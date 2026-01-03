@@ -1,0 +1,29 @@
+target-version = "py310"
+preview = true
+line-length = 120
+indent-width = 4
+
+[lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "W",  # pycodestyle warnings
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "Q",  # flake8-quotes
+]
+ignore = ["E741"]  # ambiguous variable name (l, O, I)
+fixable = ["ALL"]
+unfixable = []
+
+[lint.isort]
+lines-after-imports = 2
+combine-as-imports = true
+split-on-trailing-comma = true
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
