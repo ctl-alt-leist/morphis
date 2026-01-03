@@ -143,13 +143,24 @@ class Blade(GABaseModel):
 
     The components B^{m_1 ... m_k} are stored with full redundancy (all d^k
     elements), satisfying antisymmetry: B^{...m...n...} = -B^{...n...m...}.
+
+    Construction:
+        Blade(data, grade=k) - infers dim from last axis, cdim from remaining
+        Blade(data, grade=0, dim=d) - scalars require explicit dim
+        Blade(data, grade=k, dim=d, cdim=c) - fully explicit (all validated)
     """
 
     data: NDArray
     grade: int
-    dim: int
-    cdim: int
+    dim: Optional[int] = None  # Inferred from data.shape[-1] if not provided
+    cdim: Optional[int] = None  # Inferred from data.ndim - grade if not provided
     context: Optional[Any] = None  # GeometricContext, using Any for Pydantic compatibility
+
+    def __init__(self, data=None, /, **kwargs):
+        """Allow positional argument for data: Blade(arr, grade=1)."""
+        if data is not None:
+            kwargs["data"] = data
+        super().__init__(**kwargs)
 
     @field_validator("data", mode="before")
     @classmethod
@@ -164,29 +175,39 @@ class Blade(GABaseModel):
 
         return v
 
-    @field_validator("cdim")
-    @classmethod
-    def cdim_non_negative(cls, v):
-        if v < 0:
-            raise ValueError(f"cdim must be non-negative, got {v}")
-
-        return v
-
     @model_validator(mode="after")
-    def validate_shape(self):
-        """Verify that trailing axes match (dim,) * grade."""
-        expected_geo_ndim = self.grade
+    def infer_and_validate(self):
+        """Infer dim/cdim if not provided, then validate shape consistency."""
         actual_ndim = self.data.ndim
 
-        if actual_ndim < expected_geo_ndim:
+        # Infer dim if not provided
+        if self.dim is None:
+            if self.grade == 0:
+                raise ValueError("dim must be specified for scalar blades (grade=0)")
+            object.__setattr__(self, "dim", self.data.shape[-1])
+
+        # Infer cdim if not provided
+        if self.cdim is None:
+            object.__setattr__(self, "cdim", actual_ndim - self.grade)
+
+        # Validate: dim and cdim non-negative
+        if self.dim < 0:
+            raise ValueError(f"dim must be non-negative, got {self.dim}")
+        if self.cdim < 0:
+            raise ValueError(f"cdim must be non-negative, got {self.cdim}")
+
+        # Validate: enough dimensions for grade
+        if actual_ndim < self.grade:
             raise ValueError(
                 f"Array has {actual_ndim} dimensions but grade {self.grade} "
-                f"requires at least {expected_geo_ndim} geometric axes"
+                f"requires at least {self.grade} geometric axes"
             )
 
-        if self.cdim + expected_geo_ndim != actual_ndim:
+        # Validate: cdim + grade == ndim
+        if self.cdim + self.grade != actual_ndim:
             raise ValueError(f"cdim={self.cdim} + grade={self.grade} != ndim={actual_ndim}")
 
+        # Validate: trailing axes match dim
         for k in range(1, self.grade + 1):
             if self.data.shape[-k] != self.dim:
                 raise ValueError(f"Geometric axis {-k} has size {self.data.shape[-k]}, expected {self.dim}")

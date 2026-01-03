@@ -6,10 +6,10 @@ and Structure (geometric interpretation). Enables context-aware operations
 and meaningful validation.
 
 Examples:
-    euclidean.flat      - Standard Euclidean GA
-    euclidean.conformal - Conformal GA (CGA)
+    euclidean.flat        - Standard Euclidean GA
+    euclidean.conformal   - Conformal GA (CGA)
     degenerate.projective - Projective GA (PGA)
-    lorentzian.flat     - Spacetime GA (STA)
+    lorentzian.flat       - Spacetime GA (STA)
 """
 
 from dataclasses import dataclass

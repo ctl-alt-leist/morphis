@@ -69,6 +69,7 @@ def wedge(*blades: Blade) -> Blade:
         u = blades[0]
         return Blade(data=u.data.copy(), grade=u.grade, dim=u.dim, cdim=u.cdim, context=u.context)
 
+    # Dimensional and grade calculations - important for signature
     d = get_common_dim(*blades)
     cdim = get_common_cdim(*blades)
     grades = tuple(u.grade for u in blades)
@@ -90,7 +91,7 @@ def wedge(*blades: Blade) -> Blade:
     sig = wedge_signature(grades)
     delta = generalized_delta(n, d)
     norm = wedge_normalization(grades)
-    result = einsum(sig, *[u.data for u in blades], delta) * norm
+    result = norm * einsum(sig, *[u.data for u in blades], delta)
 
     return Blade(data=result, grade=n, dim=d, cdim=cdim, context=merged_context)
 
@@ -134,11 +135,12 @@ def interior(u: Blade, v: Blade, g: Metric | None = None) -> Blade:
             return Blade(data=u.data * v.data, grade=0, dim=d, cdim=result_cdim, context=merged_context)
 
         result_grade = k
-        result_data = u.data[..., newaxis] * v.data
-        while result_data.ndim < result_cdim + result_grade:
-            result_data = result_data[..., newaxis]
+        result = u.data[..., newaxis] * v.data
+        while result.ndim < result_cdim + result_grade:
+            result = result[..., newaxis]
+
         return Blade(
-            data=result_data,
+            data=result,
             grade=result_grade,
             dim=d,
             cdim=result_cdim,
@@ -148,10 +150,10 @@ def interior(u: Blade, v: Blade, g: Metric | None = None) -> Blade:
     result_grade = k - j
     sig = interior_signature(j, k)
     metric_args = [g.data] * j
-    result_data = einsum(sig, *metric_args, u.data, v.data)
+    result = einsum(sig, *metric_args, u.data, v.data)
 
     return Blade(
-        data=result_data,
+        data=result,
         grade=result_grade,
         dim=d,
         cdim=result_cdim,
