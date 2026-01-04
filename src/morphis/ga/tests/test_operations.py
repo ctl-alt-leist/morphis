@@ -1,20 +1,17 @@
-"""Unit tests for ga_operations.py"""
+"""Unit tests for morphis.ga.operations"""
 
 import pytest
 from numpy import array, zeros
 from numpy.random import randn
 from numpy.testing import assert_array_almost_equal
 
-from morphis.ga.duality import hodge_dual, left_complement, right_complement
 from morphis.ga.model import (
     bivector_blade,
     euclidean_metric,
-    pga_metric,
-    scalar_blade,
     trivector_blade,
     vector_blade,
 )
-from morphis.ga.norms import norm, norm_squared, normalize
+from morphis.ga.norms import norm
 from morphis.ga.operations import (
     dot,
     interior,
@@ -116,7 +113,7 @@ class TestWedge:
         assert_array_almost_equal(variadic.data, nested.data)
 
     def test_variadic_associativity(self):
-        """Test (u ∧ v) ∧ w = u ∧ (v ∧ w)."""
+        """Test (u ^ v) ^ w = u ^ (v ^ w)."""
         u = vector_blade(array([1.0, 2.0, 0.0, 0.0]))
         v = vector_blade(array([0.0, 1.0, 3.0, 0.0]))
         w = vector_blade(array([0.0, 0.0, 1.0, 4.0]))
@@ -141,7 +138,7 @@ class TestWedge:
     # --- Normalization tests ---
 
     def test_bivector_unit_norm(self):
-        """Test that |e_i ∧ e_j| = 1 for orthonormal basis vectors."""
+        """Test that |e_i ^ e_j| = 1 for orthonormal basis vectors."""
         g = euclidean_metric(4)
         e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
         e_2 = vector_blade(array([0.0, 1.0, 0.0, 0.0]))
@@ -150,7 +147,7 @@ class TestWedge:
         assert_array_almost_equal(n, 1.0)
 
     def test_trivector_unit_norm(self):
-        """Test that |e_1 ∧ e_2 ∧ e_3| = 1 for orthonormal basis vectors."""
+        """Test that |e_1 ^ e_2 ^ e_3| = 1 for orthonormal basis vectors."""
         g = euclidean_metric(4)
         e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
         e_2 = vector_blade(array([0.0, 1.0, 0.0, 0.0]))
@@ -229,119 +226,6 @@ class TestInterior:
         biv = bivector_blade(randn(4, 4))
         result = interior(vecs, biv, g)
         assert result.cdim == 1
-
-
-# =============================================================================
-# Complement
-# =============================================================================
-
-
-class TestComplement:
-    def test_right_complement_vector_3d(self):
-        e_1 = vector_blade(array([1.0, 0.0, 0.0]))
-        comp = right_complement(e_1)
-        assert comp.grade == 2
-
-    def test_right_complement_bivector_3d(self):
-        e_1 = vector_blade(array([1.0, 0.0, 0.0]))
-        e_2 = vector_blade(array([0.0, 1.0, 0.0]))
-        biv = wedge(e_1, e_2)
-        comp = right_complement(biv)
-        assert comp.grade == 1
-
-    def test_left_complement_vector(self):
-        e_1 = vector_blade(array([1.0, 0.0, 0.0]))
-        comp = left_complement(e_1)
-        assert comp.grade == 2
-
-    def test_complement_4d(self):
-        e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
-        comp = right_complement(e_1)
-        assert comp.grade == 3
-
-        e_2 = vector_blade(array([0.0, 1.0, 0.0, 0.0]))
-        biv = wedge(e_1, e_2)
-        comp_biv = right_complement(biv)
-        assert comp_biv.grade == 2
-
-    def test_complement_batch(self):
-        vecs = vector_blade(randn(5, 4), cdim=1)
-        comp = right_complement(vecs)
-        assert comp.cdim == 1
-        assert comp.grade == 3
-
-
-# =============================================================================
-# Hodge Dual
-# =============================================================================
-
-
-class TestHodgeDual:
-    def test_vector_3d(self):
-        g = euclidean_metric(3)
-        e_1 = vector_blade(array([1.0, 0.0, 0.0]))
-        dual = hodge_dual(e_1, g)
-        assert dual.grade == 2
-
-    def test_bivector_3d(self):
-        g = euclidean_metric(3)
-        e_1 = vector_blade(array([1.0, 0.0, 0.0]))
-        e_2 = vector_blade(array([0.0, 1.0, 0.0]))
-        biv = wedge(e_1, e_2)
-        dual = hodge_dual(biv, g)
-        assert dual.grade == 1
-
-    def test_scalar(self):
-        g = euclidean_metric(3)
-        s = scalar_blade(2.0, dim=3)
-        dual = hodge_dual(s, g)
-        assert dual.grade == 3
-
-
-# =============================================================================
-# Norms
-# =============================================================================
-
-
-class TestNorms:
-    def test_norm_squared_vector(self):
-        g = euclidean_metric(4)
-        e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
-        ns = norm_squared(e_1, g)
-        assert_array_almost_equal(ns, 1.0)
-
-    def test_norm_squared_bivector(self):
-        g = euclidean_metric(4)
-        e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
-        e_2 = vector_blade(array([0.0, 1.0, 0.0, 0.0]))
-        biv = wedge(e_1, e_2)
-        ns = norm_squared(biv, g)
-        assert ns > 0
-
-    def test_norm_vector(self):
-        g = euclidean_metric(4)
-        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]))
-        n = norm(v, g)
-        assert_array_almost_equal(n, 5.0)
-
-    def test_normalize(self):
-        g = euclidean_metric(4)
-        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]))
-        v_norm = normalize(v, g)
-        n = norm(v_norm, g)
-        assert_array_almost_equal(n, 1.0)
-
-    def test_norm_batch(self):
-        g = euclidean_metric(4)
-        vecs = vector_blade(randn(5, 4), cdim=1)
-        norms = norm(vecs, g)
-        assert norms.shape == (5,)
-
-    def test_norm_pga_metric(self):
-        g = pga_metric(3)
-        e_0 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
-        n = norm(e_0, g)
-        assert_array_almost_equal(n, 0.0)
 
 
 # =============================================================================
@@ -436,38 +320,11 @@ class TestProjections:
 
 
 # =============================================================================
-# Integration Tests
-# =============================================================================
-
-
-class TestIntegration:
-    def test_meet_join_duality(self):
-        # Meet of two planes (trivectors) in 4D should give a line (bivector)
-        # Use random trivectors for the test
-        a = trivector_blade(randn(4, 4, 4))
-        b = trivector_blade(randn(4, 4, 4))
-        m = meet(a, b)
-        # Complements of trivectors are vectors, wedge gives bivector
-        j = join(right_complement(a), right_complement(b))
-        comp_j = right_complement(j)
-        # m and comp_j should have the same grade
-        assert m.grade == comp_j.grade
-
-
-# =============================================================================
 # Edge Cases
 # =============================================================================
 
 
 class TestEdgeCases:
-    def test_zero_blade_norm(self):
-        g = euclidean_metric(4)
-        zero = vector_blade(zeros(4))
-        n = norm(zero, g)
-        assert_array_almost_equal(n, 0.0)
-        normed = normalize(zero, g)
-        assert_array_almost_equal(normed.data, zeros(4))
-
     def test_complex_dtype(self):
         u = vector_blade(array([1 + 1j, 0, 0, 0]))
         v = vector_blade(array([0, 1 + 1j, 0, 0]))

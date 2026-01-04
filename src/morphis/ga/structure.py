@@ -82,12 +82,12 @@ _ANTISYMMETRIC_SYMBOL_CACHE: Dict[Tuple[int, int], NDArray] = {}
 
 def antisymmetric_symbol(k: int, d: int) -> NDArray:
     """
-    Compute the k-index antisymmetric symbol ε^{m_1 ... m_k} in d dimensions.
+    Compute the k-index antisymmetric symbol eps^{m_1 ... m_k} in d dimensions.
     This is the structure constant of the exterior algebra:
 
-        ε^{m_1 ... m_k} = +1  if (m_1, ..., m_k) is even permutation of distinct indices
-                        = -1  if (m_1, ..., m_k) is odd permutation of distinct indices
-                        =  0  if any indices repeat
+        eps^{m_1 ... m_k} = +1  if (m_1, ..., m_k) is even permutation of distinct indices
+                         = -1  if (m_1, ..., m_k) is odd permutation of distinct indices
+                         =  0  if any indices repeat
 
     Shape is (d,) * k. When k = d, this is the Levi-Civita symbol.
 
@@ -109,11 +109,11 @@ def antisymmetric_symbol(k: int, d: int) -> NDArray:
 
 def levi_civita(d: int) -> NDArray:
     """
-    Get the Levi-Civita symbol ε^{m_1 ... m_d} for d dimensions. This is the
+    Get the Levi-Civita symbol eps^{m_1 ... m_d} for d dimensions. This is the
     fully antisymmetric symbol with d indices in d-dimensional space:
 
-        ε^{m_1 ... m_d} = +1  for even permutations of (0, 1, ..., d - 1)
-                        = -1  for odd permutations
+        eps^{m_1 ... m_d} = +1  for even permutations of (0, 1, ..., d - 1)
+                         = -1  for odd permutations
                         =  0  if any indices repeat
 
     Shape is (d,) * d. This is a special case of antisymmetric_symbol(d, d).
@@ -221,7 +221,7 @@ def wedge_normalization(grades: Tuple[int, ...]) -> float:
     """
     Compute the normalization factor for wedge product.
 
-    This is the multinomial coefficient: n! / (g₁! × g₂! × ... × gₖ!)
+    This is the multinomial coefficient: n! / (g_1! * g_2! * ... * g_k!)
     where n = sum(grades).
 
     The factor compensates for:
@@ -328,3 +328,91 @@ def norm_squared_signature(k: int) -> str:
         _NORM_SQUARED_SIGNATURE_CACHE[k] = sig
 
     return _NORM_SQUARED_SIGNATURE_CACHE[k]
+
+
+# =============================================================================
+# Geometric Product Signatures
+# =============================================================================
+
+
+_GEOMETRIC_SIGNATURE_CACHE: Dict[Tuple[int, int, int], str] = {}
+
+
+def geometric_signature(j: int, k: int, c: int) -> str:
+    """
+    Einsum signature for geometric product with c contractions.
+
+    Args:
+        j: grade of first blade
+        k: grade of second blade
+        c: number of contractions (index pairs to contract with metric)
+
+    Result grade r = j + k - 2c.
+
+    Returns the cached einsum signature string.
+    """
+    key = (j, k, c)
+
+    if key not in _GEOMETRIC_SIGNATURE_CACHE:
+        # Indices for first blade
+        u_indices = INDICES[:j]
+
+        # Indices for second blade
+        v_indices = INDICES[j : j + k]
+
+        # Indices that will be contracted (first c from each)
+        u_contract = u_indices[:c]
+        v_contract = v_indices[:c]
+
+        # Indices that remain (form the result)
+        u_remain = u_indices[c:]
+        v_remain = v_indices[c:]
+
+        # Result indices (in order: u remainder, then v remainder)
+        result_indices = u_remain + v_remain
+        r = len(result_indices)
+
+        # Output indices (for generalized delta)
+        output_indices = INDICES[j + k : j + k + r]
+
+        # Build metric contraction parts: "m1n1, m2n2, ..."
+        metric_parts = ", ".join(f"{u_contract[i]}{v_contract[i]}" for i in range(c))
+
+        # Build full signature
+        if c == 0:
+            # No contractions: pure wedge
+            sig = f"...{u_indices}, ...{v_indices}, {output_indices}{result_indices} -> ...{output_indices}"
+        elif r == 0:
+            # Full contraction to scalar
+            sig = f"{metric_parts}, ...{u_indices}, ...{v_indices} -> ..."
+        else:
+            # Partial contraction
+            delta_indices = output_indices + result_indices
+            sig = f"{metric_parts}, ...{u_indices}, ...{v_indices}, {delta_indices} -> ...{output_indices}"
+
+        _GEOMETRIC_SIGNATURE_CACHE[key] = sig
+
+    return _GEOMETRIC_SIGNATURE_CACHE[key]
+
+
+def geometric_normalization(j: int, k: int, c: int) -> float:
+    """
+    Normalization factor for geometric product with c contractions.
+
+    Accounts for antisymmetrization overcounting.
+
+    Args:
+        j: grade of first blade
+        k: grade of second blade
+        c: number of contractions
+
+    Returns the normalization factor.
+    """
+    r = j + k - 2 * c
+
+    if r == 0:
+        # Scalar result: divide by factorials of contracted indices
+        return 1.0 / (factorial(j) * factorial(k))
+
+    # General case: multinomial-like coefficient
+    return factorial(r) / (factorial(j) * factorial(k))

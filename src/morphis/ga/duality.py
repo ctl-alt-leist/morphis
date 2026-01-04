@@ -20,7 +20,7 @@ def right_complement(u: Blade) -> Blade:
     """
     Compute the right complement of a blade using the Levi-Civita symbol:
 
-        ū^{m_{k + 1} ... m_d} = u^{m_1 ... m_k} ε_{m_1 ... m_d}
+        comp(u)^{m_{k+1} ... m_d} = u^{m_1 ... m_k} eps_{m_1 ... m_d}
 
     Maps grade k blade to grade (d - k) blade, representing the orthogonal
     subspace.
@@ -49,7 +49,7 @@ def left_complement(u: Blade) -> Blade:
     """
     Compute the left complement of a blade:
 
-        _u^{m_1 ... m_{d - k}} = ε_{m_1 ... m_d} u^{m_{d - k + 1} ... m_d}
+        lcomp(u)^{m_1 ... m_{d-k}} = eps_{m_1 ... m_d} u^{m_{d-k+1} ... m_d}
 
     Related to right complement by a sign factor. Maps grade k to grade (d - k).
 
@@ -81,8 +81,8 @@ def hodge_dual(u: Blade, g: Metric | None = None) -> Blade:
     """
     Compute the Hodge dual of a blade:
 
-        ⋆u^{m_{k + 1} ... m_d} = (1 / k!) u^{n_1 ... n_k} g_{n_1 m_1} ... g_{n_k m_k}
-                                  × ε^{m_1 ... m_d}
+        *u^{m_{k+1} ... m_d} = (1/k!) u^{n_1 ... n_k} g_{n_1 m_1} ... g_{n_k m_k}
+                                * eps^{m_1 ... m_d}
 
     Maps grade k to grade (d - k) using the metric for index lowering.
 

@@ -36,23 +36,23 @@ from morphis.ga.utils import (
 
 def wedge(*blades: Blade) -> Blade:
     """
-    Wedge product: u ∧ v ∧ ... ∧ w
+    Wedge product: u ^ v ^ ... ^ w
 
     Computes the exterior product of blades via antisymmetrization:
 
-        (u ∧ v)^{mn} = u^m v^n - u^n v^m
+        (u ^ v)^{mn} = u^m v^n - u^n v^m
 
     More generally for k blades with grades (g_1, ..., g_k):
 
-        B^{m_1 ... m_n} = outer^{a_1 ... a_n} δ^{m_1 ... m_n}_{a_1 ... a_n}
+        B^{m_1 ... m_n} = outer^{a_1 ... a_n} delta^{m_1 ... m_n}_{a_1 ... a_n}
 
-    where n = g_1 + ... + g_k and δ is the generalized Kronecker delta
+    where n = g_1 + ... + g_k and delta is the generalized Kronecker delta
     encoding antisymmetric structure.
 
     The result satisfies:
-    - Anticommutativity: u ∧ v = -v ∧ u (for odd grade blades)
-    - Associativity: (u ∧ v) ∧ w = u ∧ (v ∧ w)
-    - Unit norm: |e_i ∧ e_j| = 1 for orthonormal basis vectors
+    - Anticommutativity: u ^ v = -v ^ u (for odd grade blades)
+    - Associativity: (u ^ v) ^ w = u ^ (v ^ w)
+    - Unit norm: |e_i ^ e_j| = 1 for orthonormal basis vectors
 
     Context: Preserves context if all inputs match, otherwise None.
 
@@ -181,9 +181,9 @@ def meet(u: Blade, v: Blade) -> Blade:
     Compute the meet (intersection) of two blades: the largest subspace
     contained in both. Computed via duality:
 
-        u ∨ v = (ū ∧ v̄)̄
+        u v v = dual(dual(u) ^ dual(v))
 
-    where bar denotes the right complement.
+    where dual denotes the right complement.
 
     Returns Blade representing the intersection.
     """
