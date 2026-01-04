@@ -39,7 +39,7 @@ def basis_vector(idx: int, dim: int) -> Blade:
 
 
 def basis_bivector(i: int, j: int, dim: int) -> Blade:
-    """Create basis bivector e_ij in d dimensions."""
+    """Create basis bivector e_{ij} in d dimensions."""
     e_i = basis_vector(i, dim)
     e_j = basis_vector(j, dim)
     return wedge(e_i, e_j)
@@ -55,17 +55,17 @@ class TestGeometricBasicProperties:
         """Test (uv)w = u(vw) for vectors in 2D via basis vectors."""
         g = euclidean_metric(2)
 
-        # For associativity, check: (e1 e2) e1 = e1 (e2 e1)
+        # For associativity, check: (e_1 e_2) e_1 = e_1 (e_2 e_1)
         e_1 = basis_vector(0, 2)
         e_2 = basis_vector(1, 2)
 
-        # e1 e2 = e12 (bivector)
-        e1e2 = geometric(e_1, e_2, g)
+        # e_1 e_2 = e_12 (bivector)
+        e_1_e_2 = geometric(e_1, e_2, g)
 
-        # Check: e1 e2 e1 = -e2 (via e_i e_i = 1)
-        result_left = geometric(grade_project(e1e2, 2), e_1, g)
-        e2e1 = geometric(e_2, e_1, g)
-        result_right = geometric(e_1, grade_project(e2e1, 2), g)
+        # Check: e_1 e_2 e_1 = -e_2 (via e_i e_i = 1)
+        result_left = geometric(grade_project(e_1_e_2, 2), e_1, g)
+        e_2_e_1 = geometric(e_2, e_1, g)
+        result_right = geometric(e_1, grade_project(e_2_e_1, 2), g)
 
         # Both should give grade-1 result
         assert 1 in result_left.components
@@ -78,16 +78,16 @@ class TestGeometricBasicProperties:
         e_2 = basis_vector(1, 3)
         e_3 = basis_vector(2, 3)
 
-        # (e1 e2) e3 vs e1 (e2 e3)
-        e1e2 = geometric(e_1, e_2, g)
-        e2e3 = geometric(e_2, e_3, g)
+        # (e_1 e_2) e_3 vs e_1 (e_2 e_3)
+        e_1_e_2 = geometric(e_1, e_2, g)
+        e_2_e_3 = geometric(e_2, e_3, g)
 
         # Extract bivector parts for next product
-        b12 = grade_project(e1e2, 2)
-        b23 = grade_project(e2e3, 2)
+        b_12 = grade_project(e_1_e_2, 2)
+        b_23 = grade_project(e_2_e_3, 2)
 
-        left = geometric(b12, e_3, g)
-        right = geometric(e_1, b23, g)
+        left = geometric(b_12, e_3, g)
+        right = geometric(e_1, b_23, g)
 
         # Both should have grade-3 component (trivector)
         assert 3 in left.components
@@ -153,18 +153,18 @@ class TestGeometricBasicProperties:
         e_1 = basis_vector(0, 3)
         e_2 = basis_vector(1, 3)
 
-        e1e2 = geometric(e_1, e_2, g)
-        e2e1 = geometric(e_2, e_1, g)
+        e_1_e_2 = geometric(e_1, e_2, g)
+        e_2_e_1 = geometric(e_2, e_1, g)
 
         # Scalar parts should both be 0
-        s1 = grade_project(e1e2, 0)
-        s2 = grade_project(e2e1, 0)
+        s1 = grade_project(e_1_e_2, 0)
+        s2 = grade_project(e_2_e_1, 0)
         assert_array_almost_equal(s1.data, 0.0)
         assert_array_almost_equal(s2.data, 0.0)
 
         # Bivector parts should be negatives
-        b1 = grade_project(e1e2, 2)
-        b2 = grade_project(e2e1, 2)
+        b1 = grade_project(e_1_e_2, 2)
+        b2 = grade_project(e_2_e_1, 2)
         assert_array_almost_equal(b1.data, -b2.data)
 
     def test_parallel_commute(self):
@@ -201,7 +201,7 @@ class TestGeometricGradeDecomposition:
         # Grade-0: should be 0 (orthogonal)
         assert_array_almost_equal(grade_project(uv, 0).data, 0.0)
 
-        # Grade-2: should be e12 with component 1
+        # Grade-2: should be e_12 with component 1
         b = grade_project(uv, 2)
         assert b.data[0, 1] == 1.0 or b.data[1, 0] == -1.0
 
@@ -242,9 +242,9 @@ class TestGeometricGradeDecomposition:
         """Test vector in bivector plane."""
         g = euclidean_metric(3)
         e_1 = basis_vector(0, 3)
-        e12 = basis_bivector(0, 1, 3)
+        e_12 = basis_bivector(0, 1, 3)
 
-        result = geometric(e_1, e12, g)
+        result = geometric(e_1, e_12, g)
 
         # Grade-1: contraction exists
         assert 1 in result.components
@@ -259,15 +259,15 @@ class TestGeometricGradeDecomposition:
         """Test vector perpendicular to bivector plane."""
         g = euclidean_metric(3)
         e_3 = basis_vector(2, 3)  # z-axis
-        e12 = basis_bivector(0, 1, 3)  # xy-plane
+        e_12 = basis_bivector(0, 1, 3)  # xy-plane
 
-        result = geometric(e_3, e12, g)
+        result = geometric(e_3, e_12, g)
 
         # Grade-1: 0 (no contraction)
         v = grade_project(result, 1)
         assert_array_almost_equal(v.data, 0.0)
 
-        # Grade-3: trivector e123
+        # Grade-3: trivector e_123
         assert 3 in result.components
         t = grade_project(result, 3)
         assert norm(t, g) > 0.1
@@ -275,10 +275,10 @@ class TestGeometricGradeDecomposition:
     def test_bivector_bivector_3d_orthogonal(self):
         """Test orthogonal bivector product in 3D."""
         g = euclidean_metric(3)
-        e12 = basis_bivector(0, 1, 3)
-        e23 = basis_bivector(1, 2, 3)
+        e_12 = basis_bivector(0, 1, 3)
+        e_23 = basis_bivector(1, 2, 3)
 
-        result = geometric(e12, e23, g)
+        result = geometric(e_12, e_23, g)
 
         # Should have grades 0 and 2 (no grade-4 in 3D)
         assert 0 in result.components or 2 in result.components
@@ -370,10 +370,10 @@ class TestInverse:
     def test_bivector_inverse(self):
         """Test B^{-1} B = 1 for unit bivector."""
         g = euclidean_metric(3)
-        e12 = basis_bivector(0, 1, 3)
+        e_12 = basis_bivector(0, 1, 3)
 
-        e12_inv = inverse(e12, g)
-        product = geometric(e12_inv, e12, g)
+        e_12_inv = inverse(e_12, g)
+        product = geometric(e_12_inv, e_12, g)
 
         s = grade_project(product, 0)
         assert_array_almost_equal(s.data, 1.0)
