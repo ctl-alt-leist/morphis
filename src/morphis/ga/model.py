@@ -10,9 +10,32 @@ Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from numpy import asarray, eye
+from numpy import asarray, eye, zeros
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+
+# =============================================================================
+# Visual Transform (for visualization, not algebraic)
+# =============================================================================
+
+
+class VisualTransform:
+    """
+    Visual transform for rendering blades. Separate from algebraic data.
+
+    This stores rotation and translation for how a blade should be displayed,
+    independent of its mathematical representation.
+    """
+
+    def __init__(self):
+        self.rotation = eye(3)  # 3x3 rotation matrix
+        self.translation = zeros(3)  # 3D translation vector
+
+    def reset(self):
+        """Reset to identity transform."""
+        self.rotation = eye(3)
+        self.translation = zeros(3)
 
 
 def _merge_contexts(*contexts: Optional[Any]) -> Optional[Any]:
@@ -148,6 +171,10 @@ class Blade(GABaseModel):
         Blade(data, grade=k) - infers dim from last axis, cdim from remaining
         Blade(data, grade=0, dim=d) - scalars require explicit dim
         Blade(data, grade=k, dim=d, cdim=c) - fully explicit (all validated)
+
+    Observer pattern:
+        blade.add_observer(callback) - register callback for change notification
+        blade.update_data(new_data) - modify in-place and notify observers
     """
 
     data: NDArray
@@ -156,11 +183,25 @@ class Blade(GABaseModel):
     cdim: Optional[int] = None  # Inferred from data.ndim - grade if not provided
     context: Optional[Any] = None  # GeometricContext, using Any for Pydantic compatibility
 
+    # Private attributes (not Pydantic fields)
+    _observers: List = []
+    _visual_transform: Optional["VisualTransform"] = None
+
     def __init__(self, data=None, /, **kwargs):
         """Allow positional argument for data: Blade(arr, grade=1)."""
         if data is not None:
             kwargs["data"] = data
         super().__init__(**kwargs)
+        # Initialize per-instance attributes
+        object.__setattr__(self, "_observers", [])
+        object.__setattr__(self, "_visual_transform", None)
+
+    @property
+    def visual_transform(self) -> "VisualTransform":
+        """Get visual transform, creating lazily if needed."""
+        if self._visual_transform is None:
+            object.__setattr__(self, "_visual_transform", VisualTransform())
+        return self._visual_transform
 
     @field_validator("data", mode="before")
     @classmethod
@@ -241,6 +282,46 @@ class Blade(GABaseModel):
     def __setitem__(self, index, value):
         """Set values in the underlying array."""
         self.data[index] = value
+
+    # -------------------------------------------------------------------------
+    # Observer Pattern
+    # -------------------------------------------------------------------------
+
+    def add_observer(self, callback):
+        """
+        Register a callback to be notified when blade data changes.
+
+        The callback takes no arguments and is called after update_data().
+        """
+        self._observers.append(callback)
+
+    def remove_observer(self, callback):
+        """Remove a previously registered observer."""
+        if callback in self._observers:
+            self._observers.remove(callback)
+
+    def _notify_observers(self):
+        """Call all registered observers."""
+        for callback in self._observers:
+            callback()
+
+    def update_data(self, new_data):
+        """
+        Update blade data in-place and notify observers.
+
+        This modifies self.data without creating a new Blade object,
+        preserving any references to this blade.
+
+        Args:
+            new_data: New array data (must have same shape as current data)
+        """
+        new_data = asarray(new_data)
+        if new_data.shape != self.data.shape:
+            raise ValueError(
+                f"New data shape {new_data.shape} != current shape {self.data.shape}"
+            )
+        self.data[:] = new_data
+        self._notify_observers()
 
     def __array__(self, dtype=None):
         """Allow np.asarray(blade) to work."""

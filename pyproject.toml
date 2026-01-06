@@ -6,9 +6,12 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
+    "imageio>=2.37.2",
+    "imageio-ffmpeg>=0.6.0",
     "matplotlib>=3.10.8",
     "numpy>=2.3.5",
     "pydantic>=2.12.5",
+    "pyvista>=0.46.4",
     "scipy>=1.16.3",
     "tomli>=2.3.0",
 ]

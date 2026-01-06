@@ -61,3 +61,10 @@ pip-wheel-metadata/
 .env
 .env.local
 *.local
+
+# Media files
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.gif

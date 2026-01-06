@@ -189,3 +189,59 @@ def solve_rotation_angle(u: NDArray, v: NDArray, axis: NDArray) -> float:
     angle = result.x
 
     return (angle + pi) % (2 * pi) - pi
+
+
+# =============================================================================
+# Blade Visual Transform Operations
+# =============================================================================
+
+
+def rotate_blade(blade, axis: NDArray, angle: float) -> None:
+    """
+    Rotate a blade's visual transform about an axis.
+
+    This modifies blade.visual_transform in place. The rotation is accumulated
+    (composed with existing rotation).
+
+    Args:
+        blade: Blade to rotate (its visual_transform is modified)
+        axis: Rotation axis (will be normalized)
+        angle: Rotation angle in radians
+    """
+    axis = unit(array(axis, dtype=float))
+    R = rotation_matrix(angle, axis)
+    blade.visual_transform.rotation = R @ blade.visual_transform.rotation
+
+
+def translate_blade(blade, delta: NDArray) -> None:
+    """
+    Translate a blade's visual transform.
+
+    This modifies blade.visual_transform in place. The translation is accumulated.
+
+    Args:
+        blade: Blade to translate (its visual_transform is modified)
+        delta: Translation vector
+    """
+    blade.visual_transform.translation = blade.visual_transform.translation + array(delta)
+
+
+def set_blade_position(blade, position: NDArray) -> None:
+    """
+    Set a blade's visual position (absolute, not relative).
+
+    Args:
+        blade: Blade to position (its visual_transform is modified)
+        position: New position vector
+    """
+    blade.visual_transform.translation = array(position)
+
+
+def reset_blade_transform(blade) -> None:
+    """
+    Reset a blade's visual transform to identity.
+
+    Args:
+        blade: Blade to reset (its visual_transform is modified)
+    """
+    blade.visual_transform.reset()
