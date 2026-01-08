@@ -12,12 +12,11 @@ Key functions:
 from typing import Optional, Tuple, Union
 
 import pyvista as pv
-from numpy import abs as np_abs
-from numpy import argmax, array, cross, ndarray, zeros
+from numpy import abs as np_abs, argmax, array, cross, ndarray, zeros
 from numpy.linalg import norm, svd
 
-from morphis.ga.model import Blade, vector_blade
-from morphis.visualization.theme import Color, Theme
+from morphis.ga.model import Blade
+from morphis.visualization.theme import Color
 
 
 # =============================================================================
@@ -249,24 +248,31 @@ def _draw_parallelepiped(
     """Draw a parallelepiped defined by vectors u, v, w from origin."""
     # 8 corners
     corners = [
-        origin,                    # 0
-        origin + u,                # 1
-        origin + v,                # 2
-        origin + w,                # 3
-        origin + u + v,            # 4
-        origin + u + w,            # 5
-        origin + v + w,            # 6
-        origin + u + v + w,        # 7
+        origin,  # 0
+        origin + u,  # 1
+        origin + v,  # 2
+        origin + w,  # 3
+        origin + u + v,  # 4
+        origin + u + w,  # 5
+        origin + v + w,  # 6
+        origin + u + v + w,  # 7
     ]
 
     if tetrad:
         # 12 edges
         edges = [
-            (0, 1), (0, 2), (0, 3),
-            (1, 4), (1, 5),
-            (2, 4), (2, 6),
-            (3, 5), (3, 6),
-            (4, 7), (5, 7), (6, 7),
+            (0, 1),
+            (0, 2),
+            (0, 3),
+            (1, 4),
+            (1, 5),
+            (2, 4),
+            (2, 6),
+            (3, 5),
+            (3, 6),
+            (4, 7),
+            (5, 7),
+            (6, 7),
         ]
         for i, j in edges:
             _draw_edge(plotter, corners[i], corners[j], color, edge_radius)
@@ -412,8 +418,14 @@ def draw_blade(
                 name = f"grade-{grade}"
 
         plotter.add_point_labels(
-            [label_pos], [name], font_size=12, text_color=color,
-            point_size=0, shape=None, show_points=False, always_visible=True,
+            [label_pos],
+            [name],
+            font_size=12,
+            text_color=color,
+            point_size=0,
+            shape=None,
+            show_points=False,
+            always_visible=True,
         )
 
 
@@ -449,14 +461,14 @@ def draw_coordinate_basis(
 
     # Label offset directions (outside positive octant)
     offset_dirs = [
-        array([0, -1, -1]),   # e1: offset in -y-z
-        array([-1, 0, -1]),   # e2: offset in -x-z
-        array([-1, -1, 0]),   # e3: offset in -x-y
+        array([0, -1, -1]),  # e1: offset in -y-z
+        array([-1, 0, -1]),  # e2: offset in -x-z
+        array([-1, -1, 0]),  # e3: offset in -x-y
     ]
 
     names = ["e1", "e2", "e3"]
 
-    for direction, offset_dir, axis_name in zip(directions, offset_dirs, names):
+    for direction, offset_dir, axis_name in zip(directions, offset_dirs, names, strict=False):
         # Draw the arrow
         if tetrad:
             _draw_arrow(plotter, zeros(3), direction, color, shaft_radius=0.004, tip_ratio=0.08)
@@ -466,8 +478,14 @@ def draw_coordinate_basis(
             offset = offset_dir / norm(offset_dir) * label_offset
             label_pos = direction * 0.5 + offset
             plotter.add_point_labels(
-                [label_pos], [axis_name], font_size=12, text_color=color,
-                point_size=0, shape=None, show_points=False, always_visible=True,
+                [label_pos],
+                [axis_name],
+                font_size=12,
+                text_color=color,
+                point_size=0,
+                shape=None,
+                show_points=False,
+                always_visible=True,
             )
 
 
@@ -533,8 +551,14 @@ def draw_basis_blade(
             offset = offset_dir / norm(offset_dir) * label_offset
             label_pos = position + direction * 0.5 + offset
             plotter.add_point_labels(
-                [label_pos], [name], font_size=12, text_color=color,
-                point_size=0, shape=None, show_points=False, always_visible=True,
+                [label_pos],
+                [name],
+                font_size=12,
+                text_color=color,
+                point_size=0,
+                shape=None,
+                show_points=False,
+                always_visible=True,
             )
 
     elif grade == 2:
@@ -551,8 +575,14 @@ def draw_basis_blade(
             label_dir = -normal if normal[2] >= 0 else normal
             label_pos = position + (u + v) / 2 + label_dir * label_offset * 2
             plotter.add_point_labels(
-                [label_pos], [name], font_size=12, text_color=color,
-                point_size=0, shape=None, show_points=False, always_visible=True,
+                [label_pos],
+                [name],
+                font_size=12,
+                text_color=color,
+                point_size=0,
+                shape=None,
+                show_points=False,
+                always_visible=True,
             )
 
     elif grade == 3:
@@ -566,8 +596,14 @@ def draw_basis_blade(
         if label:
             label_pos = position + (u + v + w) / 2 + array([-1, -1, -1]) / norm(array([1, 1, 1])) * label_offset * 3
             plotter.add_point_labels(
-                [label_pos], [name], font_size=12, text_color=color,
-                point_size=0, shape=None, show_points=False, always_visible=True,
+                [label_pos],
+                [name],
+                font_size=12,
+                text_color=color,
+                point_size=0,
+                shape=None,
+                show_points=False,
+                always_visible=True,
             )
 
     else:

@@ -10,10 +10,10 @@ Key classes:
 """
 
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Tuple
 
 import vtk
-from numpy import array, cos, eye, ndarray, pi, sin, sqrt, zeros
+from numpy import array, cos, eye, ndarray, pi, zeros
 from numpy.linalg import norm
 
 from morphis.core.rotations import rotation_matrix
@@ -114,7 +114,7 @@ class BladeTransform:
         return M
 
     @staticmethod
-    def interpolate(t1: 'BladeTransform', t2: 'BladeTransform', alpha: float) -> 'BladeTransform':
+    def interpolate(t1: "BladeTransform", t2: "BladeTransform", alpha: float) -> "BladeTransform":
         """
         Linearly interpolate between two transforms.
 
@@ -205,7 +205,7 @@ class AnimationSequence:
         duration: float = 1.0,
         center: Tuple[float, float, float] = (0, 0, 0),
         easing: Callable[[float], float] = ease_linear,
-    ) -> 'AnimationSequence':
+    ) -> "AnimationSequence":
         """
         Add a rotation segment.
 
@@ -249,7 +249,7 @@ class AnimationSequence:
         target: Tuple[float, float, float],
         duration: float = 1.0,
         easing: Callable[[float], float] = ease_in_out_cubic,
-    ) -> 'AnimationSequence':
+    ) -> "AnimationSequence":
         """
         Add a translation segment.
 
@@ -289,7 +289,7 @@ class AnimationSequence:
         scale: float,
         duration: float = 1.0,
         easing: Callable[[float], float] = ease_in_out_cubic,
-    ) -> 'AnimationSequence':
+    ) -> "AnimationSequence":
         """
         Add a scaling segment.
 
@@ -322,7 +322,7 @@ class AnimationSequence:
 
         return self
 
-    def wait(self, duration: float) -> 'AnimationSequence':
+    def wait(self, duration: float) -> "AnimationSequence":
         """
         Add a pause (no change) segment.
 

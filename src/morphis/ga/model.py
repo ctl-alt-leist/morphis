@@ -317,9 +317,7 @@ class Blade(GABaseModel):
         """
         new_data = asarray(new_data)
         if new_data.shape != self.data.shape:
-            raise ValueError(
-                f"New data shape {new_data.shape} != current shape {self.data.shape}"
-            )
+            raise ValueError(f"New data shape {new_data.shape} != current shape {self.data.shape}")
         self.data[:] = new_data
         self._notify_observers()
 

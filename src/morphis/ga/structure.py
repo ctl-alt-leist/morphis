@@ -349,6 +349,11 @@ def geometric_signature(j: int, k: int, c: int) -> str:
 
     Result grade r = j + k - 2c.
 
+    The contraction pattern follows standard GA convention: contract the LAST c
+    indices of the first blade with the FIRST c indices of the second blade,
+    paired in reverse order. For bivector B * bivector B (j=k=c=2):
+        g^{bc} g^{ad} B^{ab} B^{cd} → scalar
+
     Returns the cached einsum signature string.
     """
     key = (j, k, c)
@@ -360,13 +365,14 @@ def geometric_signature(j: int, k: int, c: int) -> str:
         # Indices for second blade
         v_indices = INDICES[j : j + k]
 
-        # Indices that will be contracted (first c from each)
-        u_contract = u_indices[:c]
-        v_contract = v_indices[:c]
-
-        # Indices that remain (form the result)
-        u_remain = u_indices[c:]
-        v_remain = v_indices[c:]
+        # Indices that will be contracted:
+        # - Last c indices of u (these are the "inner" indices adjacent to v)
+        # - First c indices of v (these are the "inner" indices adjacent to u)
+        # Paired in reverse order for correct geometric product sign
+        u_remain = u_indices[: j - c]  # First j-c indices remain
+        u_contract = u_indices[j - c :]  # Last c indices contract
+        v_contract = v_indices[:c]  # First c indices contract
+        v_remain = v_indices[c:]  # Last k-c indices remain
 
         # Result indices (in order: u remainder, then v remainder)
         result_indices = u_remain + v_remain
@@ -375,12 +381,19 @@ def geometric_signature(j: int, k: int, c: int) -> str:
         # Output indices (for generalized delta)
         output_indices = INDICES[j + k : j + k + r]
 
-        # Build metric contraction parts: "m1n1, m2n2, ..."
-        metric_parts = ", ".join(f"{u_contract[i]}{v_contract[i]}" for i in range(c))
+        # Build metric contraction parts in reverse order:
+        # u_contract[-1] with v_contract[0], u_contract[-2] with v_contract[1], etc.
+        if c > 0:
+            metric_parts = ", ".join(f"{u_contract[c - 1 - i]}{v_contract[i]}" for i in range(c))
+        else:
+            metric_parts = ""
 
         # Build full signature
-        if c == 0:
-            # No contractions: pure wedge
+        if c == 0 and r == 0:
+            # Scalar * scalar: just multiply
+            sig = "..., ... -> ..."
+        elif c == 0:
+            # No contractions: pure wedge (r > 0)
             sig = f"...{u_indices}, ...{v_indices}, {output_indices}{result_indices} -> ...{output_indices}"
         elif r == 0:
             # Full contraction to scalar
@@ -399,7 +412,9 @@ def geometric_normalization(j: int, k: int, c: int) -> float:
     """
     Normalization factor for geometric product with c contractions.
 
-    Accounts for antisymmetrization overcounting.
+    The factor 1/c! accounts for the c! ways to pair contracted indices.
+    For the wedge part (remaining indices), the factor r!/(j-c)!(k-c)!
+    is the multinomial coefficient for antisymmetrization.
 
     Args:
         j: grade of first blade
@@ -410,9 +425,14 @@ def geometric_normalization(j: int, k: int, c: int) -> float:
     """
     r = j + k - 2 * c
 
-    if r == 0:
-        # Scalar result: divide by factorials of contracted indices
-        return 1.0 / (factorial(j) * factorial(k))
+    if c == 0:
+        # Pure wedge product: multinomial coefficient
+        return factorial(r) / (factorial(j) * factorial(k))
 
-    # General case: multinomial-like coefficient
-    return factorial(r) / (factorial(j) * factorial(k))
+    if r == 0:
+        # Full contraction to scalar: just the contraction factor
+        return 1.0 / factorial(c)
+
+    # Partial contraction: both contraction and wedge factors
+    # 1/c! for contractions, r!/((j-c)!(k-c)!) for remaining wedge
+    return factorial(r) / (factorial(c) * factorial(j - c) * factorial(k - c))

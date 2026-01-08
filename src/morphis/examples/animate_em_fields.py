@@ -51,9 +51,11 @@ TIME_MARKER_COLOR = (0.95, 0.85, 0.40)  # Amber accent
 # Circuit Parameters
 # =============================================================================
 
+
 @dataclass
 class CircuitParams:
     """Parameters for a single transmission line circuit."""
+
     E0: float  # Electric field amplitude
     B0: float  # Magnetic field amplitude
     psi_E: float  # E field phase offset
@@ -124,6 +126,7 @@ S_SHAFT_RADIUS = 0.028  # Slightly bolder for Poynting vector
 # Field Computation
 # =============================================================================
 
+
 def phase_angles(t: float) -> Tuple[float, float, float]:
     """Compute phase angles for three phases A, B, C at time t."""
     phi_A = OMEGA * t
@@ -152,22 +155,30 @@ def compute_E_field(
     phi_A, phi_B, phi_C = phase_angles(t)
     w_A, w_B, w_C = distance_weights
 
-    E_x = params.E0 * 0.3 * (  # Smaller horizontal components
-        w_A * np.cos(phi_A + params.psi_E + params.E_alpha_x) +
-        w_B * np.cos(phi_B + params.psi_E + params.E_alpha_x) +
-        w_C * np.cos(phi_C + params.psi_E + params.E_alpha_x)
+    E_x = (
+        params.E0
+        * 0.3
+        * (  # Smaller horizontal components
+            w_A * np.cos(phi_A + params.psi_E + params.E_alpha_x)
+            + w_B * np.cos(phi_B + params.psi_E + params.E_alpha_x)
+            + w_C * np.cos(phi_C + params.psi_E + params.E_alpha_x)
+        )
     )
 
-    E_y = params.E0 * 0.3 * (
-        w_A * np.cos(phi_A + params.psi_E + params.E_alpha_y) +
-        w_B * np.cos(phi_B + params.psi_E + params.E_alpha_y) +
-        w_C * np.cos(phi_C + params.psi_E + params.E_alpha_y)
+    E_y = (
+        params.E0
+        * 0.3
+        * (
+            w_A * np.cos(phi_A + params.psi_E + params.E_alpha_y)
+            + w_B * np.cos(phi_B + params.psi_E + params.E_alpha_y)
+            + w_C * np.cos(phi_C + params.psi_E + params.E_alpha_y)
+        )
     )
 
     E_z = params.E0 * (  # Dominant vertical component
-        w_A * np.cos(phi_A + params.psi_E + params.E_alpha_z) +
-        w_B * np.cos(phi_B + params.psi_E + params.E_alpha_z) +
-        w_C * np.cos(phi_C + params.psi_E + params.E_alpha_z)
+        w_A * np.cos(phi_A + params.psi_E + params.E_alpha_z)
+        + w_B * np.cos(phi_B + params.psi_E + params.E_alpha_z)
+        + w_C * np.cos(phi_C + params.psi_E + params.E_alpha_z)
     )
 
     return np.array([E_x, E_y, E_z])
@@ -190,21 +201,21 @@ def compute_B_field(
     w_A, w_B, w_C = distance_weights
 
     B_x = params.B0 * (
-        w_A * np.cos(phi_A + psi_B + params.B_alpha_x) +
-        w_B * np.cos(phi_B + psi_B + params.B_alpha_x) +
-        w_C * np.cos(phi_C + psi_B + params.B_alpha_x)
+        w_A * np.cos(phi_A + psi_B + params.B_alpha_x)
+        + w_B * np.cos(phi_B + psi_B + params.B_alpha_x)
+        + w_C * np.cos(phi_C + psi_B + params.B_alpha_x)
     )
 
     B_y = params.B0 * (
-        w_A * np.cos(phi_A + psi_B + params.B_alpha_y) +
-        w_B * np.cos(phi_B + psi_B + params.B_alpha_y) +
-        w_C * np.cos(phi_C + psi_B + params.B_alpha_y)
+        w_A * np.cos(phi_A + psi_B + params.B_alpha_y)
+        + w_B * np.cos(phi_B + psi_B + params.B_alpha_y)
+        + w_C * np.cos(phi_C + psi_B + params.B_alpha_y)
     )
 
     B_z = params.B0 * (
-        w_A * np.cos(phi_A + psi_B + params.B_alpha_z) +
-        w_B * np.cos(phi_B + psi_B + params.B_alpha_z) +
-        w_C * np.cos(phi_C + psi_B + params.B_alpha_z)
+        w_A * np.cos(phi_A + psi_B + params.B_alpha_z)
+        + w_B * np.cos(phi_B + psi_B + params.B_alpha_z)
+        + w_C * np.cos(phi_C + psi_B + params.B_alpha_z)
     )
 
     return np.array([B_x, B_y, B_z])
@@ -260,6 +271,7 @@ def compute_total_fields(t: float, location: int = 1) -> Tuple[np.ndarray, np.nd
 # =============================================================================
 # Arrow Creation and Transform Utilities
 # =============================================================================
+
 
 def create_unit_arrow(
     shaft_radius: float = SHAFT_RADIUS,
@@ -361,6 +373,7 @@ def update_arrow_transform(transform: vtk.vtkTransform, direction: np.ndarray):
 @dataclass
 class AnimatedArrow:
     """Container for an arrow with its VTK transform for smooth animation."""
+
     mesh: pv.PolyData
     actor: vtk.vtkActor
     transform: vtk.vtkTransform
@@ -396,6 +409,7 @@ def create_animated_arrow(
 # =============================================================================
 # Time Series Chart
 # =============================================================================
+
 
 def create_time_series_chart(
     t_array: np.ndarray,
@@ -469,6 +483,7 @@ def create_time_series_chart(
 # =============================================================================
 # Main Animation
 # =============================================================================
+
 
 def precompute_time_series(t_array: np.ndarray) -> dict:
     """Pre-compute all field values for the animation."""
@@ -700,6 +715,7 @@ def main_interactive():
     plotter.show(interactive_update=True, auto_close=False)
 
     import time
+
     start_time = time.time()
 
     while True:
@@ -772,7 +788,11 @@ def main_save(filename: str = "em_field_animation.mp4"):
     # --- Subplot (0, 1): Location 1 - Time series ---
     plotter.subplot(0, 1)
     chart1 = create_time_series_chart(
-        t_array, data["E1_z"], data["B1"], data["S1_y"], "Location 1",
+        t_array,
+        data["E1_z"],
+        data["B1"],
+        data["S1_y"],
+        "Location 1",
     )
     plotter.add_chart(chart1)
 
@@ -789,7 +809,11 @@ def main_save(filename: str = "em_field_animation.mp4"):
     # --- Subplot (1, 1): Location 2 - Time series ---
     plotter.subplot(1, 1)
     chart2 = create_time_series_chart(
-        t_array, data["E2_z"], data["B2"], data["S2_y"], "Location 2",
+        t_array,
+        data["E2_z"],
+        data["B2"],
+        data["S2_y"],
+        "Location 2",
     )
     plotter.add_chart(chart2)
 
@@ -831,9 +855,11 @@ def main_save(filename: str = "em_field_animation.mp4"):
 # Measurement Analysis
 # =============================================================================
 
+
 @dataclass
 class MeasurementStats:
     """RMS and average statistics for a measurement period."""
+
     E_rms: float  # RMS of E field magnitude
     B_rms: float  # RMS of B field magnitude
     S_y_avg: float  # Average of S_y (power flow direction indicator)
@@ -967,11 +993,11 @@ def create_measurement_bar_chart(stats: dict, filename: str = "measurement_compa
     import matplotlib.pyplot as plt
 
     # Enable LaTeX-style rendering
-    plt.rcParams['mathtext.fontset'] = 'cm'
-    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams["mathtext.fontset"] = "cm"
+    plt.rcParams["font.family"] = "serif"
 
     # Set up the figure with dark theme (15% smaller: 14*0.85=11.9, 6*0.85=5.1)
-    plt.style.use('dark_background')
+    plt.style.use("dark_background")
     fig, axes = plt.subplots(1, 2, figsize=(11.9, 5.1))
     fig.patch.set_facecolor(BACKGROUND)
 
@@ -980,7 +1006,7 @@ def create_measurement_bar_chart(stats: dict, filename: str = "measurement_compa
     x_spacing = 0.2  # Tight grouping
     x = np.arange(3) * x_spacing  # E, B, S_y positions
 
-    for idx, (ax, loc_idx) in enumerate(zip(axes, [1, 2])):
+    for _idx, (ax, loc_idx) in enumerate(zip(axes, [1, 2], strict=False)):
         ax.set_facecolor(BACKGROUND)
 
         # Get stats for this location
@@ -998,23 +1024,21 @@ def create_measurement_bar_chart(stats: dict, filename: str = "measurement_compa
         m2_color = (0.85, 0.45, 0.38)  # Muted coral
 
         # Create bars (touching: offset by bar_width/2)
-        ax.bar(x - bar_width/2, m1_vals, bar_width,
-               label=r'Measurement at $t_1$', color=m1_color, edgecolor='none')
-        ax.bar(x + bar_width/2, m2_vals, bar_width,
-               label=r'Measurement at $t_2$', color=m2_color, edgecolor='none')
+        ax.bar(x - bar_width / 2, m1_vals, bar_width, label=r"Measurement at $t_1$", color=m1_color, edgecolor="none")
+        ax.bar(x + bar_width / 2, m2_vals, bar_width, label=r"Measurement at $t_2$", color=m2_color, edgecolor="none")
 
         # Styling with LaTeX
-        ax.set_ylabel(r'Value (a.u.)', color=LABEL_COLOR, fontsize=10)
-        ax.set_title(rf'Location {loc_idx}', color=LABEL_COLOR, fontsize=12)
+        ax.set_ylabel(r"Value (a.u.)", color=LABEL_COLOR, fontsize=10)
+        ax.set_title(rf"Location {loc_idx}", color=LABEL_COLOR, fontsize=12)
         ax.set_xticks(x)
-        ax.set_xticklabels([r'$\langle E \rangle$', r'$\langle B \rangle$', r'$\langle S_y \rangle$'],
-                          color=LABEL_COLOR, fontsize=11)
+        ax.set_xticklabels(
+            [r"$\langle E \rangle$", r"$\langle B \rangle$", r"$\langle S_y \rangle$"], color=LABEL_COLOR, fontsize=11
+        )
         ax.tick_params(colors=LABEL_COLOR, labelsize=9)
-        ax.legend(facecolor=BACKGROUND, edgecolor=(0.4, 0.4, 0.4),
-                  labelcolor=LABEL_COLOR, fontsize=9, framealpha=0.8)
+        ax.legend(facecolor=BACKGROUND, edgecolor=(0.4, 0.4, 0.4), labelcolor=LABEL_COLOR, fontsize=9, framealpha=0.8)
 
         # Horizontal line at y=0
-        ax.axhline(y=0, color=LABEL_COLOR, linestyle='-', alpha=0.3, linewidth=0.5)
+        ax.axhline(y=0, color=LABEL_COLOR, linestyle="-", alpha=0.3, linewidth=0.5)
 
         # Grid (subtle)
         ax.yaxis.grid(True, alpha=0.15, color=LABEL_COLOR, linewidth=0.5)
@@ -1025,10 +1049,9 @@ def create_measurement_bar_chart(stats: dict, filename: str = "measurement_compa
             spine.set_color(LABEL_COLOR)
             spine.set_alpha(0.25)
 
-    plt.suptitle(r'Field Measurements: Before vs After Power Flow Reversal',
-                 color=LABEL_COLOR, fontsize=13, y=0.98)
+    plt.suptitle(r"Field Measurements: Before vs After Power Flow Reversal", color=LABEL_COLOR, fontsize=13, y=0.98)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(filename, dpi=150, facecolor=BACKGROUND, edgecolor='none', bbox_inches='tight')
+    plt.savefig(filename, dpi=150, facecolor=BACKGROUND, edgecolor="none", bbox_inches="tight")
     plt.close()
 
     print(f"Saved bar chart to {filename}")

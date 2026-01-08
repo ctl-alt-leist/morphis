@@ -24,7 +24,7 @@ from typing import Dict, Optional, Tuple
 
 import pyvista as pv
 import vtk
-from numpy import array, eye, pi, zeros
+from numpy import array, pi, zeros
 from numpy.linalg import norm
 
 from morphis.ga.model import Blade
@@ -79,9 +79,7 @@ class TrackedBlade:
         self.vtk_transform.Identity()
 
         # Apply translation first (will be applied second to points in VTK)
-        self.vtk_transform.Translate(
-            vt.translation[0], vt.translation[1], vt.translation[2]
-        )
+        self.vtk_transform.Translate(vt.translation[0], vt.translation[1], vt.translation[2])
 
         # Apply rotation second (will be applied first to points in VTK)
         from scipy.spatial.transform import Rotation
@@ -143,11 +141,7 @@ class AnimatedCanvas:
             if self._show_basis:
                 from morphis.visualization.drawing import draw_coordinate_basis
 
-                axis_color = (
-                    (0.85, 0.85, 0.85)
-                    if not self._is_light_theme()
-                    else (0.15, 0.15, 0.15)
-                )
+                axis_color = (0.85, 0.85, 0.85) if not self._is_light_theme() else (0.15, 0.15, 0.15)
                 draw_coordinate_basis(self._plotter, color=axis_color)
 
     def _is_light_theme(self) -> bool:
@@ -236,23 +230,15 @@ class AnimatedCanvas:
             edges_mesh, faces_mesh = self._create_parallelepiped_mesh(corners)
 
             # Add to plotter and get actors
-            edges_actor = self._plotter.add_mesh(
-                edges_mesh, color=color, smooth_shading=True
-            )
-            faces_actor = self._plotter.add_mesh(
-                faces_mesh, color=color, opacity=0.2, smooth_shading=True
-            )
+            edges_actor = self._plotter.add_mesh(edges_mesh, color=color, smooth_shading=True)
+            faces_actor = self._plotter.add_mesh(faces_mesh, color=color, opacity=0.2, smooth_shading=True)
 
             # Create tracking record
-            tracked = TrackedBlade(
-                blade, edges_mesh, faces_mesh, edges_actor, faces_actor, color
-            )
+            tracked = TrackedBlade(blade, edges_mesh, faces_mesh, edges_actor, faces_actor, color)
             self._tracked[blade_id] = tracked
 
         else:
-            raise NotImplementedError(
-                f"Tracking grade {blade.grade} blades not yet implemented"
-            )
+            raise NotImplementedError(f"Tracking grade {blade.grade} blades not yet implemented")
 
         return blade_id
 
