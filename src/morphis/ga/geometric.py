@@ -12,7 +12,7 @@ Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 Blade naming convention: u, v, w (never a, b, c for blades).
 """
 
-from numpy import einsum, zeros
+from numpy import einsum, newaxis, zeros
 from numpy.typing import NDArray
 
 from morphis.ga.context import GeometricContext
@@ -22,7 +22,7 @@ from morphis.ga.structure import (
     geometric_normalization,
     geometric_signature,
 )
-from morphis.ga.utils import get_common_cdim, get_common_dim
+from morphis.ga.utils import broadcast_collection_shape, get_common_cdim, get_common_dim
 
 
 # =============================================================================
@@ -30,7 +30,7 @@ from morphis.ga.utils import get_common_cdim, get_common_dim
 # =============================================================================
 
 
-def geometric(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
+def _geometric_bl_bl(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
     """
     Geometric product of two blades: uv = sum of <uv>_r over grades r
 
@@ -77,11 +77,13 @@ def geometric(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
             # Scalar result
             result_data = norm * einsum(sig, *metric_args, u.data, v.data)
             component = scalar_blade(result_data, dim=d, cdim=cdim)
+
         elif c == 0:
             # Pure wedge (no contractions)
             delta = generalized_delta(r, d)
             result_data = norm * einsum(sig, u.data, v.data, delta)
             component = Blade(data=result_data, grade=r, dim=d, cdim=cdim)
+
         else:
             # Mixed: contractions + antisymmetrization
             delta = generalized_delta(r, d)
@@ -99,21 +101,22 @@ def geometric(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
 # =============================================================================
 
 
-def grade_project(m: MultiVector, k: int) -> Blade:
+def grade_project(M: MultiVector, k: int) -> Blade:
     """
     Extract grade-k component from multivector: <M>_k
 
     Returns grade-k blade if present, otherwise zero blade.
     """
-    component = m.grade_select(k)
+    component = M.grade_select(k)
 
     if component is not None:
         return component
 
     # Return zero blade of appropriate grade
-    d = m.dim
-    cdim = m.cdim
+    d = M.dim
+    cdim = M.cdim
     shape = (1,) * cdim + (d,) * k if k > 0 else (1,) * cdim
+
     return Blade(data=zeros(shape), grade=k, dim=d, cdim=cdim)
 
 
@@ -128,38 +131,38 @@ def scalar_product(u: Blade, v: Blade, g: Metric | None = None) -> NDArray:
 
     Returns scalar array with shape collection_shape.
     """
-    mv = geometric(u, v, g)
-    scalar_blade = mv.grade_select(0)
+    M = geometric(u, v, g)
+    s = M.grade_select(0)
 
-    if scalar_blade is not None:
-        return scalar_blade.data
+    if s is not None:
+        return s.data
 
     # No scalar component
-    from morphis.ga.utils import broadcast_collection_shape
-
     return zeros(broadcast_collection_shape(u, v))
 
 
 def commutator(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
     """
-    Commutator product: [u, v] = (1/2)(uv - vu)
+    Commutator product: [u, v] = (1 / 2) (uv - vu)
 
     Extracts antisymmetric part (odd grade differences).
     """
     uv = geometric(u, v, g)
     vu = geometric(v, u, g)
-    return (uv - vu) * 0.5
+
+    return 0.5 * (uv - vu)
 
 
 def anticommutator(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
     """
-    Anticommutator product: u * v = (1/2)(uv + vu)
+    Anticommutator product: u * v = (1 / 2) (uv + vu)
 
     Extracts symmetric part (even grade differences).
     """
     uv = geometric(u, v, g)
     vu = geometric(v, u, g)
-    return (uv + vu) * 0.5
+
+    return 0.5 * (uv + vu)
 
 
 # =============================================================================
@@ -167,9 +170,9 @@ def anticommutator(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
 # =============================================================================
 
 
-def reverse(u: Blade) -> Blade:
+def _reverse_bl(u: Blade) -> Blade:
     """
-    Reverse: reverse(u) = (-1)^(k(k-1)/2) u for grade-k blade.
+    Reverse a blade: reverse(u) = (-1)^(k (k - 1) / 2) u for grade-k blade.
 
     Reverses the order of vector factors in the blade.
     Context: Preserves input blade context.
@@ -186,42 +189,56 @@ def reverse(u: Blade) -> Blade:
     )
 
 
-def reverse_mv(m: MultiVector) -> MultiVector:
+def _reverse_mv(M: MultiVector) -> MultiVector:
     """
     Reverse each component of a multivector.
 
     Returns MultiVector with all components reversed.
     """
-    components = {k: reverse(blade) for k, blade in m.components.items()}
-    return MultiVector(components=components, dim=m.dim, cdim=m.cdim)
+    components = {k: _reverse_bl(blade) for k, blade in M.components.items()}
+
+    return MultiVector(components=components, dim=M.dim, cdim=M.cdim)
 
 
-def inverse(u: Blade, g: Metric | None = None) -> Blade:
+def reverse(u: Blade | MultiVector) -> Blade | MultiVector:
     """
-    Inverse: u^(-1) = reverse(u) / (u * reverse(u))
+    Reverse: reverse(u) = (-1)^(k (k - 1) / 2) u for grade-k blade.
+
+    For multivectors, reverses each component.
+
+    Reverses the order of vector factors.
+    Context: Preserves input context.
+    """
+    if isinstance(u, Blade):
+        return _reverse_bl(u)
+
+    return _reverse_mv(u)
+
+
+def _inverse_bl(u: Blade, g: Metric | None = None) -> Blade:
+    """
+    Inverse of a blade: u^(-1) = reverse(u) / (u * reverse(u))
 
     Requires u * reverse(u) to be nonzero scalar.
     Context: Preserves input blade context.
     """
     g = euclidean(u.dim) if g is None else g
 
-    u_rev = reverse(u)
-    u_u_rev = geometric(u, u_rev, g)
+    u_rev = _reverse_bl(u)
+    u_u_rev = _geometric_bl_bl(u, u_rev, g)
 
     # Extract scalar part
-    scalar = u_u_rev.grade_select(0)
-    if scalar is None:
+    s = u_u_rev.grade_select(0)
+    if s is None:
         raise ValueError("Blade square is not scalar - cannot invert")
 
     # Divide reversed blade by scalar
-    from numpy import newaxis
-
-    scalar_expanded = scalar.data
+    s_expanded = s.data
     for _ in range(u.grade):
-        scalar_expanded = scalar_expanded[..., newaxis]
+        s_expanded = s_expanded[..., newaxis]
 
     return Blade(
-        data=u_rev.data / scalar_expanded,
+        data=u_rev.data / s_expanded,
         grade=u.grade,
         dim=u.dim,
         cdim=u.cdim,
@@ -229,46 +246,148 @@ def inverse(u: Blade, g: Metric | None = None) -> Blade:
     )
 
 
-def geometric_mv_mv(m1: MultiVector, m2: MultiVector, g: Metric | None = None) -> MultiVector:
+def _inverse_mv(M: MultiVector, g: Metric | None = None) -> MultiVector:
+    """
+    Inverse of a multivector: M^(-1) = reverse(M) / (M * reverse(M))
+
+    Requires M * reverse(M) to be invertible scalar.
+    """
+    g = euclidean(M.dim) if g is None else g
+
+    M_rev = _reverse_mv(M)
+    M_M_rev = _geometric_mv_mv(M, M_rev, g)
+
+    # Extract scalar part
+    s = M_M_rev.grade_select(0)
+    if s is None:
+        raise ValueError("MultiVector product with reverse is not scalar - cannot invert")
+
+    return M_rev * (1.0 / s.data)
+
+
+def inverse(u: Blade | MultiVector, g: Metric | None = None) -> Blade | MultiVector:
+    """
+    Inverse: u^(-1) = reverse(u) / (u * reverse(u))
+
+    Requires u * reverse(u) to be nonzero scalar.
+    Context: Preserves input context.
+    """
+    if isinstance(u, Blade):
+        return _inverse_bl(u, g)
+
+    return _inverse_mv(u, g)
+
+
+def _geometric_mv_mv(M: MultiVector, N: MultiVector, g: Metric | None = None) -> MultiVector:
     """
     Geometric product of two multivectors.
 
     Computes all pairwise geometric products of components and sums.
     """
-    g = euclidean(m1.dim) if g is None else g
+    g = euclidean(M.dim) if g is None else g
 
-    if m1.dim != m2.dim:
-        raise ValueError(f"Dimension mismatch: {m1.dim} != {m2.dim}")
+    if M.dim != N.dim:
+        raise ValueError(f"Dimension mismatch: {M.dim} != {N.dim}")
 
     result_components: dict[int, Blade] = {}
 
-    for _k1, blade1 in m1.components.items():
-        for _k2, blade2 in m2.components.items():
-            product = geometric(blade1, blade2, g)
+    for _k1, u in M.components.items():
+        for _k2, v in N.components.items():
+            product = _geometric_bl_bl(u, v, g)
             for grade, component in product.components.items():
                 if grade in result_components:
                     result_components[grade] = result_components[grade] + component
                 else:
                     result_components[grade] = component
 
-    return MultiVector(components=result_components, dim=m1.dim, cdim=max(m1.cdim, m2.cdim))
+    return MultiVector(components=result_components, dim=M.dim, cdim=max(M.cdim, N.cdim))
 
 
-def inverse_mv(m: MultiVector, g: Metric | None = None) -> MultiVector:
+def geometric(u: Blade | MultiVector, v: Blade | MultiVector, g: Metric | None = None) -> MultiVector:
     """
-    Inverse of a multivector: m^(-1) = reverse(m) / (m * reverse(m))
+    Geometric product of two blades or multivectors: uv = sum of <uv>_r over grades r
 
-    Requires m * reverse(m) to be invertible scalar.
+    For blades of grade j and k, produces components at grades
+    |j - k|, |j - k| + 2, ..., j + k (same parity as j + k).
+
+    Each grade r corresponds to (j + k - r) / 2 metric contractions.
+
+    Context: Preserves if both match, otherwise None.
+
+    Returns MultiVector containing all nonzero grade components.
     """
-    g = euclidean(m.dim) if g is None else g
+    # Both blades
+    if isinstance(u, Blade) and isinstance(v, Blade):
+        return _geometric_bl_bl(u, v, g)
 
-    m_rev = reverse_mv(m)
-    m_m_rev = geometric_mv_mv(m, m_rev, g)
+    # Convert blades to multivectors if needed
+    if isinstance(u, Blade):
+        u = MultiVector(components={u.grade: u}, dim=u.dim, cdim=u.cdim)
 
-    # Extract scalar part
-    scalar = m_m_rev.grade_select(0)
-    if scalar is None:
-        raise ValueError("MultiVector product with reverse is not scalar - cannot invert")
+    if isinstance(v, Blade):
+        v = MultiVector(components={v.grade: v}, dim=v.dim, cdim=v.cdim)
 
-    # Divide reversed multivector by scalar
-    return m_rev * (1.0 / scalar.data)
+    return _geometric_mv_mv(u, v, g)
+
+
+# =============================================================================
+# Geometric Product with Mixed Types (for operators)
+# =============================================================================
+
+
+def geometric_bl_mv(u: Blade, M: MultiVector, g: Metric | None = None) -> MultiVector:
+    """
+    Geometric product of blade with multivector: u @ M
+
+    Distributes over components.
+
+    Context: Preserves if all match, otherwise None.
+
+    Returns MultiVector.
+    """
+    g = euclidean(u.dim) if g is None else g
+    result_components: dict[int, Blade] = {}
+
+    for _k, component in M.components.items():
+        product = _geometric_bl_bl(u, component, g)
+
+        for grade, blade in product.components.items():
+            if grade in result_components:
+                result_components[grade] = result_components[grade] + blade
+            else:
+                result_components[grade] = blade
+
+    return MultiVector(
+        components=result_components,
+        dim=u.dim,
+        cdim=max(u.cdim, M.cdim),
+    )
+
+
+def geometric_mv_bl(M: MultiVector, u: Blade, g: Metric | None = None) -> MultiVector:
+    """
+    Geometric product of multivector with blade: M @ u
+
+    Distributes over components.
+
+    Context: Preserves if all match, otherwise None.
+
+    Returns MultiVector.
+    """
+    g = euclidean(M.dim) if g is None else g
+    result_components: dict[int, Blade] = {}
+
+    for _k, component in M.components.items():
+        product = _geometric_bl_bl(component, u, g)
+
+        for grade, blade in product.components.items():
+            if grade in result_components:
+                result_components[grade] = result_components[grade] + blade
+            else:
+                result_components[grade] = blade
+
+    return MultiVector(
+        components=result_components,
+        dim=M.dim,
+        cdim=max(M.cdim, u.cdim),
+    )

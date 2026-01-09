@@ -8,16 +8,13 @@ product: p' = M p M†
 All operations support collection dimensions via einsum broadcasting.
 """
 
-from __future__ import annotations
-
-from typing import Dict, Optional
-
-from numpy import array, cos, newaxis, ones, sin, zeros
+from numpy import array, cos, ndarray, newaxis, ones, sin, zeros
 from numpy.typing import NDArray
 
 from morphis.ga.context import degenerate
-from morphis.ga.geometric import geometric_mv_mv, inverse_mv, reverse_mv
+from morphis.ga.geometric import geometric, inverse, reverse
 from morphis.ga.model import Blade, Metric, MultiVector, pga, scalar_blade
+from morphis.geometry.projective import euclidean as to_euclidean, point
 
 
 class Motor(MultiVector):
@@ -34,7 +31,7 @@ class Motor(MultiVector):
     All transformations operate via sandwich product: p' = M p M†
     """
 
-    def __init__(self, components: Dict[int, Blade], dim: int, cdim: int):
+    def __init__(self, components: dict[int, Blade], dim: int, cdim: int):
         """
         Initialize motor from components.
 
@@ -54,7 +51,7 @@ class Motor(MultiVector):
             blade.context = degenerate.projective
 
     @classmethod
-    def rotor(cls, B: Blade, angle: float | NDArray) -> Motor:
+    def rotor(cls, B: Blade, angle: float | NDArray) -> "Motor":
         """
         Pure rotation about origin.
 
@@ -113,7 +110,7 @@ class Motor(MultiVector):
         return cls(components=components, dim=dim, cdim=cdim)
 
     @classmethod
-    def translator(cls, displacement: NDArray, dim: int = None, cdim: int = 0) -> Motor:
+    def translator(cls, displacement: NDArray, dim: int = None, cdim: int = 0) -> "Motor":
         """
         Pure translation.
 
@@ -172,18 +169,18 @@ class Motor(MultiVector):
     @classmethod
     def rotation_about_point(
         cls,
-        center: Blade,
+        p: Blade,
         B: Blade,
         angle: float | NDArray,
-    ) -> Motor:
+    ) -> "Motor":
         """
         Rotation about arbitrary center point.
 
         Implemented as: translate to origin, rotate, translate back.
-        This is equivalent to the line exponential M = exp(-(p ∧ B) θ/2).
+        This is equivalent to the line exponential M = exp(-(p ^ B) theta / 2).
 
         Args:
-            center: PGA point (grade-1) for rotation center
+            p: PGA point (grade-1) for rotation center
             B: Euclidean bivector defining rotation plane
             angle: Rotation angle in radians
 
@@ -192,50 +189,72 @@ class Motor(MultiVector):
 
         Example:
             p = point([1, 0, 0])  # Center at x=1
-            B = bivector_blade([[0,0,0,0,0,1]], dim=4)  # e_{12}
-            M = Motor.rotation_about_point(p, B, pi/2)
+            B = bivector_blade([[0, 0, 0, 0, 0, 1]], dim=4)  # e_{12}
+            M = Motor.rotation_about_point(p, B, pi / 2)
         """
-        from morphis.geometry.projective import euclidean as to_euclidean
-
         # Extract center coordinates (project from PGA to Euclidean)
-        c = to_euclidean(center)  # Shape: (..., d)
+        c = to_euclidean(p)  # Shape: (..., d)
 
-        # Create three motors: T(-c) * R * T(c)
-        T1 = cls.translator(-c, dim=center.dim)  # Translate to origin
+        # Create three motors: T1 (to origin), R (rotate), T2 (back)
+        T1 = cls.translator(-c, dim=p.dim)  # Translate to origin
         R = cls.rotor(B, angle)  # Rotate
-        T2 = cls.translator(c, dim=center.dim)  # Translate back
+        T2 = cls.translator(c, dim=p.dim)  # Translate back
 
         # Compose: T2 * R * T1
         return T2.compose(R).compose(T1)
 
     @classmethod
-    def screw(cls, B: Blade, angle: float | NDArray, pitch: float) -> Motor:
+    def screw(
+        cls,
+        B: Blade,
+        angle: float | NDArray,
+        translation: NDArray,
+        center: NDArray | None = None,
+    ) -> "Motor":
         """
-        Screw motion (rotation + translation along axis).
+        Screw motion: rotation in plane B + translation.
 
-        M = exp(-L s/2)
+        The screw motion rotates by `angle` in the plane defined by bivector B
+        and translates by `translation`. This is the general rigid motion.
 
-        where L = B + (pitch) B* encodes the screw line.
+        In proper GA, the rotation plane is the fundamental object (bivector),
+        not a derived axis. The translation direction is explicit.
 
         Args:
-            B: Euclidean bivector defining screw axis (plane of rotation)
+            B: Bivector defining the rotation plane
             angle: Rotation angle in radians
-            pitch: Translation distance per radian
+            translation: Translation vector
+            center: Optional center point (default: origin)
 
         Returns:
-            Motor representing screw motion
+            Motor representing the screw motion
 
         Example:
-            B = bivector_blade(data, dim=4)
-            M = Motor.screw(B, pi, 1.0)  # 180° + π units translation
+            # Rotation in e12 plane + translation along e3
+            B = e1 ^ e2  # or use bivector_blade
+            M = Motor.screw(B, angle=pi/2, translation=[0, 0, 1])
+
+            # With explicit center
+            M = Motor.screw(B, angle=pi, translation=[0, 0, 2],
+                            center=[1, 0, 0])
         """
-        raise NotImplementedError(
-            "Motor.screw() requires proper dual operation implementation. "
-            "Use Motor.rotor() and Motor.translator() separately for now."
-        )
+        translation = array(translation, dtype=float)
+
+        # Create rotor and translator
+        R = cls.rotor(B, angle)
+        T = cls.translator(translation, dim=B.dim)
+
+        # Compose: T * R (translate after rotate)
+        if center is not None:
+            center = array(center, dtype=float)
+            T_to = cls.translator(-center, dim=B.dim)
+            T_back = cls.translator(center, dim=B.dim)
+            return T_back.compose(T).compose(R).compose(T_to)
+
+        return T.compose(R)
 
     @classmethod
-    def from_line(cls, L: Blade, param: float | NDArray) -> Motor:
+    def from_line(cls, L: Blade, param: float | NDArray) -> "Motor":
         """
         General motor from line exponential.
 
@@ -254,24 +273,24 @@ class Motor(MultiVector):
         )
 
     @classmethod
-    def from_bivector_angle(cls, B: Blade, angle: float | NDArray, center: Optional[Blade] = None) -> Motor:
+    def from_bivector_angle(cls, B: Blade, angle: float | NDArray, p: Blade | None = None) -> "Motor":
         """
         Construct motor from bivector and angle with optional center.
 
         Args:
             B: Bivector defining plane of rotation
             angle: Rotation angle in radians
-            center: Optional PGA point for rotation center
+            p: Optional PGA point for rotation center
 
         Returns:
-            Motor (rotor if center is None, full motor otherwise)
+            Motor (rotor if p is None, full motor otherwise)
         """
-        if center is None:
+        if p is None:
             return cls.rotor(B, angle)
-        else:
-            return cls.rotation_about_point(center, B, angle)
 
-    def apply(self, p: Blade, g: Optional[Metric] = None) -> Blade:
+        return cls.rotation_about_point(p, B, angle)
+
+    def apply(self, p: Blade, g: Metric | None = None) -> Blade:
         """
         Apply motor to PGA points via sandwich product.
 
@@ -279,7 +298,7 @@ class Motor(MultiVector):
 
         Args:
             p: PGA point or points (grade-1, shape: (..., dim))
-            g: PGA metric (defaults to pga(dim-1))
+            g: PGA metric (defaults to pga(dim - 1))
 
         Returns:
             Transformed point(s) with same shape
@@ -295,19 +314,19 @@ class Motor(MultiVector):
         p_mv = MultiVector(components={p.grade: p}, dim=p.dim, cdim=p.cdim)
 
         # Sandwich product: M p M†
-        M_reverse = reverse_mv(self)
-        temp = geometric_mv_mv(self, p_mv, g)
-        result = geometric_mv_mv(temp, M_reverse, g)
+        M_rev = reverse(self)
+        temp = geometric(self, p_mv, g)
+        result = geometric(temp, M_rev, g)
 
         # Extract grade-1 component (the transformed point)
-        transformed_point = result.grade_select(1)
+        transformed = result.grade_select(1)
 
-        if transformed_point is None:
+        if transformed is None:
             raise ValueError("Motor transformation did not produce a grade-1 result")
 
-        return transformed_point
+        return transformed
 
-    def apply_to_euclidean(self, v: NDArray, g: Optional[Metric] = None) -> NDArray:
+    def apply_to_euclidean(self, v: NDArray, g: Metric | None = None) -> NDArray:
         """
         Apply motor to Euclidean vectors (convenience wrapper).
 
@@ -325,13 +344,15 @@ class Motor(MultiVector):
 
         Example:
             vectors = array([[0, 0, 0], [1, 1, 1]])
-            M = Motor.rotor(B, pi/4)
+            M = Motor.rotor(B, pi / 4)
             v_rotated = M.apply_to_euclidean(vectors)
         """
-        from morphis.geometry.projective import euclidean as to_euclidean, point
+        v = array(v)
+        # Calculate cdim: all dimensions except the last are collection dimensions
+        cdim = v.ndim - 1 if v.ndim > 1 else 0
 
         # Embed as PGA points
-        p = point(v)
+        p = point(v, cdim=cdim)
 
         # Apply motor
         p_transformed = self.apply(p, g)
@@ -339,7 +360,7 @@ class Motor(MultiVector):
         # Project back to Euclidean
         return to_euclidean(p_transformed)
 
-    def compose(self, other: Motor, g: Optional[Metric] = None) -> Motor:
+    def compose(self, other: "Motor", g: Metric | None = None) -> "Motor":
         """
         Compose with another motor via geometric product.
 
@@ -360,22 +381,22 @@ class Motor(MultiVector):
 
         Example:
             M1 = Motor.translator([1, 0, 0])
-            M2 = Motor.rotor(B, pi/2)
+            M2 = Motor.rotor(B, pi / 2)
             M = M2.compose(M1)  # Translate then rotate
         """
         g = pga(self.dim - 1) if g is None else g
-        result_mv = geometric_mv_mv(self, other, g)
+        result_mv = geometric(self, other, g)
 
         # Project onto motor grades {0, 2}
         motor_components = {k: v for k, v in result_mv.components.items() if k in {0, 2}}
 
         return Motor(components=motor_components, dim=self.dim, cdim=max(self.cdim, other.cdim))
 
-    def inverse(self, g: Optional[Metric] = None) -> Motor:
+    def inverse(self, g: Metric | None = None) -> "Motor":
         """
         Compute motor inverse.
 
-        For motors (versors), M^{-1} = M† typically.
+        For motors (versors), M^(-1) = M† typically.
 
         Args:
             g: PGA metric
@@ -384,15 +405,15 @@ class Motor(MultiVector):
             Inverse motor
         """
         g = pga(self.dim - 1) if g is None else g
-        inv_mv = inverse_mv(self, g)
+        M_inv = inverse(self, g)
 
-        return Motor(components=inv_mv.components, dim=self.dim, cdim=self.cdim)
+        return Motor(components=M_inv.components, dim=self.dim, cdim=self.cdim)
 
-    def to_matrix(self, g: Optional[Metric] = None) -> NDArray:
+    def to_matrix(self, g: Metric | None = None) -> NDArray:
         """
         Convert motor to transformation matrix for efficient bulk operations.
 
-        Returns (dim × dim) matrix M such that: p' = M @ p
+        Returns (dim x dim) matrix M such that: p' = M @ p
 
         Args:
             g: PGA metric
@@ -452,14 +473,54 @@ class Motor(MultiVector):
             p = point([0, 0, 0])
             p_new = M(p)  # Callable syntax
         """
-        from numpy import ndarray
-
         if isinstance(target, Blade):
             return self.apply(target)
-        elif isinstance(target, ndarray):
+
+        if isinstance(target, ndarray):
             return self.apply_to_euclidean(target)
+
+        raise TypeError(f"Cannot apply motor to {type(target)}")
+
+    def __invert__(self) -> "Motor":
+        """
+        Reverse operator: ~M
+
+        For motors, the reverse is equivalent to the inverse (for normalized motors).
+        Returns M† where M M† = 1.
+        """
+        M_rev = reverse(self)
+        return Motor(components=M_rev.components, dim=self.dim, cdim=self.cdim)
+
+    def __pow__(self, exponent: int) -> "Motor":
+        """
+        Power operation for motors.
+
+        For motors (which are versors), the inverse is computed via
+        the geometric product. Motors should typically be normalized,
+        in which case inverse equals reverse.
+
+        Currently supports:
+            motor**(-1) - multiplicative inverse
+            motor**(1)  - identity (returns self)
+
+        Args:
+            exponent: Integer power (only -1 and 1 supported)
+
+        Returns:
+            Motor: Result of power operation
+
+        Raises:
+            NotImplementedError: For unsupported exponents
+            ValueError: If motor is not invertible
+        """
+        if exponent == -1:
+            return self.inverse()
+        elif exponent == 1:
+            return self
         else:
-            raise TypeError(f"Cannot apply motor to {type(target)}")
+            raise NotImplementedError(
+                f"Power {exponent} not implemented. Only motor**(-1) for multiplicative inverse is supported."
+            )
 
     def __repr__(self) -> str:
         return f"Motor(dim={self.dim}, cdim={self.cdim}, grades={self.grades})"

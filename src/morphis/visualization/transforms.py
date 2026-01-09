@@ -10,7 +10,7 @@ Key classes:
 """
 
 from dataclasses import dataclass, field
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import vtk
 from numpy import array, cos, eye, ndarray, pi, zeros
@@ -190,7 +190,7 @@ class AnimationSequence:
     """
 
     def __init__(self):
-        self.segments: List[AnimationSegment] = []
+        self.segments: list[AnimationSegment] = []
         self._current_state = BladeTransform()
 
     @property
@@ -201,9 +201,9 @@ class AnimationSequence:
     def rotate(
         self,
         angle: float,
-        axis: Tuple[float, float, float] = (0, 0, 1),
+        axis: tuple[float, float, float] = (0, 0, 1),
         duration: float = 1.0,
-        center: Tuple[float, float, float] = (0, 0, 0),
+        center: tuple[float, float, float] = (0, 0, 0),
         easing: Callable[[float], float] = ease_linear,
     ) -> "AnimationSequence":
         """
@@ -246,7 +246,7 @@ class AnimationSequence:
 
     def translate(
         self,
-        target: Tuple[float, float, float],
+        target: tuple[float, float, float],
         duration: float = 1.0,
         easing: Callable[[float], float] = ease_in_out_cubic,
     ) -> "AnimationSequence":

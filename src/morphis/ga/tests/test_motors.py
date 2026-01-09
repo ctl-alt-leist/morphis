@@ -37,7 +37,7 @@ from numpy import allclose, array, cos, linspace, sin, zeros
 from numpy.linalg import norm as np_norm
 from numpy.testing import assert_array_almost_equal
 
-from morphis.ga.geometric import geometric_mv_mv, reverse_mv
+from morphis.ga.geometric import geometric, reverse
 from morphis.ga.model import Blade, pga, vector_blade
 from morphis.ga.motors import Motor
 from morphis.ga.operations import wedge
@@ -153,8 +153,8 @@ class TestRotorVersorProperty:
         rotor = Motor.rotor(b, pi / 3)
 
         g = pga(3)
-        rotor_rev = reverse_mv(rotor)
-        product = geometric_mv_mv(rotor, rotor_rev, g)
+        rotor_rev = reverse(rotor)
+        product = geometric(rotor, rotor_rev, g)
 
         # Should be pure scalar = 1
         scalar = product.grade_select(0)
@@ -173,8 +173,8 @@ class TestRotorVersorProperty:
 
         for angle in [0, pi / 6, pi / 4, pi / 3, pi / 2, pi, 3 * pi / 2]:
             rotor = Motor.rotor(b, angle)
-            rotor_rev = reverse_mv(rotor)
-            product = geometric_mv_mv(rotor, rotor_rev, g)
+            rotor_rev = reverse(rotor)
+            product = geometric(rotor, rotor_rev, g)
 
             scalar = product.grade_select(0)
             assert allclose(scalar.data, 1.0), f"Failed for angle {angle}"
@@ -189,13 +189,13 @@ class TestRotorInverse:
         rotor = Motor.rotor(b, pi / 4)
 
         g = pga(3)
-        inverse = rotor.inverse(g)
-        reverse = reverse_mv(rotor)
+        rotor_inv = rotor.inverse(g)
+        rotor_rev = reverse(rotor)
 
         # Compare components
         for grade in rotor.grades:
-            inv_component = inverse.grade_select(grade)
-            rev_component = reverse.grade_select(grade)
+            inv_component = rotor_inv.grade_select(grade)
+            rev_component = rotor_rev.grade_select(grade)
             assert_array_almost_equal(inv_component.data, rev_component.data)
 
     def test_rotor_times_inverse_is_identity(self):
@@ -204,8 +204,8 @@ class TestRotorInverse:
         rotor = Motor.rotor(b, pi / 3)
 
         g = pga(3)
-        inverse = rotor.inverse(g)
-        product = geometric_mv_mv(rotor, inverse, g)
+        rotor_inv = rotor.inverse(g)
+        product = geometric(rotor, rotor_inv, g)
 
         scalar = product.grade_select(0)
         assert allclose(scalar.data, 1.0)
@@ -350,8 +350,8 @@ class TestTranslatorVersorProperty:
         trans = Motor.translator(array([1.0, 2.0, 3.0]))
 
         g = pga(3)
-        trans_rev = reverse_mv(trans)
-        product = geometric_mv_mv(trans, trans_rev, g)
+        trans_rev = reverse(trans)
+        product = geometric(trans, trans_rev, g)
 
         scalar = product.grade_select(0)
         assert allclose(scalar.data, 1.0)
@@ -928,18 +928,55 @@ class TestMotorMultiplication:
 # =============================================================================
 
 
+class TestScrewMotion:
+    """Tests for Motor.screw() - combined rotation and translation."""
+
+    @xfail_translation
+    def test_screw_basic(self):
+        """Motor.screw() combines rotation and translation."""
+        # Create a bivector for rotation plane (e1^e2 in 4D PGA - the xy-plane)
+        # In PGA, indices 1,2,3 are Euclidean; index 0 is ideal (weight)
+        B = euclidean_bivector(1, 2, dim=4)
+
+        # Screw: rotate pi/2 in xy-plane and translate along z
+        translation = array([0.0, 0.0, 1.0])
+        M = Motor.screw(B, pi / 2, translation)
+
+        # Apply to a point at (1,0,0)
+        p = point(array([1.0, 0.0, 0.0]))
+        p_result = M(p)
+
+        # After pi/2 rotation in xy-plane: (1,0,0) -> (0,1,0)
+        # Plus translation (0,0,1): (0,1,0) -> (0,1,1)
+        result = euclidean(p_result)
+        expected = array([0.0, 1.0, 1.0])
+        assert allclose(result, expected, atol=1e-10)
+
+    @xfail_translation
+    def test_screw_with_center(self):
+        """Motor.screw() respects center point."""
+        # e1^e2 is the xy-plane rotation
+        B = euclidean_bivector(1, 2, dim=4)
+        translation = array([0.0, 0.0, 0.5])
+        center = array([1.0, 1.0, 0.0])
+
+        M = Motor.screw(B, pi / 2, translation, center=center)
+
+        # Apply to point at (2, 1, 0) - offset (1, 0, 0) from center
+        p = point(array([2.0, 1.0, 0.0]))
+        p_result = M(p)
+
+        # Relative to center: (1, 0, 0)
+        # After pi/2 rotation: (0, 1, 0)
+        # Back to absolute: (1, 2, 0)
+        # Plus translation: (1, 2, 0.5)
+        result = euclidean(p_result)
+        expected = array([1.0, 2.0, 0.5])
+        assert allclose(result, expected, atol=1e-10)
+
+
 class TestNotImplemented:
     """Tests for features marked as not implemented."""
-
-    def test_screw_raises_not_implemented(self):
-        """Motor.screw() should raise NotImplementedError."""
-        b = euclidean_bivector(1, 2, dim=4)
-
-        try:
-            Motor.screw(b, pi / 2, pitch=1.0)
-            raise AssertionError("Expected NotImplementedError")
-        except NotImplementedError as e:
-            assert "Motor.screw()" in str(e)
 
     def test_from_line_raises_not_implemented(self):
         """Motor.from_line() should raise NotImplementedError."""

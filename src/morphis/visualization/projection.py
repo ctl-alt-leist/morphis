@@ -6,7 +6,7 @@ Supports configurable axis selection and different projection methods.
 """
 
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple
+from typing import Literal
 
 from numpy import abs as np_abs, argsort, zeros
 from numpy.typing import NDArray
@@ -27,12 +27,12 @@ class ProjectionConfig:
         target_dim: Target dimension (default 3)
     """
 
-    axes: Optional[Tuple[int, ...]] = None
+    axes: tuple[int, ...] | None = None
     method: Literal["slice", "principal"] = "slice"
     target_dim: int = 3
 
 
-def _extract_principal_axes(data: NDArray, grade: int, target_dim: int) -> Tuple[int, ...]:
+def _extract_principal_axes(data: NDArray, grade: int, target_dim: int) -> tuple[int, ...]:
     """
     Find the axes with largest component magnitudes.
 
@@ -190,7 +190,7 @@ def project_trivector(blade: Blade, config: ProjectionConfig) -> Blade:
     )
 
 
-def project_blade(blade: Blade, config: Optional[ProjectionConfig] = None) -> Blade:
+def project_blade(blade: Blade, config: ProjectionConfig | None = None) -> Blade:
     """
     Project a blade to lower dimension for visualization.
 
@@ -235,7 +235,7 @@ def project_blade(blade: Blade, config: Optional[ProjectionConfig] = None) -> Bl
         )
 
 
-def get_projection_axes(blade: Blade, config: Optional[ProjectionConfig] = None) -> Tuple[int, ...]:
+def get_projection_axes(blade: Blade, config: ProjectionConfig | None = None) -> tuple[int, ...]:
     """
     Get the axes that would be used for projection.
 

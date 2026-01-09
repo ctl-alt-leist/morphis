@@ -9,7 +9,12 @@ Key functions:
 - draw_coordinate_basis: Draw the standard basis vectors e1, e2, e3
 """
 
-from typing import Optional, Tuple, Union
+# Enable LaTeX/MathText rendering in VTK (must be before pyvista import)
+try:
+    import vtkmodules.vtkRenderingFreeType  # noqa: F401
+    import vtkmodules.vtkRenderingMatplotlib  # noqa: F401
+except ImportError:
+    pass  # LaTeX rendering may not be available
 
 import pyvista as pv
 from numpy import abs as np_abs, argmax, array, cross, ndarray, zeros
@@ -24,7 +29,7 @@ from morphis.visualization.theme import Color
 # =============================================================================
 
 
-def _factor_bivector(B: Blade) -> Tuple[ndarray, ndarray]:
+def _factor_bivector(B: Blade) -> tuple[ndarray, ndarray]:
     """
     Factor a bivector into two vectors: B = u ^ v.
 
@@ -64,7 +69,7 @@ def _factor_bivector(B: Blade) -> Tuple[ndarray, ndarray]:
     return u, v
 
 
-def _factor_trivector(T: Blade) -> Tuple[ndarray, ndarray, ndarray]:
+def _factor_trivector(T: Blade) -> tuple[ndarray, ndarray, ndarray]:
     """
     Factor a trivector into three vectors: T = u ^ v ^ w.
 
@@ -113,7 +118,7 @@ def _factor_trivector(T: Blade) -> Tuple[ndarray, ndarray, ndarray]:
     return zeros(dim), zeros(dim), zeros(dim)
 
 
-def factor_blade(B: Blade) -> Tuple[ndarray, ...]:
+def factor_blade(B: Blade) -> tuple[ndarray, ...]:
     """
     Factor a blade into its constituent vectors.
 
@@ -300,12 +305,12 @@ def _draw_parallelepiped(
 def draw_blade(
     plotter: pv.Plotter,
     b: Blade,
-    p: Union[Blade, ndarray, tuple] = None,
+    p: Blade | ndarray | tuple = None,
     color: Color = (0.85, 0.85, 0.85),
     tetrad: bool = True,
     surface: bool = True,
     label: bool = False,
-    name: Optional[str] = None,
+    name: str | None = None,
     shaft_radius: float = 0.008,
     edge_radius: float = 0.006,
     label_offset: float = 0.08,
@@ -466,7 +471,7 @@ def draw_coordinate_basis(
         array([-1, -1, 0]),  # e3: offset in -x-y
     ]
 
-    names = ["e1", "e2", "e3"]
+    names = [r"$\mathbf{e}_1$", r"$\mathbf{e}_2$", r"$\mathbf{e}_3$"]
 
     for direction, offset_dir, axis_name in zip(directions, offset_dirs, names, strict=False):
         # Draw the arrow
@@ -491,14 +496,14 @@ def draw_coordinate_basis(
 
 def draw_basis_blade(
     plotter: pv.Plotter,
-    indices: Tuple[int, ...],
-    position: Union[ndarray, tuple] = (0, 0, 0),
+    indices: tuple[int, ...],
+    position: ndarray | tuple = (0, 0, 0),
     scale: float = 1.0,
     color: Color = (0.85, 0.85, 0.85),
     tetrad: bool = True,
     surface: bool = True,
     label: bool = False,
-    name: Optional[str] = None,
+    name: str | None = None,
     label_offset: float = 0.08,
 ):
     """

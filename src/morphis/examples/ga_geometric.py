@@ -25,7 +25,6 @@ from morphis.ga.geometric import (
 )
 from morphis.ga.model import Blade, euclidean_metric, vector_blade
 from morphis.ga.norms import norm
-from morphis.ga.operations import wedge
 from morphis.utils.pretty import (
     section,
     show_blade,
@@ -67,7 +66,7 @@ def demo_geometric_basics() -> None:
     print("  e_1 ^ e_2 = e_12 (bivector)")
     print()
 
-    uv = geometric(u, v, g)
+    uv = geometric(u, v)
     show_mv("e_1 * e_2", uv)
 
     scalar_part = grade_project(uv, 0)
@@ -80,7 +79,7 @@ def demo_geometric_basics() -> None:
     u = vector_blade(array([1.0, 0.0, 0.0]))
     v = vector_blade(array([3.0, 0.0, 0.0]))  # v = 3u
 
-    uv = geometric(u, v, g)
+    uv = geometric(u, v)
     show_mv("e_1 * (3 e_1)", uv)
     print("  -> Pure scalar: 3 (no bivector part)")
 
@@ -89,7 +88,7 @@ def demo_geometric_basics() -> None:
     u = vector_blade(array([1.0, 0.0, 0.0]))
     v = vector_blade(array([cos(theta), sin(theta), 0.0]))
 
-    uv = geometric(u, v, g)
+    uv = geometric(u, v)
     show_mv("e_1 * v (at pi/4)", uv)
 
     scalar_part = grade_project(uv, 0)
@@ -109,17 +108,17 @@ def demo_vector_contraction() -> None:
     """Demonstrate v^2 = |v|^2 for vectors."""
     section("2. VECTOR CONTRACTION (v^2 = |v|^2)")
 
-    g = euclidean_metric(3)
+    euclidean_metric(3)
 
     subsection("Unit vector squares to 1")
     e_1 = basis_vector(0, 3)
-    e_1_sq = geometric(e_1, e_1, g)
+    e_1_sq = geometric(e_1, e_1)
     show_mv("e_1 * e_1", e_1_sq)
     print("  -> Scalar 1 (unit vector in Euclidean space)")
 
     subsection("General vector: v^2 = |v|^2")
     v = vector_blade(array([3.0, 4.0, 0.0]))
-    v_sq = geometric(v, v, g)
+    v_sq = geometric(v, v)
     show_mv("v * v  where v = [3, 4, 0]", v_sq)
     print(f"  -> Scalar {grade_project(v_sq, 0).data} = 3^2 + 4^2")
 
@@ -133,14 +132,14 @@ def demo_anticommutativity() -> None:
     """Demonstrate orthogonal vectors anticommute."""
     section("3. ANTICOMMUTATIVITY (orthogonal vectors)")
 
-    g = euclidean_metric(3)
+    euclidean_metric(3)
 
     e_1 = basis_vector(0, 3)
     e_2 = basis_vector(1, 3)
 
     subsection("e_1 * e_2 vs e_2 * e_1")
-    e_1_e_2 = geometric(e_1, e_2, g)
-    e_2_e_1 = geometric(e_2, e_1, g)
+    e_1_e_2 = geometric(e_1, e_2)
+    e_2_e_1 = geometric(e_2, e_1)
 
     print("e_1 * e_2:")
     show_mv("  result", e_1_e_2)
@@ -165,7 +164,7 @@ def demo_reversion() -> None:
     """Demonstrate the reverse operation."""
     section("4. REVERSION")
 
-    g = euclidean_metric(3)
+    euclidean_metric(3)
 
     print("Reverse sign pattern: (-1)^{k(k-1)/2}")
     print("  Grade 0 (scalar):   +1")
@@ -183,7 +182,7 @@ def demo_reversion() -> None:
     subsection("Bivector reverse (negated)")
     e_1 = basis_vector(0, 3)
     e_2 = basis_vector(1, 3)
-    B = wedge(e_1, e_2)
+    B = e_1 ^ e_2
     B_rev = reverse(B)
     show_blade("B = e_1 ^ e_2", B)
     show_blade("reverse(B)", B_rev)
@@ -193,7 +192,7 @@ def demo_reversion() -> None:
     u = vector_blade(array([1.0, 0.0, 0.0]))
     v = vector_blade(array([0.0, 1.0, 0.0]))
 
-    uv = geometric(u, v, g)
+    uv = geometric(u, v)
     uv_scalar = grade_project(uv, 0)
     grade_project(uv, 2)
 
@@ -221,19 +220,19 @@ def demo_inverse() -> None:
     print("  Expected: v / 25 = [0.12, 0.16, 0]")
 
     subsection("Verification: v^{-1} * v = 1")
-    product = geometric(v_inv, v, g)
+    product = geometric(v_inv, v)
     scalar = grade_project(product, 0)
     show_scalar("v^{-1} * v", scalar.data)
 
     subsection("Bivector inverse")
     e_1 = basis_vector(0, 3)
     e_2 = basis_vector(1, 3)
-    B = wedge(e_1, e_2)
+    B = e_1 ^ e_2
     B_inv = inverse(B, g)
     show_blade("B = e_1 ^ e_2", B)
     show_blade("B^{-1}", B_inv)
 
-    product = geometric(B_inv, B, g)
+    product = geometric(B_inv, B)
     scalar = grade_project(product, 0)
     show_scalar("B^{-1} * B", scalar.data)
     print("  -> Bivector inverse satisfies B^{-1} * B = 1")
@@ -277,7 +276,7 @@ def demo_grade_structure() -> None:
     """Demonstrate grade structure of geometric products."""
     section("7. GRADE STRUCTURE")
 
-    g = euclidean_metric(3)
+    euclidean_metric(3)
 
     print("Grade selection rule for blade product:")
     print("  grades(u_j * v_k) = |j-k|, |j-k|+2, ..., j+k")
@@ -285,23 +284,23 @@ def demo_grade_structure() -> None:
     subsection("Vector * Vector (grades 1+1 -> 0, 2)")
     e_1 = basis_vector(0, 3)
     e_2 = basis_vector(1, 3)
-    result = geometric(e_1, e_2, g)
+    result = geometric(e_1, e_2)
     print(f"  e_1 * e_2 has grades: {list(result.components.keys())}")
     print("  Grade 0: scalar (dot product)")
     print("  Grade 2: bivector (wedge product)")
 
     subsection("Vector * Bivector (grades 1+2 -> 1, 3)")
-    B = wedge(e_1, e_2)
-    result = geometric(e_1, B, g)
+    B = e_1 ^ e_2
+    result = geometric(e_1, B)
     print(f"  e_1 * (e_1 ^ e_2) has grades: {list(result.components.keys())}")
     print("  Grade 1: vector (contraction)")
     print("  Grade 3: trivector (extension, if possible)")
 
     subsection("Bivector * Bivector (grades 2+2 -> 0, 2, 4)")
     e_3 = basis_vector(2, 3)
-    B_1 = wedge(e_1, e_2)
-    B_2 = wedge(e_2, e_3)
-    result = geometric(B_1, B_2, g)
+    B_1 = e_1 ^ e_2
+    B_2 = e_2 ^ e_3
+    result = geometric(B_1, B_2)
     print(f"  (e_1^e_2) * (e_2^e_3) has grades: {list(result.components.keys())}")
     print("  Grade 0: scalar")
     print("  Grade 2: bivector")
@@ -317,7 +316,7 @@ def demo_geometric_interpretation() -> None:
     """Show geometric meaning of the geometric product."""
     section("8. GEOMETRIC INTERPRETATION")
 
-    g = euclidean_metric(2)
+    euclidean_metric(2)
 
     print("The geometric product encodes both magnitude and orientation:")
     print("  uv = |u||v| (cos(theta) + I sin(theta))")
@@ -327,18 +326,18 @@ def demo_geometric_interpretation() -> None:
     e_1 = basis_vector(0, 2)
     e_2 = basis_vector(1, 2)
 
-    # e_1 * e_2 gives a bivector
-    I = wedge(e_1, e_2)
+    # e_1 ^ e_2 gives a bivector
+    I = e_1 ^ e_2
     show_blade("I = e_1 ^ e_2 (bivector)", I)
 
     # I * e_1 rotates e_1 toward e_2
-    I_e_1 = geometric(I, e_1, g)
+    I_e_1 = geometric(I, e_1)
     rotated = grade_project(I_e_1, 1)
     show_blade("I * e_1", rotated)
     print("  -> Vector component points in e_2 direction")
 
     subsection("Bivector squared")
-    I_sq = geometric(I, I, g)
+    I_sq = geometric(I, I)
     scalar = grade_project(I_sq, 0)
     show_scalar("I * I", scalar.data)
     print("  -> Scalar result (bivector contracted with itself)")

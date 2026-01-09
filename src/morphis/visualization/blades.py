@@ -9,7 +9,7 @@ Each blade renders to canvas primitives (arrows, curves, points, planes).
 """
 
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple
+from typing import Literal
 
 from numpy import (
     array,
@@ -41,19 +41,19 @@ from morphis.visualization.theme import Color
 class BladeStyle:
     """Style parameters for blade rendering."""
 
-    color: Optional[Color] = None
+    color: Color | None = None
     opacity: float = 0.8
     scale: float = 1.0
 
     # Scalar specific
     scalar_radius_base: float = 0.05
     scalar_radius_scale: float = 0.03
-    positive_color: Optional[Color] = None
-    negative_color: Optional[Color] = None
+    positive_color: Color | None = None
+    negative_color: Color | None = None
 
     # Vector specific
-    arrow_shaft_radius: Optional[float] = None
-    arrow_origin: Optional[Tuple[float, float, float]] = None
+    arrow_shaft_radius: float | None = None
+    arrow_origin: tuple[float, float, float] | None = None
 
     # Bivector specific
     bivector_radius_factor: float = 0.3
@@ -69,7 +69,7 @@ class BladeStyle:
     plane_opacity: float = 0.25
 
     # Dual rendering
-    dual_color: Optional[Color] = None
+    dual_color: Color | None = None
     dual_opacity: float = 0.5
 
 
@@ -81,8 +81,8 @@ class BladeStyle:
 def render_scalar(
     blade: Blade,
     canvas: Canvas,
-    position: Optional[Tuple[float, float, float]] = None,
-    style: Optional[BladeStyle] = None,
+    position: tuple[float, float, float] | None = None,
+    style: BladeStyle | None = None,
 ) -> None:
     """
     Render scalar blade as sphere at origin (or specified position).
@@ -119,8 +119,8 @@ def render_scalar(
 def render_vector(
     blade: Blade,
     canvas: Canvas,
-    projection: Optional[ProjectionConfig] = None,
-    style: Optional[BladeStyle] = None,
+    projection: ProjectionConfig | None = None,
+    style: BladeStyle | None = None,
 ) -> None:
     """
     Render vector blade as arrow from origin.
@@ -175,8 +175,8 @@ def render_bivector(
     blade: Blade,
     canvas: Canvas,
     mode: Literal["circle", "parallelogram", "plane", "circular_arrow"] = "circle",
-    projection: Optional[ProjectionConfig] = None,
-    style: Optional[BladeStyle] = None,
+    projection: ProjectionConfig | None = None,
+    style: BladeStyle | None = None,
 ) -> None:
     """
     Render bivector blade with multiple visualization modes.
@@ -222,7 +222,7 @@ def render_bivector(
         raise ValueError(f"Unknown bivector mode: {mode}")
 
 
-def _bivector_to_normal_and_magnitude(B: NDArray) -> Tuple[NDArray, float]:
+def _bivector_to_normal_and_magnitude(B: NDArray) -> tuple[NDArray, float]:
     """
     Extract normal vector and magnitude from 3D bivector.
 
@@ -244,7 +244,7 @@ def _bivector_to_normal_and_magnitude(B: NDArray) -> Tuple[NDArray, float]:
     return normal, magnitude
 
 
-def _bivector_to_spanning_vectors(B: NDArray) -> Tuple[NDArray, NDArray]:
+def _bivector_to_spanning_vectors(B: NDArray) -> tuple[NDArray, NDArray]:
     """
     Decompose bivector into two spanning vectors a, b such that B ~ a ∧ b.
 
@@ -271,7 +271,7 @@ def _bivector_to_spanning_vectors(B: NDArray) -> Tuple[NDArray, NDArray]:
     return a, b
 
 
-def _orthonormal_basis_in_plane(normal: NDArray) -> Tuple[NDArray, NDArray]:
+def _orthonormal_basis_in_plane(normal: NDArray) -> tuple[NDArray, NDArray]:
     """
     Construct orthonormal basis vectors in plane with given normal.
     """
@@ -406,8 +406,8 @@ def render_trivector(
     blade: Blade,
     canvas: Canvas,
     mode: Literal["parallelepiped", "sphere"] = "parallelepiped",
-    projection: Optional[ProjectionConfig] = None,
-    style: Optional[BladeStyle] = None,
+    projection: ProjectionConfig | None = None,
+    style: BladeStyle | None = None,
 ) -> None:
     """
     Render trivector blade as 3D volume element.
@@ -454,7 +454,7 @@ def _trivector_magnitude(T: NDArray) -> float:
     return abs(T_012)
 
 
-def _trivector_to_spanning_vectors(T: NDArray) -> Tuple[NDArray, NDArray, NDArray]:
+def _trivector_to_spanning_vectors(T: NDArray) -> tuple[NDArray, NDArray, NDArray]:
     """
     Decompose trivector into three spanning vectors.
 
@@ -550,11 +550,11 @@ def _render_trivector_sphere(T: NDArray, canvas: Canvas, style: BladeStyle) -> N
 
 def visualize_blade(
     blade: Blade,
-    canvas: Optional[Canvas] = None,
+    canvas: Canvas | None = None,
     mode: str = "auto",
-    projection: Optional[ProjectionConfig] = None,
+    projection: ProjectionConfig | None = None,
     show_dual: bool = False,
-    style: Optional[BladeStyle] = None,
+    style: BladeStyle | None = None,
 ) -> Canvas:
     """
     Main entry point for blade visualization.
@@ -601,8 +601,8 @@ def visualize_blade(
 
 def visualize_blades(
     blades: list,
-    canvas: Optional[Canvas] = None,
-    style: Optional[BladeStyle] = None,
+    canvas: Canvas | None = None,
+    style: BladeStyle | None = None,
 ) -> Canvas:
     """
     Visualize multiple blades on same canvas.
@@ -637,7 +637,7 @@ def _auto_mode(blade: Blade) -> str:
 def _render_higher_grade(
     blade: Blade,
     canvas: Canvas,
-    projection: Optional[ProjectionConfig],
+    projection: ProjectionConfig | None,
     style: BladeStyle,
     show_dual: bool,
 ) -> None:
@@ -663,7 +663,7 @@ def _render_higher_grade(
 def _render_dual(
     blade: Blade,
     canvas: Canvas,
-    projection: Optional[ProjectionConfig],
+    projection: ProjectionConfig | None,
     style: BladeStyle,
 ) -> None:
     """Render the dual of a blade."""

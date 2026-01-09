@@ -111,14 +111,19 @@ def demo_single_vs_single() -> None:
     v = vector_blade(array([0.0, 1.0, 0.0]))
     w = vector_blade(array([0.0, 0.0, 1.0]))
 
-    subsection("Wedge Product: u ∧ v")
-    uv = wedge(u, v)
-    show_blade("u ∧ v", uv)
+    subsection("Wedge Product: u ^ v (operator)")
+    uv = u ^ v
+    show_blade("u ^ v", uv)
 
-    subsection("Variadic Wedge: u ∧ v ∧ w (trivector)")
+    subsection("Chained Wedge: u ^ v ^ w (operator)")
+    uvw_op = u ^ v ^ w
+    show_blade("u ^ v ^ w", uvw_op)
+    print("  Chained operators evaluate left-to-right: (u ^ v) ^ w")
+
+    subsection("Variadic Wedge: wedge(u, v, w) (optimized)")
     uvw = wedge(u, v, w)
     show_blade("wedge(u, v, w)", uvw)
-    print("  Single einsum with ε-symbol: no nested calls needed!")
+    print("  Single einsum with ε-symbol: optimal for large collections!")
 
     subsection("Dot Product")
     p = vector_blade(array([1.0, 2.0, 3.0]))
@@ -167,9 +172,9 @@ def demo_single_vs_array() -> None:
     show_array("e1 . [e1, e2, e3, e1+e2]", dots)
     print("  expected: [1, 0, 0, 1]")
 
-    subsection("Wedge product: single ^ many")
-    wedges = wedge(single, many)
-    show_blade("e1 ^ many", wedges)
+    subsection("Wedge product: single ^ many (operator)")
+    wedges = single ^ many
+    show_blade("single ^ many", wedges)
     print("  Note: e1 ^ e1 = 0, giving zero in first position")
 
 
@@ -205,9 +210,9 @@ def demo_array_vs_array() -> None:
     show_array("u[k] . v[k]", dots)
     print("  expected: [0, 0, 0] (all orthogonal pairs)")
 
-    subsection("Element-wise wedge product")
-    wedges = wedge(u, v)
-    show_blade("u[k] ^ v[k]", wedges)
+    subsection("Element-wise wedge product (operator)")
+    wedges = u ^ v
+    show_blade("u ^ v", wedges)
 
     subsection("Element-wise norms")
     norms = norm(u, g)
@@ -261,7 +266,7 @@ def demo_complements() -> None:
 
     u = vector_blade(array([1.0, 0.0, 0.0]))
     v = vector_blade(array([0.0, 1.0, 0.0]))
-    B = wedge(u, v)
+    B = u ^ v
 
     subsection("Right complement of a vector")
     u_comp = right_complement(u)
@@ -291,13 +296,13 @@ def demo_meet() -> None:
     v = vector_blade(array([0.0, 1.0, 0.0]))
     w = vector_blade(array([0.0, 0.0, 1.0]))
 
-    # Variadic wedge for clean plane definitions
-    A = wedge(u, v)  # xy-plane
-    B = wedge(u, w)  # xz-plane
+    # Using ^ operator for clean plane definitions
+    A = u ^ v  # xy-plane
+    B = u ^ w  # xz-plane
 
     subsection("Intersection of two planes")
-    show_blade("A = u ∧ v (xy-plane)", A)
-    show_blade("B = u ∧ w (xz-plane)", B)
+    show_blade("A = u ^ v (xy-plane)", A)
+    show_blade("B = u ^ w (xz-plane)", B)
 
     intersection = meet(A, B)
     show_blade("meet(A, B)", intersection)

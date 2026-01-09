@@ -11,7 +11,6 @@ from morphis.ga.geometric import (
     grade_project,
     inverse,
     reverse,
-    reverse_mv,
     scalar_product,
 )
 from morphis.ga.model import (
@@ -323,7 +322,7 @@ class TestReversion:
         v = vector_blade(array([0.0, 1.0, 0.0]))
 
         uv = geometric(u, v, g)
-        uv_rev = reverse_mv(uv)
+        uv_rev = reverse(uv)
 
         v_rev = reverse(v)
         u_rev = reverse(u)

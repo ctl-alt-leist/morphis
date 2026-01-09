@@ -14,7 +14,7 @@ Examples:
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Tuple
+from typing import Tuple
 
 
 class Signature(Enum):
@@ -79,7 +79,7 @@ class GeometricContext:
         return self.signature == other.signature and self.structure == other.structure
 
     @classmethod
-    def merge(cls, *contexts: Optional["GeometricContext"]) -> Optional["GeometricContext"]:
+    def merge(cls, *contexts: "GeometricContext | None") -> "GeometricContext | None":
         """
         Merge multiple contexts, returning None if incompatible.
 

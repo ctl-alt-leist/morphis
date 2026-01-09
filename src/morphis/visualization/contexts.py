@@ -11,7 +11,6 @@ planes are infinite surfaces.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from numpy import array, cross, zeros
 from numpy.linalg import norm as np_norm
@@ -53,7 +52,7 @@ class PGAStyle(BladeStyle):
 def render_pga_point(
     blade: Blade,
     canvas: Canvas,
-    style: Optional[PGAStyle] = None,
+    style: PGAStyle | None = None,
 ) -> None:
     """
     Render PGA point (grade-1 in PGA) as sphere at Euclidean location.
@@ -119,7 +118,7 @@ def _to_3d(coords: NDArray) -> NDArray:
 def render_pga_line(
     blade: Blade,
     canvas: Canvas,
-    style: Optional[PGAStyle] = None,
+    style: PGAStyle | None = None,
 ) -> None:
     """
     Render PGA line (grade-2 in PGA) as extended line segment.
@@ -189,7 +188,7 @@ def render_pga_line(
 def render_pga_plane(
     blade: Blade,
     canvas: Canvas,
-    style: Optional[PGAStyle] = None,
+    style: PGAStyle | None = None,
 ) -> None:
     """
     Render PGA plane (grade-3 in PGA) as extended plane surface.
@@ -260,8 +259,8 @@ def is_pga_context(blade: Blade) -> bool:
 
 def visualize_pga_blade(
     blade: Blade,
-    canvas: Optional[Canvas] = None,
-    style: Optional[PGAStyle] = None,
+    canvas: Canvas | None = None,
+    style: PGAStyle | None = None,
 ) -> Canvas:
     """
     Visualize a blade in PGA context with appropriate geometric interpretation.
@@ -295,8 +294,8 @@ def visualize_pga_blade(
 
 def visualize_pga_scene(
     *blades: Blade,
-    canvas: Optional[Canvas] = None,
-    style: Optional[PGAStyle] = None,
+    canvas: Canvas | None = None,
+    style: PGAStyle | None = None,
 ) -> Canvas:
     """
     Visualize multiple PGA blades forming a geometric scene.

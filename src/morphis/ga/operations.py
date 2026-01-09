@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 
 from morphis.ga.context import GeometricContext
 from morphis.ga.duality import right_complement
-from morphis.ga.model import Blade, Metric, euclidean
+from morphis.ga.model import Blade, Metric, MultiVector, euclidean
 from morphis.ga.norms import norm_squared
 from morphis.ga.structure import (
     generalized_delta,
@@ -257,4 +257,95 @@ def reject(u: Blade, v: Blade, g: Metric | None = None) -> Blade:
     """
     d = get_common_dim(u, v)
     g = euclidean(d) if g is None else g
+
     return u - project(u, v, g)
+
+
+# =============================================================================
+# Wedge Product with MultiVectors
+# =============================================================================
+
+
+def wedge_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
+    """
+    Wedge product of blade with multivector: u ^ M
+
+    Distributes over components: u ^ (A + B + ...) = (u ^ A) + (u ^ B) + ...
+
+    Context: Preserves if all match, otherwise None.
+
+    Returns MultiVector.
+    """
+    result_components: dict[int, Blade] = {}
+
+    for _k, component in M.components.items():
+        product = wedge(u, component)
+        result_grade = product.grade
+
+        if result_grade in result_components:
+            result_components[result_grade] = result_components[result_grade] + product
+        else:
+            result_components[result_grade] = product
+
+    return MultiVector(
+        components=result_components,
+        dim=u.dim,
+        cdim=max(u.cdim, M.cdim),
+    )
+
+
+def wedge_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
+    """
+    Wedge product of multivector with blade: M ^ u
+
+    Distributes over components.
+
+    Context: Preserves if all match, otherwise None.
+
+    Returns MultiVector.
+    """
+    result_components: dict[int, Blade] = {}
+
+    for _k, component in M.components.items():
+        product = wedge(component, u)
+        result_grade = product.grade
+
+        if result_grade in result_components:
+            result_components[result_grade] = result_components[result_grade] + product
+        else:
+            result_components[result_grade] = product
+
+    return MultiVector(
+        components=result_components,
+        dim=M.dim,
+        cdim=max(M.cdim, u.cdim),
+    )
+
+
+def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
+    """
+    Wedge product of two multivectors: M ^ N
+
+    Computes all pairwise wedge products of components and sums.
+
+    Context: Preserves if all match, otherwise None.
+
+    Returns MultiVector.
+    """
+    result_components: dict[int, Blade] = {}
+
+    for _k1, blade1 in M.components.items():
+        for _k2, blade2 in N.components.items():
+            product = wedge(blade1, blade2)
+            result_grade = product.grade
+
+            if result_grade in result_components:
+                result_components[result_grade] = result_components[result_grade] + product
+            else:
+                result_components[result_grade] = product
+
+    return MultiVector(
+        components=result_components,
+        dim=M.dim,
+        cdim=max(M.cdim, N.cdim),
+    )

@@ -4,15 +4,13 @@ Coordinate systems and transformations.
 Functions support arbitrary dimensions and broadcasting.
 """
 
-from typing import Tuple
-
-from numpy import arctan2, cos, linspace, meshgrid, ones_like, sin, stack
+from numpy import arccos, arctan2, cos, linspace, meshgrid, ones_like, sin, sqrt, stack, where
 from numpy.typing import NDArray
 
 from morphis.core.vectors import mag
 
 
-def coordinate_grid(*bounds: Tuple[float, float, int]) -> NDArray:
+def coordinate_grid(*bounds: tuple[float, float, int]) -> NDArray:
     """
     Create an N-dimensional coordinate grid.
 
@@ -49,8 +47,6 @@ def to_spherical(v: NDArray) -> NDArray:
 
     Supports broadcasting over leading dimensions.
     """
-    from numpy import arccos, sqrt, where
-
     r = mag(v)
     d = v.shape[-1]
 

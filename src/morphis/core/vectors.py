@@ -7,7 +7,7 @@ The last axis is assumed to be the vector components.
 
 from itertools import permutations
 
-from numpy import diag, einsum, ones, zeros
+from numpy import diag, einsum, ones, sqrt, zeros
 from numpy.typing import NDArray
 
 
@@ -58,8 +58,6 @@ def mag(v: NDArray) -> NDArray:
 
     Works for any dimension.
     """
-    from numpy import sqrt
-
     return sqrt(dot(v, v))
 
 

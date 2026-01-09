@@ -13,10 +13,9 @@ Each theme provides:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Tuple
 
 
-Color = Tuple[float, float, float]
+Color = tuple[float, float, float]
 
 
 # =============================================================================
@@ -34,7 +33,7 @@ class Palette:
     visual rhythm without jarring transitions.
     """
 
-    colors: Tuple[Color, ...]
+    colors: tuple[Color, ...]
     _index: int = field(default=0, compare=False, repr=False)
 
     def __len__(self) -> int:
@@ -46,7 +45,7 @@ class Palette:
     def __iter__(self):
         return iter(self.colors)
 
-    def cycle(self, n: int) -> List[Color]:
+    def cycle(self, n: int) -> list[Color]:
         """Return n colors, cycling through the palette."""
         return [self.colors[k % len(self.colors)] for k in range(n)]
 
@@ -69,6 +68,11 @@ class Theme:
         accent: High-contrast color for emphasis
         muted: Low-saturation color for secondary elements
         label: Text and annotation color
+
+    Computed properties provide contrast-aware colors for UI elements:
+        axis_color: Axis lines (medium contrast)
+        grid_color: Grid lines (subtle, low contrast)
+        text_color: Text and tick labels (high contrast)
     """
 
     name: str
@@ -82,9 +86,53 @@ class Theme:
     label: Color
 
     @property
-    def basis_colors(self) -> Tuple[Color, Color, Color]:
+    def basis_colors(self) -> tuple[Color, Color, Color]:
         """Return basis colors as a tuple for iteration."""
         return (self.e1, self.e2, self.e3)
+
+    def is_light(self) -> bool:
+        """Check if this is a light theme based on background luminance."""
+        r, g, b = self.background
+        # Use standard luminance formula (ITU-R BT.601)
+        return 0.299 * r + 0.587 * g + 0.114 * b > 0.5
+
+    def _contrast_color(self, strength: float) -> Color:
+        """
+        Generate a color that contrasts with background.
+
+        Args:
+            strength: Contrast strength 0.0 (subtle) to 1.0 (strong)
+
+        Returns:
+            Grayscale color appropriate for the theme
+        """
+        if self.is_light():
+            # Dark grays for light backgrounds
+            v = 0.1 + (1 - strength) * 0.3
+        else:
+            # Light grays for dark backgrounds
+            v = 0.6 + strength * 0.3
+        return (v, v, v)
+
+    @property
+    def axis_color(self) -> Color:
+        """Color for axis lines (medium contrast)."""
+        return self._contrast_color(strength=0.6)
+
+    @property
+    def grid_color(self) -> Color:
+        """Color for grid lines (subtle, low contrast)."""
+        return self._contrast_color(strength=0.2)
+
+    @property
+    def text_color(self) -> Color:
+        """Color for text and tick labels (high contrast)."""
+        return self.label
+
+    @property
+    def edge_color(self) -> Color:
+        """Color for edges and outlines (medium-high contrast)."""
+        return self._contrast_color(strength=0.7)
 
 
 # =============================================================================
@@ -227,6 +275,6 @@ def get_theme(name: str) -> Theme:
     return THEMES[name]
 
 
-def list_themes() -> List[str]:
+def list_themes() -> list[str]:
     """Return list of available theme names."""
     return list(THEMES.keys())

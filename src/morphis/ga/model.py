@@ -8,37 +8,18 @@ constructors for Euclidean and PGA metrics.
 Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Tuple
 
-from numpy import asarray, eye, zeros
+from numpy import asarray, eye
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
-# =============================================================================
-# Visual Transform (for visualization, not algebraic)
-# =============================================================================
+if TYPE_CHECKING:
+    from morphis.ga.motors import Motor
 
 
-class VisualTransform:
-    """
-    Visual transform for rendering blades. Separate from algebraic data.
-
-    This stores rotation and translation for how a blade should be displayed,
-    independent of its mathematical representation.
-    """
-
-    def __init__(self):
-        self.rotation = eye(3)  # 3x3 rotation matrix
-        self.translation = zeros(3)  # 3D translation vector
-
-    def reset(self):
-        """Reset to identity transform."""
-        self.rotation = eye(3)
-        self.translation = zeros(3)
-
-
-def _merge_contexts(*contexts: Optional[Any]) -> Optional[Any]:
+def _merge_contexts(*contexts: Any | None) -> Any | None:
     """Merge contexts: return matching context or None if mismatch."""
     from morphis.ga.context import GeometricContext
 
@@ -51,12 +32,19 @@ def _merge_contexts(*contexts: Optional[Any]) -> Optional[Any]:
 
 
 class GABaseModel(BaseModel):
-    """Base model with configuration for NDArray and complex number support."""
+    """
+    Base model for all GA objects.
+
+    Provides common configuration for NDArray/complex support and the geometric
+    context field that tracks semantic interpretation (PGA, Euclidean, etc.).
+    """
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         frozen=False,
     )
+
+    context: Any | None = None  # GeometricContext, using Any for Pydantic compatibility
 
 
 # =============================================================================
@@ -171,37 +159,18 @@ class Blade(GABaseModel):
         Blade(data, grade=k) - infers dim from last axis, cdim from remaining
         Blade(data, grade=0, dim=d) - scalars require explicit dim
         Blade(data, grade=k, dim=d, cdim=c) - fully explicit (all validated)
-
-    Observer pattern:
-        blade.add_observer(callback) - register callback for change notification
-        blade.update_data(new_data) - modify in-place and notify observers
     """
 
     data: NDArray
     grade: int
-    dim: Optional[int] = None  # Inferred from data.shape[-1] if not provided
-    cdim: Optional[int] = None  # Inferred from data.ndim - grade if not provided
-    context: Optional[Any] = None  # GeometricContext, using Any for Pydantic compatibility
-
-    # Private attributes (not Pydantic fields)
-    _observers: List = []
-    _visual_transform: Optional["VisualTransform"] = None
+    dim: int | None = None  # Inferred from data.shape[-1] if not provided
+    cdim: int | None = None  # Inferred from data.ndim - grade if not provided
 
     def __init__(self, data=None, /, **kwargs):
         """Allow positional argument for data: Blade(arr, grade=1)."""
         if data is not None:
             kwargs["data"] = data
         super().__init__(**kwargs)
-        # Initialize per-instance attributes
-        object.__setattr__(self, "_observers", [])
-        object.__setattr__(self, "_visual_transform", None)
-
-    @property
-    def visual_transform(self) -> "VisualTransform":
-        """Get visual transform, creating lazily if needed."""
-        if self._visual_transform is None:
-            object.__setattr__(self, "_visual_transform", VisualTransform())
-        return self._visual_transform
 
     @field_validator("data", mode="before")
     @classmethod
@@ -283,44 +252,6 @@ class Blade(GABaseModel):
         """Set values in the underlying array."""
         self.data[index] = value
 
-    # -------------------------------------------------------------------------
-    # Observer Pattern
-    # -------------------------------------------------------------------------
-
-    def add_observer(self, callback):
-        """
-        Register a callback to be notified when blade data changes.
-
-        The callback takes no arguments and is called after update_data().
-        """
-        self._observers.append(callback)
-
-    def remove_observer(self, callback):
-        """Remove a previously registered observer."""
-        if callback in self._observers:
-            self._observers.remove(callback)
-
-    def _notify_observers(self):
-        """Call all registered observers."""
-        for callback in self._observers:
-            callback()
-
-    def update_data(self, new_data):
-        """
-        Update blade data in-place and notify observers.
-
-        This modifies self.data without creating a new Blade object,
-        preserving any references to this blade.
-
-        Args:
-            new_data: New array data (must have same shape as current data)
-        """
-        new_data = asarray(new_data)
-        if new_data.shape != self.data.shape:
-            raise ValueError(f"New data shape {new_data.shape} != current shape {self.data.shape}")
-        self.data[:] = new_data
-        self._notify_observers()
-
     def __array__(self, dtype=None):
         """Allow np.asarray(blade) to work."""
         if dtype is None:
@@ -339,15 +270,15 @@ class Blade(GABaseModel):
         if self.dim != other.dim:
             raise ValueError(f"Cannot add blades of dim {self.dim} and {other.dim}")
 
-        result_cdim = max(self.cdim, other.cdim)
-        merged_context = _merge_contexts(self.context, other.context)
+        cdim = max(self.cdim, other.cdim)
+        context = _merge_contexts(self.context, other.context)
 
         return Blade(
             data=self.data + other.data,
             grade=self.grade,
             dim=self.dim,
-            cdim=result_cdim,
-            context=merged_context,
+            cdim=cdim,
+            context=context,
         )
 
     def __sub__(self, other: "Blade") -> "Blade":
@@ -359,15 +290,15 @@ class Blade(GABaseModel):
         if self.dim != other.dim:
             raise ValueError(f"Cannot subtract blades of dim {self.dim} and {other.dim}")
 
-        result_cdim = max(self.cdim, other.cdim)
-        merged_context = _merge_contexts(self.context, other.context)
+        cdim = max(self.cdim, other.cdim)
+        context = _merge_contexts(self.context, other.context)
 
         return Blade(
             data=self.data - other.data,
             grade=self.grade,
             dim=self.dim,
-            cdim=result_cdim,
-            context=merged_context,
+            cdim=cdim,
+            context=context,
         )
 
     def __mul__(self, scalar) -> "Blade":
@@ -414,6 +345,84 @@ class Blade(GABaseModel):
             context=context,
         )
 
+    def __xor__(self, other: "Blade | MultiVector") -> "Blade | MultiVector":
+        """
+        Wedge product: u ^ v
+
+        Chained operators like `u ^ v ^ w` evaluate left-to-right, performing
+        multiple einsum operations. For large collections, use `wedge(u, v, w)`
+        for a single optimized einsum.
+
+        Returns Blade or MultiVector depending on operands.
+        """
+        if isinstance(other, Blade):
+            from morphis.ga.operations import wedge
+
+            return wedge(self, other)
+
+        elif isinstance(other, MultiVector):
+            from morphis.ga.operations import wedge_bl_mv
+
+            return wedge_bl_mv(self, other)
+
+        return NotImplemented
+
+    def __invert__(self) -> "Blade":
+        """
+        Reverse operator: ~u
+
+        Equivalent to reverse(u). Reverses the order of vector factors:
+        ~(u ^ v ^ w) = w ^ v ^ u = (-1)^(k(k-1)/2) * (u ^ v ^ w)
+        """
+        from morphis.ga.geometric import reverse
+
+        return reverse(self)
+
+    def transform_by(self, motor: "Motor") -> None:
+        """
+        Transform this blade in-place by a motor.
+
+        Performs the sandwich product M * self * ~M and updates self.data.
+        This is efficient for animation since no new Blade object is created.
+
+        Args:
+            motor: Motor to transform by
+        """
+        transformed = motor.apply(self)
+        self.data[...] = transformed.data
+
+    def __pow__(self, exponent: int) -> "Blade":
+        """
+        Power operation for blades.
+
+        Currently supports:
+            blade**(-1) - multiplicative inverse
+            blade**(1)  - identity (returns self)
+
+        For unit blades (normalized versors), inverse equals reverse.
+        For non-unit blades, inverse depends on norm: u^(-1) = ~u / (u * ~u)
+
+        Args:
+            exponent: Integer power (only -1 and 1 supported)
+
+        Returns:
+            Blade: Result of power operation
+
+        Raises:
+            NotImplementedError: For unsupported exponents
+            ValueError: If blade is not invertible (from inverse())
+        """
+        if exponent == -1:
+            from morphis.ga.geometric import inverse
+
+            return inverse(self)
+        elif exponent == 1:
+            return self
+        else:
+            raise NotImplementedError(
+                f"Power {exponent} not implemented. Only blade**(-1) for multiplicative inverse is supported."
+            )
+
     def __repr__(self) -> str:
         ctx_str = f", context={self.context}" if self.context else ""
         return f"Blade(grade={self.grade}, dim={self.dim}, cdim={self.cdim}, shape={self.shape}{ctx_str})"
@@ -431,7 +440,7 @@ class MultiVector(GABaseModel):
     blades must have the same dim and compatible collection shapes.
     """
 
-    components: Dict[int, Blade]
+    components: dict[int, Blade]
     dim: int
     cdim: int
 
@@ -449,15 +458,15 @@ class MultiVector(GABaseModel):
         return self
 
     @property
-    def grades(self) -> List[int]:
+    def grades(self) -> list[int]:
         """List of grades with nonzero components."""
         return sorted(self.components.keys())
 
-    def grade_select(self, k: int) -> Optional[Blade]:
+    def grade_select(self, k: int) -> Blade | None:
         """Extract the grade-k component, or None if not present."""
         return self.components.get(k)
 
-    def __getitem__(self, k: int) -> Optional[Blade]:
+    def __getitem__(self, k: int) -> Blade | None:
         """Shorthand for grade_select."""
         return self.grade_select(k)
 
@@ -468,24 +477,24 @@ class MultiVector(GABaseModel):
         if self.dim != other.dim:
             raise ValueError(f"Cannot add multivectors of dim {self.dim} and {other.dim}")
 
-        result_cdim = max(self.cdim, other.cdim)
-        result_components = {}
+        cdim = max(self.cdim, other.cdim)
+        components = {}
         all_grades = set(self.grades) | set(other.grades)
 
         for k in all_grades:
             a = self.components.get(k)
             b = other.components.get(k)
             if a is not None and b is not None:
-                result_components[k] = a + b
+                components[k] = a + b
             elif a is not None:
-                result_components[k] = a
+                components[k] = a
             else:
-                result_components[k] = b
+                components[k] = b
 
         return MultiVector(
-            components=result_components,
+            components=components,
             dim=self.dim,
-            cdim=result_cdim,
+            cdim=cdim,
         )
 
     def __sub__(self, other: "MultiVector") -> "MultiVector":
@@ -495,24 +504,24 @@ class MultiVector(GABaseModel):
         if self.dim != other.dim:
             raise ValueError(f"Cannot subtract multivectors of dim {self.dim} and {other.dim}")
 
-        result_cdim = max(self.cdim, other.cdim)
-        result_components = {}
+        cdim = max(self.cdim, other.cdim)
+        components = {}
         all_grades = set(self.grades) | set(other.grades)
 
         for k in all_grades:
             a = self.components.get(k)
             b = other.components.get(k)
             if a is not None and b is not None:
-                result_components[k] = a - b
+                components[k] = a - b
             elif a is not None:
-                result_components[k] = a
+                components[k] = a
             else:
-                result_components[k] = -b
+                components[k] = -b
 
         return MultiVector(
-            components=result_components,
+            components=components,
             dim=self.dim,
-            cdim=result_cdim,
+            cdim=cdim,
         )
 
     def __mul__(self, scalar) -> "MultiVector":
@@ -534,6 +543,66 @@ class MultiVector(GABaseModel):
             dim=self.dim,
             cdim=self.cdim,
         )
+
+    def __xor__(self, other: "Blade | MultiVector") -> "MultiVector":
+        """
+        Wedge product: M ^ v
+
+        Distributes over components. For large collections, direct function calls
+        may be more efficient.
+
+        Returns MultiVector.
+        """
+        if isinstance(other, Blade):
+            from morphis.ga.operations import wedge_mv_bl
+
+            return wedge_mv_bl(self, other)
+
+        elif isinstance(other, MultiVector):
+            from morphis.ga.operations import wedge_mv_mv
+
+            return wedge_mv_mv(self, other)
+
+        return NotImplemented
+
+    def __invert__(self) -> "MultiVector":
+        """
+        Reverse operator: ~M
+
+        Equivalent to reverse(M). Reverses each component blade.
+        """
+        from morphis.ga.geometric import reverse
+
+        return reverse(self)
+
+    def __pow__(self, exponent: int) -> "MultiVector":
+        """
+        Power operation for multivectors.
+
+        Currently supports:
+            mv**(-1) - multiplicative inverse
+            mv**(1)  - identity (returns self)
+
+        Args:
+            exponent: Integer power (only -1 and 1 supported)
+
+        Returns:
+            MultiVector: Result of power operation
+
+        Raises:
+            NotImplementedError: For unsupported exponents
+            ValueError: If multivector is not invertible (from inverse())
+        """
+        if exponent == -1:
+            from morphis.ga.geometric import inverse
+
+            return inverse(self)
+        elif exponent == 1:
+            return self
+        else:
+            raise NotImplementedError(
+                f"Power {exponent} not implemented. Only mv**(-1) for multiplicative inverse is supported."
+            )
 
     def __repr__(self) -> str:
         return f"MultiVector(grades={self.grades}, dim={self.dim}, cdim={self.cdim})"

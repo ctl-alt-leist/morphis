@@ -6,7 +6,7 @@ Shows inputs and results together to illustrate geometric relationships.
 """
 
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Literal
 
 from morphis.ga.model import Blade
 from morphis.ga.operations import meet, wedge
@@ -27,12 +27,12 @@ class OperationStyle:
 
     # Input blade styling
     input_opacity: float = 0.4
-    input_color_1: Optional[Color] = None
-    input_color_2: Optional[Color] = None
+    input_color_1: Color | None = None
+    input_color_2: Color | None = None
 
     # Result blade styling
     result_opacity: float = 0.9
-    result_color: Optional[Color] = None
+    result_color: Color | None = None
 
     # Common parameters
     scale: float = 1.0
@@ -46,9 +46,9 @@ class OperationStyle:
 def render_join(
     u: Blade,
     v: Blade,
-    canvas: Optional[Canvas] = None,
-    projection: Optional[ProjectionConfig] = None,
-    style: Optional[OperationStyle] = None,
+    canvas: Canvas | None = None,
+    projection: ProjectionConfig | None = None,
+    style: OperationStyle | None = None,
 ) -> Canvas:
     """
     Visualize the join (wedge product) of two blades.
@@ -117,9 +117,9 @@ def render_join(
 def render_meet(
     u: Blade,
     v: Blade,
-    canvas: Optional[Canvas] = None,
-    projection: Optional[ProjectionConfig] = None,
-    style: Optional[OperationStyle] = None,
+    canvas: Canvas | None = None,
+    projection: ProjectionConfig | None = None,
+    style: OperationStyle | None = None,
 ) -> Canvas:
     """
     Visualize the meet (intersection) of two blades.
@@ -188,10 +188,10 @@ def render_meet(
 def render_meet_join(
     u: Blade,
     v: Blade,
-    canvas: Optional[Canvas] = None,
+    canvas: Canvas | None = None,
     show: Literal["meet", "join", "both"] = "both",
-    projection: Optional[ProjectionConfig] = None,
-    style: Optional[OperationStyle] = None,
+    projection: ProjectionConfig | None = None,
+    style: OperationStyle | None = None,
 ) -> Canvas:
     """
     Visualize meet and/or join operations between two blades.
@@ -262,10 +262,10 @@ def render_meet_join(
 
 def render_with_dual(
     blade: Blade,
-    canvas: Optional[Canvas] = None,
+    canvas: Canvas | None = None,
     dual_type: Literal["right", "left", "hodge"] = "right",
-    projection: Optional[ProjectionConfig] = None,
-    style: Optional[OperationStyle] = None,
+    projection: ProjectionConfig | None = None,
+    style: OperationStyle | None = None,
 ) -> Canvas:
     """
     Visualize a blade alongside its dual.

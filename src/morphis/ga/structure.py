@@ -10,7 +10,6 @@ Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 
 from itertools import permutations
 from math import factorial
-from typing import Dict, Tuple
 
 from numpy import transpose, zeros
 from numpy.typing import NDArray
@@ -24,7 +23,7 @@ INDICES = "abcdefghmnpqrstuvwxyz"
 # =============================================================================
 
 
-def permutation_sign(perm: Tuple[int, ...]) -> int:
+def permutation_sign(perm: tuple[int, ...]) -> int:
     """
     Compute the sign of a permutation (+1 for even, -1 for odd). Uses the
     cycle-counting algorithm: count transpositions needed to sort.
@@ -77,7 +76,7 @@ def antisymmetrize(tensor: NDArray, k: int, cdim: int = 0) -> NDArray:
 # =============================================================================
 
 
-_ANTISYMMETRIC_SYMBOL_CACHE: Dict[Tuple[int, int], NDArray] = {}
+_ANTISYMMETRIC_SYMBOL_CACHE: dict[tuple[int, int], NDArray] = {}
 
 
 def antisymmetric_symbol(k: int, d: int) -> NDArray:
@@ -123,7 +122,7 @@ def levi_civita(d: int) -> NDArray:
     return antisymmetric_symbol(d, d)
 
 
-_GENERALIZED_DELTA_CACHE: Dict[Tuple[int, int], NDArray] = {}
+_GENERALIZED_DELTA_CACHE: dict[tuple[int, int], NDArray] = {}
 
 
 def generalized_delta(k: int, d: int) -> NDArray:
@@ -169,10 +168,10 @@ def generalized_delta(k: int, d: int) -> NDArray:
 # =============================================================================
 
 
-_WEDGE_SIGNATURE_CACHE: Dict[Tuple[int, ...], str] = {}
+_WEDGE_SIGNATURE_CACHE: dict[tuple[int, ...], str] = {}
 
 
-def wedge_signature(grades: Tuple[int, ...]) -> str:
+def wedge_signature(grades: tuple[int, ...]) -> str:
     """
     Einsum signature for wedge product including delta contraction.
 
@@ -217,7 +216,7 @@ def wedge_signature(grades: Tuple[int, ...]) -> str:
     return _WEDGE_SIGNATURE_CACHE[grades]
 
 
-def wedge_normalization(grades: Tuple[int, ...]) -> float:
+def wedge_normalization(grades: tuple[int, ...]) -> float:
     """
     Compute the normalization factor for wedge product.
 
@@ -247,7 +246,7 @@ def wedge_normalization(grades: Tuple[int, ...]) -> float:
 # =============================================================================
 
 
-_INTERIOR_SIGNATURE_CACHE: Dict[Tuple[int, int], str] = {}
+_INTERIOR_SIGNATURE_CACHE: dict[tuple[int, int], str] = {}
 
 
 def interior_signature(j: int, k: int) -> str:
@@ -280,7 +279,7 @@ def interior_signature(j: int, k: int) -> str:
     return _INTERIOR_SIGNATURE_CACHE[key]
 
 
-_COMPLEMENT_SIGNATURE_CACHE: Dict[Tuple[int, int], str] = {}
+_COMPLEMENT_SIGNATURE_CACHE: dict[tuple[int, int], str] = {}
 
 
 def complement_signature(k: int, d: int) -> str:
@@ -306,7 +305,7 @@ def complement_signature(k: int, d: int) -> str:
     return _COMPLEMENT_SIGNATURE_CACHE[key]
 
 
-_NORM_SQUARED_SIGNATURE_CACHE: Dict[int, str] = {}
+_NORM_SQUARED_SIGNATURE_CACHE: dict[int, str] = {}
 
 
 def norm_squared_signature(k: int) -> str:
@@ -335,7 +334,7 @@ def norm_squared_signature(k: int) -> str:
 # =============================================================================
 
 
-_GEOMETRIC_SIGNATURE_CACHE: Dict[Tuple[int, int, int], str] = {}
+_GEOMETRIC_SIGNATURE_CACHE: dict[tuple[int, int, int], str] = {}
 
 
 def geometric_signature(j: int, k: int, c: int) -> str:

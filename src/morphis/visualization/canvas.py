@@ -11,28 +11,11 @@ explicitly for full control.
 """
 
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union
 
 from numpy import array, cross, ndarray
 from numpy.linalg import norm as np_norm
 
 from morphis.visualization.theme import DEFAULT_THEME, Color, Palette, Theme, get_theme
-
-
-def _is_light_theme(theme: Theme) -> bool:
-    """Determine if theme is light based on background luminance."""
-    r, g, b = theme.background
-    # Relative luminance formula
-    luminance = 0.299 * r + 0.587 * g + 0.114 * b
-    return luminance > 0.5
-
-
-def _axes_color(theme: Theme) -> Color:
-    """Get axes color: black for light themes, white for dark themes."""
-    if _is_light_theme(theme):
-        return (0.1, 0.1, 0.1)  # Near black
-    else:
-        return (0.9, 0.9, 0.9)  # Near white
 
 
 # =============================================================================
@@ -81,11 +64,11 @@ class Canvas:
 
     def __init__(
         self,
-        theme: Union[str, Theme] = DEFAULT_THEME,
-        title: Optional[str] = None,
-        size: Tuple[int, int] = (1200, 900),
+        theme: str | Theme = DEFAULT_THEME,
+        title: str | None = None,
+        size: tuple[int, int] = (1200, 900),
         show_basis: bool = True,
-        basis_axes: Tuple[int, int, int] = (1, 2, 3),
+        basis_axes: tuple[int, int, int] = (1, 2, 3),
     ):
         import pyvista as pv
 
@@ -115,7 +98,7 @@ class Canvas:
 
         return color
 
-    def _resolve_color(self, color: Optional[Color]) -> Color:
+    def _resolve_color(self, color: Color | None) -> Color:
         """Resolve color: use provided or get next from palette."""
         if color is None:
             return self._next_color()
@@ -129,7 +112,7 @@ class Canvas:
     def basis(
         self,
         scale: float = 1.0,
-        axes: Tuple[int, int, int] = (1, 2, 3),
+        axes: tuple[int, int, int] = (1, 2, 3),
         labels: bool = True,
     ):
         """
@@ -140,7 +123,7 @@ class Canvas:
             axes: Which basis vectors to label (1-indexed, e.g., (1, 2, 3) or (2, 4, 5))
             labels: Whether to show axis labels
         """
-        color = _axes_color(self.theme)
+        color = self.theme.axis_color
 
         # Generate labels based on which axes are displayed
         xlabel = f"e{axes[0]}" if len(axes) > 0 else "e1"
@@ -161,7 +144,7 @@ class Canvas:
         # Store current axes for reference
         self._basis_axes = axes
 
-    def set_basis_axes(self, axes: Tuple[int, int, int]):
+    def set_basis_axes(self, axes: tuple[int, int, int]):
         """
         Change which basis vectors are displayed.
 
@@ -185,7 +168,7 @@ class Canvas:
         start: ndarray,
         direction: ndarray,
         color: Color,
-        shaft_radius: Optional[float] = None,
+        shaft_radius: float | None = None,
     ):
         """Internal: add arrow mesh to plotter."""
         import pyvista as pv
@@ -230,8 +213,8 @@ class Canvas:
         self,
         start,
         direction,
-        color: Optional[Color] = None,
-        shaft_radius: Optional[float] = None,
+        color: Color | None = None,
+        shaft_radius: float | None = None,
     ):
         """
         Add an arrow to the scene.
@@ -254,9 +237,9 @@ class Canvas:
         self,
         starts,
         directions,
-        color: Optional[Color] = None,
-        colors: Optional[Union[Palette, list]] = None,
-        shaft_radius: Optional[float] = None,
+        color: Color | None = None,
+        colors: Palette | list | None = None,
+        shaft_radius: float | None = None,
     ):
         """
         Add multiple arrows to the scene.
@@ -296,8 +279,8 @@ class Canvas:
     def curve(
         self,
         points,
-        color: Optional[Color] = None,
-        radius: Optional[float] = None,
+        color: Color | None = None,
+        radius: float | None = None,
         closed: bool = False,
     ):
         """
@@ -330,9 +313,9 @@ class Canvas:
     def curves(
         self,
         point_sets,
-        color: Optional[Color] = None,
-        colors: Optional[Union[Palette, list]] = None,
-        radius: Optional[float] = None,
+        color: Color | None = None,
+        colors: Palette | list | None = None,
+        radius: float | None = None,
     ):
         """
         Add multiple curves to the scene.
@@ -366,7 +349,7 @@ class Canvas:
     def point(
         self,
         position,
-        color: Optional[Color] = None,
+        color: Color | None = None,
         radius: float = 0.03,
     ):
         """
@@ -386,8 +369,8 @@ class Canvas:
     def points(
         self,
         positions,
-        color: Optional[Color] = None,
-        colors: Optional[Union[Palette, list]] = None,
+        color: Color | None = None,
+        colors: Palette | list | None = None,
         radius: float = 0.03,
     ):
         """
@@ -425,7 +408,7 @@ class Canvas:
         center,
         normal,
         size: float = 1.0,
-        color: Optional[Color] = None,
+        color: Color | None = None,
         opacity: float = 0.3,
     ):
         """
@@ -479,9 +462,9 @@ class Canvas:
 
     def camera(
         self,
-        position: Optional[Tuple[float, float, float]] = None,
-        focal_point: Optional[Tuple[float, float, float]] = None,
-        view_up: Optional[Tuple[float, float, float]] = None,
+        position: tuple[float, float, float] | None = None,
+        focal_point: tuple[float, float, float] | None = None,
+        view_up: tuple[float, float, float] | None = None,
     ):
         """
         Set camera position and orientation.

@@ -177,6 +177,146 @@ einsum("...a, ...b -> ...ab", u, v)
 
 All functions support leading batch dimensions. Use `...` in einsum and `[..., idx]` for slicing.
 
+### Variable Naming (Blades vs MultiVectors)
+
+Blade variables use lowercase, MultiVector variables use uppercase:
+
+```python
+# Blade variables: lowercase
+u, v, w, b, r, s, t
+
+# MultiVector variables: uppercase
+U, V, W, B, M, N, T
+
+# Arguments accepting either: default to lowercase
+def func(u: Blade | MultiVector)
+```
+
+### Numeric Suffixes
+
+Single-letter variables use no underscore; word variables use underscore:
+
+```python
+# Single-letter variable + number: no underscore
+v1, v2, vx, vy, vz
+
+# Word variable + number: use underscore
+blade_1, blade_2, multivector_1
+```
+
+### Abbreviated Variable Suffixes
+
+Use abbreviated suffixes for intermediate variables, but full words for function names:
+
+```python
+# Yes - abbreviated suffixes
+u_rev = reverse(u)
+u_inv = inverse(u)
+
+# No - verbose suffixes
+u_reverse = reverse(u)
+u_inverse = inverse(u)
+
+# But function names stay full:
+def reverse(u): ...
+def inverse(u): ...
+```
+
+### Unified API for Blade/MultiVector
+
+Public functions accept both types; use private helpers for implementation:
+
+```python
+# Yes - unified public API with private helpers
+def func(u: Blade | MultiVector) -> Blade | MultiVector:
+    if isinstance(u, Blade):
+        return _func_bl(u)
+    return _func_mv(u)
+
+def _func_bl(u: Blade) -> Blade: ...
+def _func_mv(U: MultiVector) -> MultiVector: ...
+
+# No - separate public functions
+def func_blade(u: Blade): ...
+def func_mv(U: MultiVector): ...
+```
+
+### Factor Ordering
+
+Numeric factors go in front:
+
+```python
+# Yes
+0.5 * (uv + vu)
+2 * x + 1
+
+# No
+(uv + vu) * 0.5
+x * 2 + 1
+```
+
+### If-Block Spacing
+
+For non-trivial if-blocks, add empty lines between branches:
+
+```python
+# Yes - empty lines between non-trivial branches
+if r == 0:
+    result = compute_scalar(...)
+    component = wrap_scalar(result)
+
+elif c == 0:
+    delta = get_delta(...)
+    result = compute_wedge(...)
+    component = wrap_blade(result)
+
+else:
+    delta = get_delta(...)
+    result = compute_mixed(...)
+    component = wrap_blade(result)
+
+# No - cramped branches
+if r == 0:
+    result = compute_scalar(...)
+    component = wrap_scalar(result)
+elif c == 0:
+    delta = get_delta(...)
+    result = compute_wedge(...)
+    component = wrap_blade(result)
+else:
+    ...
+```
+
+### Docstring Math Formatting
+
+Use spaces around operators in math expressions:
+
+```python
+# Yes - spaces around operators
+"""
+Reverse: reverse(u) = (-1)^(k (k - 1) / 2) u
+"""
+
+# No - cramped math
+"""
+Reverse: reverse(u) = (-1)^(k(k-1)/2) u
+"""
+```
+
+### Type Annotations
+
+Use native Python 3.10+ union syntax:
+
+```python
+# Yes - native union syntax
+def func(u: Blade | None) -> Blade | MultiVector: ...
+
+# No - __future__ imports or Optional
+from __future__ import annotations
+from typing import Optional
+def func(u: Optional[Blade]) -> Union[Blade, MultiVector]: ...
+```
+
 ---
 
 ## LaTeX
