@@ -5,6 +5,10 @@ manifolds, and their applications across mathematics and physics. The name deriv
 embodying the transformation and adaptation of geometric structures across different contexts while preserving their
 essential nature.
 
+<p align="center">
+  <img src="figures/rotating_trivector.gif" alt="Rotating trivector animation" width="400">
+</p>
+
 ## Features
 
 - **Geometric Algebra as Foundation**: All geometric computations use GA structures (blades, multivectors) as the

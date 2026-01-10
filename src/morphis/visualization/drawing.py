@@ -140,7 +140,297 @@ def factor_blade(B: Blade) -> tuple[ndarray, ...]:
 
 
 # =============================================================================
-# Drawing Primitives
+# Mesh Creation (low-level, returns meshes without adding to plotter)
+# =============================================================================
+
+
+def _create_arrow_mesh(
+    start: ndarray,
+    direction: ndarray,
+    shaft_radius: float = 0.008,
+    tip_ratio: float = 0.12,
+    tip_radius_ratio: float = 2.5,
+    resolution: int = 20,
+) -> pv.PolyData | None:
+    """Create an arrow mesh from start in the given direction."""
+    length = norm(direction)
+    if length < 1e-10:
+        return None
+
+    dir_norm = direction / length
+    tip_length = length * tip_ratio
+    shaft_length = length - tip_length
+    tip_radius = shaft_radius * tip_radius_ratio
+
+    shaft_end = start + dir_norm * shaft_length
+
+    shaft = pv.Cylinder(
+        center=(start + shaft_end) / 2,
+        direction=dir_norm,
+        radius=shaft_radius,
+        height=shaft_length,
+        resolution=resolution,
+        capping=True,
+    )
+
+    tip = pv.Cone(
+        center=shaft_end + dir_norm * (tip_length / 2),
+        direction=dir_norm,
+        height=tip_length,
+        radius=tip_radius,
+        resolution=resolution,
+        capping=True,
+    )
+
+    return shaft.merge(tip)
+
+
+def _create_origin_marker(origin: ndarray, radius: float = 0.025) -> pv.PolyData:
+    """Create a sphere mesh to mark the origin point."""
+    return pv.Sphere(radius=radius, center=origin)
+
+
+def create_vector_mesh(
+    origin: ndarray,
+    direction: ndarray,
+    shaft_radius: float = 0.008,
+) -> tuple[pv.PolyData | None, pv.PolyData]:
+    """
+    Create meshes for a vector (grade 1 blade).
+
+    Returns:
+        (arrow_mesh, origin_marker_mesh)
+    """
+    arrow = _create_arrow_mesh(origin, direction, shaft_radius=shaft_radius)
+    marker = _create_origin_marker(origin)
+    return arrow, marker
+
+
+def create_bivector_mesh(
+    origin: ndarray,
+    u: ndarray,
+    v: ndarray,
+    shaft_radius: float = 0.006,
+    face_opacity: float = 0.25,
+) -> tuple[pv.PolyData, pv.PolyData, pv.PolyData]:
+    """
+    Create meshes for a bivector (grade 2 blade).
+
+    Bivector is an OPEN surface - it has a boundary.
+    Show boundary circulation: u → v → -u → -v
+
+    Returns:
+        (edges_mesh, face_mesh, origin_marker_mesh)
+    """
+    # Boundary circulation arrows (open surface has a boundary)
+    boundary_arrows = [
+        (origin, u),              # along +u
+        (origin + u, v),          # along +v
+        (origin + u + v, -u),     # along -u
+        (origin + v, -v),         # along -v (back to origin)
+    ]
+
+    edge_meshes = []
+    for start, direction in boundary_arrows:
+        arrow = _create_arrow_mesh(start, direction, shaft_radius=shaft_radius)
+        if arrow is not None:
+            edge_meshes.append(arrow)
+
+    edges_mesh = edge_meshes[0] if edge_meshes else pv.PolyData()
+    for mesh in edge_meshes[1:]:
+        edges_mesh = edges_mesh.merge(mesh)
+
+    # Face
+    corners = [origin, origin + u, origin + u + v, origin + v]
+    face_mesh = pv.Quadrilateral(corners)
+
+    # Origin marker
+    marker = _create_origin_marker(origin)
+
+    return edges_mesh, face_mesh, marker
+
+
+def _create_tube_mesh(
+    start: ndarray,
+    end: ndarray,
+    radius: float = 0.006,
+    resolution: int = 20,
+) -> pv.PolyData | None:
+    """Create a tube (cylinder) mesh between two points."""
+    direction = end - start
+    length = norm(direction)
+    if length < 1e-10:
+        return None
+
+    dir_norm = direction / length
+    center = (start + end) / 2
+
+    return pv.Cylinder(
+        center=center,
+        direction=dir_norm,
+        radius=radius,
+        height=length,
+        resolution=resolution,
+        capping=True,
+    )
+
+
+def create_trivector_mesh(
+    origin: ndarray,
+    u: ndarray,
+    v: ndarray,
+    w: ndarray,
+    shaft_radius: float = 0.006,
+    face_opacity: float = 0.15,
+) -> tuple[pv.PolyData, pv.PolyData, pv.PolyData]:
+    """
+    Create meshes for a trivector.
+
+    Trivector is a CLOSED surface - ∂∂=0, no consistent boundary orientation.
+    Show orientation via path: 0 → u → u+v → u+v+w (3 arrows along cumulative sum).
+    All other edges are tubes.
+
+    Returns:
+        (edges_mesh, faces_mesh, origin_marker_mesh)
+    """
+    edge_meshes = []
+
+    # Orientation arrows: trace path 0 → u → u+v → u+v+w
+    orientation_arrows = [
+        (origin, u),                # 0 → e1
+        (origin + u, v),            # e1 → e1 + e2
+        (origin + u + v, w),        # e1 + e2 → e1 + e2 + e3
+    ]
+
+    # Edges that are arrows (as endpoint pairs for comparison)
+    arrow_edges = {
+        (tuple(origin.round(10)), tuple((origin + u).round(10))),
+        (tuple((origin + u).round(10)), tuple((origin + u + v).round(10))),
+        (tuple((origin + u + v).round(10)), tuple((origin + u + v + w).round(10))),
+    }
+
+    for start, direction in orientation_arrows:
+        arrow = _create_arrow_mesh(start, direction, shaft_radius=shaft_radius)
+        if arrow is not None:
+            edge_meshes.append(arrow)
+
+    # All 12 cube edges as (start, end) pairs
+    cube_edges = [
+        # Edges from origin
+        (origin, origin + u),
+        (origin, origin + v),
+        (origin, origin + w),
+        # Edges parallel to u
+        (origin + v, origin + u + v),
+        (origin + w, origin + u + w),
+        (origin + v + w, origin + u + v + w),
+        # Edges parallel to v
+        (origin + u, origin + u + v),
+        (origin + w, origin + v + w),
+        (origin + u + w, origin + u + v + w),
+        # Edges parallel to w
+        (origin + u, origin + u + w),
+        (origin + v, origin + v + w),
+        (origin + u + v, origin + u + v + w),
+    ]
+
+    # Make tubes for edges that aren't arrows
+    for start, end in cube_edges:
+        edge_key = (tuple(start.round(10)), tuple(end.round(10)))
+        edge_key_rev = (tuple(end.round(10)), tuple(start.round(10)))
+        if edge_key not in arrow_edges and edge_key_rev not in arrow_edges:
+            tube = _create_tube_mesh(start, end, radius=shaft_radius)
+            if tube is not None:
+                edge_meshes.append(tube)
+
+    edges_mesh = edge_meshes[0] if edge_meshes else pv.PolyData()
+    for mesh in edge_meshes[1:]:
+        edges_mesh = edges_mesh.merge(mesh)
+
+    # 8 corners for faces
+    corners = [
+        origin,              # 0
+        origin + u,          # 1
+        origin + v,          # 2
+        origin + w,          # 3
+        origin + u + v,      # 4
+        origin + u + w,      # 5
+        origin + v + w,      # 6
+        origin + u + v + w,  # 7
+    ]
+
+    # 6 faces
+    face_indices = [
+        [0, 1, 4, 2],  # bottom (w=0)
+        [3, 5, 7, 6],  # top (w=1)
+        [0, 1, 5, 3],  # front (v=0)
+        [2, 4, 7, 6],  # back (v=1)
+        [0, 2, 6, 3],  # left (u=0)
+        [1, 4, 7, 5],  # right (u=1)
+    ]
+
+    face_meshes = []
+    for indices in face_indices:
+        quad = pv.Quadrilateral([corners[k] for k in indices])
+        face_meshes.append(quad)
+
+    faces_mesh = face_meshes[0]
+    for mesh in face_meshes[1:]:
+        faces_mesh = faces_mesh.merge(mesh)
+
+    # Origin marker
+    marker = _create_origin_marker(origin)
+
+    return edges_mesh, faces_mesh, marker
+
+
+def create_blade_mesh(
+    grade: int,
+    origin: ndarray,
+    vectors: ndarray,
+    shaft_radius: float = 0.008,
+    edge_radius: float = 0.006,
+) -> tuple[pv.PolyData | None, pv.PolyData | None, pv.PolyData]:
+    """
+    Create meshes for a blade of any grade.
+
+    This is the main entry point for mesh creation.
+
+    Args:
+        grade: Blade grade (1, 2, or 3)
+        origin: Origin point (3D)
+        vectors: Spanning vectors (shape depends on grade)
+        shaft_radius: Arrow shaft radius (for vectors/bivectors)
+        edge_radius: Edge tube radius (for trivectors)
+
+    Returns:
+        (edges_mesh, faces_mesh, origin_marker_mesh)
+        - For grade 1: edges_mesh is the arrow, faces_mesh is None
+        - For grade 2: edges_mesh is circulation arrows, faces_mesh is the quad
+        - For grade 3: edges_mesh is tubes, faces_mesh is 6 quads
+    """
+    origin = array(origin, dtype=float)
+    vectors = array(vectors, dtype=float)
+
+    if grade == 1:
+        direction = vectors[0] if vectors.ndim > 1 else vectors
+        arrow, marker = create_vector_mesh(origin, direction, shaft_radius=shaft_radius)
+        return arrow, None, marker
+
+    elif grade == 2:
+        u, v = vectors[0], vectors[1]
+        return create_bivector_mesh(origin, u, v, shaft_radius=edge_radius)
+
+    elif grade == 3:
+        u, v, w = vectors[0], vectors[1], vectors[2]
+        return create_trivector_mesh(origin, u, v, w, shaft_radius=edge_radius)
+
+    else:
+        raise NotImplementedError(f"Grade {grade} not supported")
+
+
+# =============================================================================
+# Drawing Primitives (add meshes to plotter)
 # =============================================================================
 
 
@@ -155,57 +445,9 @@ def _draw_arrow(
     resolution: int = 20,
 ):
     """Draw an arrow from start in the given direction."""
-    length = norm(direction)
-    if length < 1e-10:
-        return
-
-    dir_norm = direction / length
-    tip_length = length * tip_ratio
-    shaft_length = length - tip_length
-    tip_radius = shaft_radius * tip_radius_ratio
-
-    shaft_end = start + dir_norm * shaft_length
-
-    # Shaft cylinder
-    shaft = pv.Cylinder(
-        center=(start + shaft_end) / 2,
-        direction=dir_norm,
-        radius=shaft_radius,
-        height=shaft_length,
-        resolution=resolution,
-        capping=True,
-    )
-    plotter.add_mesh(shaft, color=color, smooth_shading=True)
-
-    # Tip cone
-    tip = pv.Cone(
-        center=shaft_end + dir_norm * (tip_length / 2),
-        direction=dir_norm,
-        height=tip_length,
-        radius=tip_radius,
-        resolution=resolution,
-        capping=True,
-    )
-    plotter.add_mesh(tip, color=color, smooth_shading=True)
-
-
-def _draw_edge(
-    plotter: pv.Plotter,
-    start: ndarray,
-    end: ndarray,
-    color: Color,
-    radius: float = 0.006,
-    resolution: int = 16,
-):
-    """Draw a tube edge between two points."""
-    direction = end - start
-    length = norm(direction)
-    if length < 1e-10:
-        return
-
-    edge = pv.Spline(array([start, end]), n_points=2)
-    tube = edge.tube(radius=radius)
-    plotter.add_mesh(tube, color=color, smooth_shading=True)
+    mesh = _create_arrow_mesh(start, direction, shaft_radius, tip_ratio, tip_radius_ratio, resolution)
+    if mesh is not None:
+        plotter.add_mesh(mesh, color=color, smooth_shading=True)
 
 
 def _draw_parallelogram(
@@ -219,23 +461,15 @@ def _draw_parallelogram(
     edge_radius: float = 0.006,
     opacity: float = 0.25,
 ):
-    """Draw a parallelogram defined by vectors u and v from origin."""
-    corners = [
-        origin,
-        origin + u,
-        origin + u + v,
-        origin + v,
-    ]
+    """Draw a parallelogram with oriented boundary (circulation arrows)."""
+    edges_mesh, face_mesh, marker = create_bivector_mesh(origin, u, v, shaft_radius=edge_radius)
 
     if tetrad:
-        # Draw edges
-        for i in range(4):
-            _draw_edge(plotter, corners[i], corners[(i + 1) % 4], color, edge_radius)
+        plotter.add_mesh(edges_mesh, color=color, smooth_shading=True)
+        plotter.add_mesh(marker, color=color, smooth_shading=True)
 
     if surface:
-        # Draw filled quad
-        quad = pv.Quadrilateral(corners)
-        plotter.add_mesh(quad, color=color, opacity=opacity, smooth_shading=True)
+        plotter.add_mesh(face_mesh, color=color, opacity=opacity, smooth_shading=True)
 
 
 def _draw_parallelepiped(
@@ -250,51 +484,15 @@ def _draw_parallelepiped(
     edge_radius: float = 0.006,
     opacity: float = 0.15,
 ):
-    """Draw a parallelepiped defined by vectors u, v, w from origin."""
-    # 8 corners
-    corners = [
-        origin,  # 0
-        origin + u,  # 1
-        origin + v,  # 2
-        origin + w,  # 3
-        origin + u + v,  # 4
-        origin + u + w,  # 5
-        origin + v + w,  # 6
-        origin + u + v + w,  # 7
-    ]
+    """Draw a parallelepiped with origin marker."""
+    edges_mesh, faces_mesh, marker = create_trivector_mesh(origin, u, v, w, edge_radius=edge_radius)
 
     if tetrad:
-        # 12 edges
-        edges = [
-            (0, 1),
-            (0, 2),
-            (0, 3),
-            (1, 4),
-            (1, 5),
-            (2, 4),
-            (2, 6),
-            (3, 5),
-            (3, 6),
-            (4, 7),
-            (5, 7),
-            (6, 7),
-        ]
-        for i, j in edges:
-            _draw_edge(plotter, corners[i], corners[j], color, edge_radius)
+        plotter.add_mesh(edges_mesh, color=color, smooth_shading=True)
+        plotter.add_mesh(marker, color=color, smooth_shading=True)
 
     if surface:
-        # 6 faces
-        faces = [
-            [0, 1, 4, 2],  # bottom
-            [3, 5, 7, 6],  # top
-            [0, 1, 5, 3],  # front
-            [2, 4, 7, 6],  # back
-            [0, 2, 6, 3],  # left
-            [1, 4, 7, 5],  # right
-        ]
-        for face_indices in faces:
-            quad = pv.Quadrilateral([corners[i] for i in face_indices])
-            plotter.add_mesh(quad, color=color, opacity=opacity, smooth_shading=True)
+        plotter.add_mesh(faces_mesh, color=color, opacity=opacity, smooth_shading=True)
 
 
 # =============================================================================

@@ -42,7 +42,7 @@ Themes:
     - chalk: Light with cool undertones
 """
 
-from morphis.visualization.animated import AnimatedCanvas as AnimatedCanvas
+from morphis.visualization.animation import Animation as Animation
 from morphis.visualization.blades import (
     BladeStyle as BladeStyle,
     render_bivector as render_bivector,
