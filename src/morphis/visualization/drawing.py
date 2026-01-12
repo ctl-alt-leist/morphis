@@ -18,125 +18,26 @@ except ImportError:
 
 import pyvista as pv
 from numpy import abs as np_abs, argmax, array, cross, ndarray, zeros
-from numpy.linalg import norm, svd
+from numpy.linalg import norm
 
+from morphis.ga.factorization import spanning_vectors
 from morphis.ga.model import Blade
 from morphis.visualization.theme import Color
 
 
-# =============================================================================
-# Blade Factorization
-# =============================================================================
+def _extract_vector_data(blade: Blade) -> ndarray:
+    """Extract the raw numpy array from a grade-1 blade."""
+    return blade.data
 
 
-def _factor_bivector(B: Blade) -> tuple[ndarray, ndarray]:
+def _factor_blade_to_arrays(B: Blade) -> tuple[ndarray, ...]:
     """
-    Factor a bivector into two vectors: B = u ^ v.
+    Factor a blade and return raw numpy arrays (for mesh creation).
 
-    Uses SVD to find the two vectors that span the plane defined by the bivector.
-    For the basis bivector e_i ^ e_j, returns (e_i, e_j).
-
-    Returns:
-        Tuple of two vectors (u, v) such that B = u ^ v (up to scale).
+    This is an internal helper that wraps the GA factorization for visualization.
     """
-    if B.grade != 2:
-        raise ValueError(f"Expected grade 2, got {B.grade}")
-
-    data = B.data
-    dim = B.dim
-
-    # The bivector B^{ab} is antisymmetric. We can find spanning vectors via SVD
-    # of the matrix representation, or by finding two non-zero rows.
-    # For simple blades, we find two vectors that span the plane.
-
-    # Extract the antisymmetric matrix
-    matrix = data.copy()
-
-    # For numerical stability, use SVD
-    U, S, Vt = svd(matrix)
-
-    # The two largest singular values correspond to the plane
-    # For a simple blade, only rank-2 structure exists
-    if S[0] < 1e-10:
-        # Zero bivector
-        return zeros(dim), zeros(dim)
-
-    # Scale by sqrt of singular value to distribute magnitude
-    scale = S[0] ** 0.5
-    u = U[:, 0] * scale
-    v = Vt[0, :] * scale
-
-    return u, v
-
-
-def _factor_trivector(T: Blade) -> tuple[ndarray, ndarray, ndarray]:
-    """
-    Factor a trivector into three vectors: T = u ^ v ^ w.
-
-    For basis trivector e_i ^ e_j ^ e_k, returns (e_i, e_j, e_k).
-
-    Returns:
-        Tuple of three vectors (u, v, w) such that T = u ^ v ^ w (up to scale).
-    """
-    if T.grade != 3:
-        raise ValueError(f"Expected grade 3, got {T.grade}")
-
-    data = T.data
-    dim = T.dim
-
-    # For 3D, the trivector T^{abc} = alpha * epsilon^{abc}
-    # The spanning vectors are just e1, e2, e3 scaled appropriately
-
-    # Find the magnitude from T^{012} (or any non-zero component)
-    if dim >= 3:
-        alpha = data[0, 1, 2]
-        if np_abs(alpha) > 1e-10:
-            # Standard orientation
-            scale = np_abs(alpha) ** (1.0 / 3.0)
-            u = array([scale, 0.0, 0.0])
-            v = array([0.0, scale, 0.0])
-            w = array([0.0, 0.0, scale])
-            return u, v, w
-
-    # Fallback: find spanning vectors from non-zero components
-    # This is more complex for general trivectors
-    for a in range(dim):
-        for b in range(dim):
-            for c in range(dim):
-                if np_abs(data[a, b, c]) > 1e-10:
-                    # Found a non-zero component
-                    scale = np_abs(data[a, b, c]) ** (1.0 / 3.0)
-                    u = zeros(dim)
-                    v = zeros(dim)
-                    w = zeros(dim)
-                    u[a] = scale
-                    v[b] = scale
-                    w[c] = scale
-                    return u, v, w
-
-    # Zero trivector
-    return zeros(dim), zeros(dim), zeros(dim)
-
-
-def factor_blade(B: Blade) -> tuple[ndarray, ...]:
-    """
-    Factor a blade into its constituent vectors.
-
-    For a k-blade B = v1 ^ v2 ^ ... ^ vk, returns (v1, v2, ..., vk).
-
-    Returns:
-        Tuple of k vectors that wedge to produce the blade.
-    """
-    if B.grade == 0:
-        return ()
-    elif B.grade == 1:
-        return (B.data.copy(),)
-    elif B.grade == 2:
-        return _factor_bivector(B)
-    elif B.grade == 3:
-        return _factor_trivector(B)
-    else:
-        raise NotImplementedError(f"Factorization not implemented for grade {B.grade}")
+    vectors = spanning_vectors(B)
+    return tuple(_extract_vector_data(v) for v in vectors)
 
 
 # =============================================================================
@@ -224,10 +125,10 @@ def create_bivector_mesh(
     """
     # Boundary circulation arrows (open surface has a boundary)
     boundary_arrows = [
-        (origin, u),              # along +u
-        (origin + u, v),          # along +v
-        (origin + u + v, -u),     # along -u
-        (origin + v, -v),         # along -v (back to origin)
+        (origin, u),  # along +u
+        (origin + u, v),  # along +v
+        (origin + u + v, -u),  # along -u
+        (origin + v, -v),  # along -v (back to origin)
     ]
 
     edge_meshes = []
@@ -297,9 +198,9 @@ def create_trivector_mesh(
 
     # Orientation arrows: trace path 0 → u → u+v → u+v+w
     orientation_arrows = [
-        (origin, u),                # 0 → e1
-        (origin + u, v),            # e1 → e1 + e2
-        (origin + u + v, w),        # e1 + e2 → e1 + e2 + e3
+        (origin, u),  # 0 → e1
+        (origin + u, v),  # e1 → e1 + e2
+        (origin + u + v, w),  # e1 + e2 → e1 + e2 + e3
     ]
 
     # Edges that are arrows (as endpoint pairs for comparison)
@@ -349,13 +250,13 @@ def create_trivector_mesh(
 
     # 8 corners for faces
     corners = [
-        origin,              # 0
-        origin + u,          # 1
-        origin + v,          # 2
-        origin + w,          # 3
-        origin + u + v,      # 4
-        origin + u + w,      # 5
-        origin + v + w,      # 6
+        origin,  # 0
+        origin + u,  # 1
+        origin + v,  # 2
+        origin + w,  # 3
+        origin + u + v,  # 4
+        origin + u + w,  # 5
+        origin + v + w,  # 6
         origin + u + v + w,  # 7
     ]
 
@@ -384,12 +285,139 @@ def create_trivector_mesh(
     return edges_mesh, faces_mesh, marker
 
 
+def create_quadvector_mesh(
+    origin: ndarray,
+    u: ndarray,
+    v: ndarray,
+    w: ndarray,
+    x: ndarray,
+    projection_axes: tuple[int, int, int] = (0, 1, 2),
+    shaft_radius: float = 0.006,
+    face_opacity: float = 0.12,
+) -> tuple[pv.PolyData, pv.PolyData, pv.PolyData]:
+    """
+    Create meshes for a quadvector (4-blade) as a tesseract projection.
+
+    The 4D tesseract is projected to 3D by selecting 3 axes.
+
+    Args:
+        origin: Origin point (nD, where n >= 4)
+        u, v, w, x: Four spanning vectors (each nD)
+        projection_axes: Which 3 axes to project onto (e.g., (0,1,2) for e123)
+        shaft_radius: Tube radius for edges
+        face_opacity: Opacity for faces
+
+    Returns:
+        (edges_mesh, faces_mesh, origin_marker_mesh)
+    """
+    # A tesseract has 16 vertices (2^4 combinations)
+    # Vertices are: origin + any combination of {u, v, w, x}
+
+    # Generate all 16 vertices in nD
+    vertices_nd = []
+    for bits in range(16):
+        vertex = origin.copy()
+        if bits & 1:
+            vertex = vertex + u
+        if bits & 2:
+            vertex = vertex + v
+        if bits & 4:
+            vertex = vertex + w
+        if bits & 8:
+            vertex = vertex + x
+        vertices_nd.append(vertex)
+
+    # Project vertices to 3D
+    ax0, ax1, ax2 = projection_axes
+    vertices_3d = []
+    for v_nd in vertices_nd:
+        if len(v_nd) > max(projection_axes):
+            v_3d = array([v_nd[ax0], v_nd[ax1], v_nd[ax2]])
+        else:
+            # Pad with zeros if needed
+            v_padded = zeros(max(projection_axes) + 1)
+            v_padded[: len(v_nd)] = v_nd
+            v_3d = array([v_padded[ax0], v_padded[ax1], v_padded[ax2]])
+        vertices_3d.append(v_3d)
+
+    # 32 edges: pairs of vertices differing by exactly one bit
+    edge_pairs = []
+    for i in range(16):
+        for bit in range(4):
+            j = i ^ (1 << bit)
+            if i < j:  # Avoid duplicates
+                edge_pairs.append((i, j))
+
+    # Determine which edges should have arrows (orientation path)
+    # Path: 0 -> u -> u+v -> u+v+w -> u+v+w+x
+    arrow_edge_indices = {(0, 1), (1, 3), (3, 7), (7, 15)}
+
+    edge_meshes = []
+    for i, j in edge_pairs:
+        start = vertices_3d[i]
+        end = vertices_3d[j]
+        direction = end - start
+
+        if (i, j) in arrow_edge_indices or (j, i) in arrow_edge_indices:
+            # Create arrow for orientation edges
+            arrow = _create_arrow_mesh(start, direction, shaft_radius=shaft_radius)
+            if arrow is not None:
+                edge_meshes.append(arrow)
+        else:
+            # Create tube for non-orientation edges
+            tube = _create_tube_mesh(start, end, radius=shaft_radius)
+            if tube is not None:
+                edge_meshes.append(tube)
+
+    edges_mesh = edge_meshes[0] if edge_meshes else pv.PolyData()
+    for mesh in edge_meshes[1:]:
+        edges_mesh = edges_mesh.merge(mesh)
+
+    # 24 square faces (6 faces per 3D cube, 4 cubes share each face)
+    # For a tesseract, faces are defined by pairs of adjacent vectors
+    # Each face is determined by fixing 2 vectors and varying the other 2
+    face_definitions = []
+    for i in range(4):
+        for j in range(i + 1, 4):
+            # Face in the plane of vectors i and j
+            # There are 2^2 = 4 such faces (for each combination of the other 2 vectors)
+            other_bits = [k for k in range(4) if k not in (i, j)]
+            for ob0 in [0, 1]:
+                for ob1 in [0, 1]:
+                    base_bits = (ob0 << other_bits[0]) | (ob1 << other_bits[1])
+                    # Four corners of this face
+                    corners = [
+                        base_bits,
+                        base_bits | (1 << i),
+                        base_bits | (1 << i) | (1 << j),
+                        base_bits | (1 << j),
+                    ]
+                    face_definitions.append(corners)
+
+    face_meshes = []
+    for corners in face_definitions:
+        quad_corners = [vertices_3d[c] for c in corners]
+        quad = pv.Quadrilateral(quad_corners)
+        face_meshes.append(quad)
+
+    faces_mesh = face_meshes[0] if face_meshes else pv.PolyData()
+    for mesh in face_meshes[1:]:
+        faces_mesh = faces_mesh.merge(mesh)
+
+    # Origin marker (at projected origin)
+    origin_3d = vertices_3d[0]
+    marker = _create_origin_marker(origin_3d)
+
+    return edges_mesh, faces_mesh, marker
+
+
 def create_blade_mesh(
     grade: int,
     origin: ndarray,
     vectors: ndarray,
     shaft_radius: float = 0.008,
     edge_radius: float = 0.006,
+    projection_axes: tuple[int, int, int] | None = None,
 ) -> tuple[pv.PolyData | None, pv.PolyData | None, pv.PolyData]:
     """
     Create meshes for a blade of any grade.
@@ -397,33 +425,70 @@ def create_blade_mesh(
     This is the main entry point for mesh creation.
 
     Args:
-        grade: Blade grade (1, 2, or 3)
-        origin: Origin point (3D)
+        grade: Blade grade (1, 2, 3, or 4)
+        origin: Origin point (nD)
         vectors: Spanning vectors (shape depends on grade)
         shaft_radius: Arrow shaft radius (for vectors/bivectors)
-        edge_radius: Edge tube radius (for trivectors)
+        edge_radius: Edge tube radius (for trivectors/quadvectors)
+        projection_axes: For grade >= 4, which 3 axes to project onto
 
     Returns:
         (edges_mesh, faces_mesh, origin_marker_mesh)
         - For grade 1: edges_mesh is the arrow, faces_mesh is None
         - For grade 2: edges_mesh is circulation arrows, faces_mesh is the quad
         - For grade 3: edges_mesh is tubes, faces_mesh is 6 quads
+        - For grade 4: edges_mesh is tubes (tesseract), faces_mesh is 24 quads
     """
     origin = array(origin, dtype=float)
     vectors = array(vectors, dtype=float)
 
     if grade == 1:
         direction = vectors[0] if vectors.ndim > 1 else vectors
-        arrow, marker = create_vector_mesh(origin, direction, shaft_radius=shaft_radius)
+        # Project to 3D if needed
+        if len(direction) > 3:
+            axes = projection_axes or (0, 1, 2)
+            direction = array([direction[axes[0]], direction[axes[1]], direction[axes[2]]])
+            origin_3d = array([origin[axes[0]], origin[axes[1]], origin[axes[2]]])
+        else:
+            origin_3d = origin[:3] if len(origin) >= 3 else array([*origin, *[0.0] * (3 - len(origin))])
+            direction = direction[:3] if len(direction) >= 3 else array([*direction, *[0.0] * (3 - len(direction))])
+        arrow, marker = create_vector_mesh(origin_3d, direction, shaft_radius=shaft_radius)
         return arrow, None, marker
 
     elif grade == 2:
         u, v = vectors[0], vectors[1]
-        return create_bivector_mesh(origin, u, v, shaft_radius=edge_radius)
+        # Project to 3D if needed
+        if len(u) > 3:
+            axes = projection_axes or (0, 1, 2)
+            u = array([u[axes[0]], u[axes[1]], u[axes[2]]])
+            v = array([v[axes[0]], v[axes[1]], v[axes[2]]])
+            origin_3d = array([origin[axes[0]], origin[axes[1]], origin[axes[2]]])
+        else:
+            origin_3d = origin[:3] if len(origin) >= 3 else array([*origin, *[0.0] * (3 - len(origin))])
+            u = u[:3] if len(u) >= 3 else array([*u, *[0.0] * (3 - len(u))])
+            v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
+        return create_bivector_mesh(origin_3d, u, v, shaft_radius=edge_radius)
 
     elif grade == 3:
         u, v, w = vectors[0], vectors[1], vectors[2]
-        return create_trivector_mesh(origin, u, v, w, shaft_radius=edge_radius)
+        # Project to 3D if needed
+        if len(u) > 3:
+            axes = projection_axes or (0, 1, 2)
+            u = array([u[axes[0]], u[axes[1]], u[axes[2]]])
+            v = array([v[axes[0]], v[axes[1]], v[axes[2]]])
+            w = array([w[axes[0]], w[axes[1]], w[axes[2]]])
+            origin_3d = array([origin[axes[0]], origin[axes[1]], origin[axes[2]]])
+        else:
+            origin_3d = origin[:3] if len(origin) >= 3 else array([*origin, *[0.0] * (3 - len(origin))])
+            u = u[:3] if len(u) >= 3 else array([*u, *[0.0] * (3 - len(u))])
+            v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
+            w = w[:3] if len(w) >= 3 else array([*w, *[0.0] * (3 - len(w))])
+        return create_trivector_mesh(origin_3d, u, v, w, shaft_radius=edge_radius)
+
+    elif grade == 4:
+        u, v, w, x = vectors[0], vectors[1], vectors[2], vectors[3]
+        axes = projection_axes or (0, 1, 2)
+        return create_quadvector_mesh(origin, u, v, w, x, projection_axes=axes, shaft_radius=edge_radius)
 
     else:
         raise NotImplementedError(f"Grade {grade} not supported")
@@ -565,14 +630,16 @@ def draw_blade(
 
     elif grade == 2:
         # Bivector: factor and draw parallelogram
-        u, v = _factor_bivector(b)
+        vectors = _factor_blade_to_arrays(b)
+        u, v = vectors[0], vectors[1]
         u = u[:3] if len(u) >= 3 else array([*u, *[0.0] * (3 - len(u))])
         v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
         _draw_parallelogram(plotter, origin, u, v, color, tetrad=tetrad, surface=surface, edge_radius=edge_radius)
 
     elif grade == 3:
         # Trivector: factor and draw parallelepiped
-        u, v, w = _factor_trivector(b)
+        vectors = _factor_blade_to_arrays(b)
+        u, v, w = vectors[0], vectors[1], vectors[2]
         u = u[:3] if len(u) >= 3 else array([*u, *[0.0] * (3 - len(u))])
         v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
         w = w[:3] if len(w) >= 3 else array([*w, *[0.0] * (3 - len(w))])
@@ -592,7 +659,8 @@ def draw_blade(
             # Offset perpendicular to direction
             label_pos = origin + direction * 0.5 + array([0, -1, -1]) / norm(array([0, 1, 1])) * label_offset
         elif grade == 2:
-            u, v = _factor_bivector(b)
+            vectors = _factor_blade_to_arrays(b)
+            u, v = vectors[0], vectors[1]
             u = u[:3] if len(u) >= 3 else array([*u, *[0.0] * (3 - len(u))])
             v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
             # Default label from dominant axes
@@ -608,7 +676,8 @@ def draw_blade(
             label_dir = -normal if normal[2] >= 0 else normal
             label_pos = origin + (u + v) / 2 + label_dir * label_offset * 2
         elif grade == 3:
-            u, v, w = _factor_trivector(b)
+            vectors = _factor_blade_to_arrays(b)
+            u, v, w = vectors[0], vectors[1], vectors[2]
             u = u[:3] if len(u) >= 3 else array([*u, *[0.0] * (3 - len(u))])
             v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
             w = w[:3] if len(w) >= 3 else array([*w, *[0.0] * (3 - len(w))])
@@ -640,6 +709,7 @@ def draw_coordinate_basis(
     surface: bool = False,
     label: bool = True,
     label_offset: float = 0.08,
+    labels: tuple[str, str, str] | None = None,
 ):
     """
     Draw the standard coordinate basis e1, e2, e3.
@@ -653,8 +723,9 @@ def draw_coordinate_basis(
         color: RGB color tuple (0-1 range)
         tetrad: If True, draw arrows
         surface: If True, draw filled surfaces (not typical for vectors)
-        label: If True, add e1, e2, e3 labels
+        label: If True, add labels
         label_offset: Distance to offset labels from axes
+        labels: Custom labels for (x, y, z) axes. Default: e1, e2, e3
     """
     directions = [
         array([1.0, 0.0, 0.0]) * scale,
@@ -669,7 +740,10 @@ def draw_coordinate_basis(
         array([-1, -1, 0]),  # e3: offset in -x-y
     ]
 
-    names = [r"$\mathbf{e}_1$", r"$\mathbf{e}_2$", r"$\mathbf{e}_3$"]
+    if labels is not None:
+        names = list(labels)
+    else:
+        names = [r"$\mathbf{e}_1$", r"$\mathbf{e}_2$", r"$\mathbf{e}_3$"]
 
     for direction, offset_dir, axis_name in zip(directions, offset_dirs, names, strict=False):
         # Draw the arrow

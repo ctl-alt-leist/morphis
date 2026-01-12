@@ -10,8 +10,9 @@ It has no knowledge of:
 - Effects or scheduling
 """
 
-import pyvista as pv
 from dataclasses import dataclass
+
+import pyvista as pv
 from numpy import array
 from numpy.typing import NDArray
 
@@ -30,6 +31,7 @@ class TrackedObject:
     faces_actor: pv.Actor | None
     origin_actor: pv.Actor | None
     opacity: float = 1.0
+    projection_axes: tuple[int, int, int] | None = None  # For nD -> 3D projection
 
 
 class Renderer:
@@ -99,22 +101,24 @@ class Renderer:
         vectors: NDArray,
         color: Color | None = None,
         opacity: float = 1.0,
+        projection_axes: tuple[int, int, int] | None = None,
     ):
         """
         Add a new object to the renderer.
 
         Args:
             obj_id: Unique identifier for this object
-            grade: Geometric grade (1=vector, 2=bivector, 3=trivector)
-            origin: Origin point (3D)
+            grade: Geometric grade (1=vector, 2=bivector, 3=trivector, 4=quadvector)
+            origin: Origin point (nD)
             vectors: Spanning vectors (shape depends on grade)
             color: RGB color tuple (0-1 range), or None for auto
             opacity: Initial opacity [0, 1]
+            projection_axes: For nD blades, which 3 axes to project onto
         """
         self._ensure_plotter()
 
         if obj_id in self._objects:
-            self.update_object(obj_id, origin, vectors, opacity)
+            self.update_object(obj_id, origin, vectors, opacity, projection_axes)
             return
 
         if color is None:
@@ -124,25 +128,26 @@ class Renderer:
         vectors = array(vectors, dtype=float)
 
         # Create meshes using centralized drawing functions
-        edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(grade, origin, vectors)
+        edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(grade, origin, vectors, projection_axes=projection_axes)
 
         # Add to plotter
         edges_actor = None
         if edges_mesh is not None:
-            edges_actor = self._plotter.add_mesh(
-                edges_mesh, color=color, opacity=opacity, smooth_shading=True
-            )
+            edges_actor = self._plotter.add_mesh(edges_mesh, color=color, opacity=opacity, smooth_shading=True)
 
         faces_actor = None
         if faces_mesh is not None:
-            face_opacity = opacity * (0.25 if grade == 2 else 0.2)
-            faces_actor = self._plotter.add_mesh(
-                faces_mesh, color=color, opacity=face_opacity, smooth_shading=True
-            )
+            if grade == 2:
+                face_opacity = opacity * 0.25
+            elif grade == 3:
+                face_opacity = opacity * 0.2
+            elif grade == 4:
+                face_opacity = opacity * 0.15
+            else:
+                face_opacity = opacity * 0.2
+            faces_actor = self._plotter.add_mesh(faces_mesh, color=color, opacity=face_opacity, smooth_shading=True)
 
-        origin_actor = self._plotter.add_mesh(
-            origin_mesh, color=color, opacity=opacity, smooth_shading=True
-        )
+        origin_actor = self._plotter.add_mesh(origin_mesh, color=color, opacity=opacity, smooth_shading=True)
 
         self._objects[obj_id] = TrackedObject(
             obj_id=obj_id,
@@ -152,6 +157,7 @@ class Renderer:
             faces_actor=faces_actor,
             origin_actor=origin_actor,
             opacity=opacity,
+            projection_axes=projection_axes,
         )
 
     def update_object(
@@ -160,6 +166,7 @@ class Renderer:
         origin: NDArray,
         vectors: NDArray,
         opacity: float | None = None,
+        projection_axes: tuple[int, int, int] | None = None,
     ):
         """
         Update an existing object's geometry and/or opacity.
@@ -169,6 +176,7 @@ class Renderer:
             origin: New origin point
             vectors: New spanning vectors
             opacity: New opacity (or None to keep current)
+            projection_axes: For nD blades, which 3 axes to project onto
         """
         if obj_id not in self._objects:
             return
@@ -180,9 +188,12 @@ class Renderer:
         if opacity is not None:
             tracked.opacity = opacity
 
+        if projection_axes is not None:
+            tracked.projection_axes = projection_axes
+
         # Recreate meshes using centralized drawing functions
         edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(
-            tracked.grade, origin, vectors
+            tracked.grade, origin, vectors, projection_axes=tracked.projection_axes
         )
 
         # Update actors with new meshes
@@ -197,7 +208,14 @@ class Renderer:
         if tracked.edges_actor is not None:
             tracked.edges_actor.GetProperty().SetOpacity(tracked.opacity)
         if tracked.faces_actor is not None:
-            face_opacity = tracked.opacity * (0.25 if tracked.grade == 2 else 0.2)
+            if tracked.grade == 2:
+                face_opacity = tracked.opacity * 0.25
+            elif tracked.grade == 3:
+                face_opacity = tracked.opacity * 0.2
+            elif tracked.grade == 4:
+                face_opacity = tracked.opacity * 0.15
+            else:
+                face_opacity = tracked.opacity * 0.2
             tracked.faces_actor.GetProperty().SetOpacity(face_opacity)
         if tracked.origin_actor is not None:
             tracked.origin_actor.GetProperty().SetOpacity(tracked.opacity)

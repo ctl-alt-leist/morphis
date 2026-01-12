@@ -20,11 +20,16 @@ Usage:
 """
 
 from itertools import combinations
+from typing import TYPE_CHECKING
 
 from numpy import zeros
 
 from morphis.ga.model import Blade, vector_blade
 from morphis.ga.operations import wedge
+
+
+if TYPE_CHECKING:
+    from morphis.ga.context import GeometricContext
 
 
 def basis_vector(index: int, dim: int) -> Blade:
@@ -58,6 +63,59 @@ def basis_vectors(dim: int) -> tuple[Blade, ...]:
         e12 = e1 ^ e2  # Wedge product
     """
     return tuple(basis_vector(k, dim) for k in range(dim))
+
+
+def coordinate_basis(dim: int, context: "GeometricContext | None" = None) -> tuple[Blade, ...]:
+    """
+    Create coordinate basis vectors in the specified geometric context.
+
+    This is the context-aware alternative to basis_vectors().
+
+    Args:
+        dim: Dimension of the Euclidean space to model
+        context: Geometric context determining the algebra structure
+            - None or euclidean.flat: Standard d-dimensional Euclidean vectors
+            - PGA: (d+1)-dimensional PGA directions where e₀ is ideal
+
+    Returns:
+        Tuple of grade-1 Blades representing the coordinate basis
+
+    For PGA context:
+        - Returns vectors in (d+1) dimensions
+        - Index 0 is the ideal (degenerate) direction e₀
+        - Indices 1..d are Euclidean directions e₁, e₂, ..., eₐ
+        - Euclidean e_i in ℝᵈ maps to PGA index (i+1)
+
+    Example:
+        # Standard Euclidean
+        e1, e2, e3 = coordinate_basis(3)
+
+        # PGA (4-dimensional algebra for 3D Euclidean geometry)
+        e1, e2, e3 = coordinate_basis(3, context=PGA)
+        # These are 4D vectors with e_0 = 0, e.g., e1 = (0, 1, 0, 0)
+    """
+    from morphis.ga.context import Structure
+
+    if context is None:
+        # Default: standard Euclidean vectors
+        return basis_vectors(dim)
+
+    if context.structure == Structure.PROJECTIVE:
+        # PGA: d+1 dimensional algebra, e_0 is ideal
+        # Return d Euclidean direction vectors (not the ideal e_0)
+        pga_dim = dim + 1
+        vectors = []
+        for i in range(dim):
+            data = zeros(pga_dim)
+            data[i + 1] = 1.0  # Skip index 0 (ideal), place in index i+1
+            blade = vector_blade(data)
+            blade = blade.with_context(context)
+            vectors.append(blade)
+        return tuple(vectors)
+
+    # Other contexts: default to standard Euclidean
+    vectors = basis_vectors(dim)
+    return tuple(v.with_context(context) for v in vectors)
 
 
 def basis_blade(indices: tuple[int, ...], dim: int) -> Blade:

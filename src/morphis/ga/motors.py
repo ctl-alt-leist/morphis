@@ -8,13 +8,13 @@ product: p' = M p M†
 All operations support collection dimensions via einsum broadcasting.
 """
 
-from numpy import array, cos, ndarray, newaxis, ones, sin, zeros
+from numpy import array, cos, newaxis, ones, sin, zeros
 from numpy.typing import NDArray
 
 from morphis.ga.context import degenerate
 from morphis.ga.geometric import geometric, inverse, reverse
 from morphis.ga.model import Blade, Metric, MultiVector, pga, scalar_blade
-from morphis.geometry.projective import euclidean as to_euclidean, point
+from morphis.geometry.projective import euclidean as to_euclidean
 
 
 class Motor(MultiVector):
@@ -290,75 +290,54 @@ class Motor(MultiVector):
 
         return cls.rotation_about_point(p, B, angle)
 
-    def apply(self, p: Blade, g: Metric | None = None) -> Blade:
+    def apply(self, blade: Blade, g: Metric | None = None) -> Blade:
         """
-        Apply motor to PGA points via sandwich product.
+        Apply motor to any PGA blade via sandwich product.
 
-        p' = M p M†
+        blade' = M blade M̃
+
+        The sandwich product preserves grade: if blade is a k-blade,
+        the result is also a k-blade representing the transformed
+        k-dimensional subspace.
 
         Args:
-            p: PGA point or points (grade-1, shape: (..., dim))
+            blade: PGA blade of any grade
             g: PGA metric (defaults to pga(dim - 1))
 
         Returns:
-            Transformed point(s) with same shape
+            Transformed blade of same grade
 
         Example:
-            p = point([[0, 0, 0], [1, 0, 0]])  # 2 points
-            M = Motor.translator([1, 0, 0])
-            p_new = M.apply(p)  # Both translated
+            # Transform a point
+            p = point([1, 0, 0])
+            p_new = M.apply(p)
+
+            # Transform a bivector (rotation plane)
+            B = e1 ^ e2
+            B_new = M.apply(B)
+
+            # Transform a trivector
+            T = e1 ^ e2 ^ e3
+            T_new = M.apply(T)
         """
         g = pga(self.dim - 1) if g is None else g
+        input_grade = blade.grade
 
-        # Convert point blade to MultiVector for geometric product
-        p_mv = MultiVector(components={p.grade: p}, dim=p.dim, cdim=p.cdim)
+        # Convert blade to MultiVector for geometric product
+        blade_mv = MultiVector(components={blade.grade: blade}, dim=blade.dim, cdim=blade.cdim)
 
-        # Sandwich product: M p M†
+        # Sandwich product: M blade M̃
         M_rev = reverse(self)
-        temp = geometric(self, p_mv, g)
+        temp = geometric(self, blade_mv, g)
         result = geometric(temp, M_rev, g)
 
-        # Extract grade-1 component (the transformed point)
-        transformed = result.grade_select(1)
+        # Extract component of same grade as input
+        transformed = result.grade_select(input_grade)
 
         if transformed is None:
-            raise ValueError("Motor transformation did not produce a grade-1 result")
+            raise ValueError(f"Motor transformation did not produce a grade-{input_grade} result")
 
         return transformed
-
-    def apply_to_euclidean(self, v: NDArray, g: Metric | None = None) -> NDArray:
-        """
-        Apply motor to Euclidean vectors (convenience wrapper).
-
-        Handles PGA embedding/projection automatically:
-        1. Embed v as PGA points: p = e_0 + v^m e_m
-        2. Apply motor: p' = M p M†
-        3. Project back: v' = p'^m / p'^0
-
-        Args:
-            v: Euclidean vectors (shape: (..., d))
-            g: PGA metric
-
-        Returns:
-            Transformed Euclidean vectors (shape: (..., d))
-
-        Example:
-            vectors = array([[0, 0, 0], [1, 1, 1]])
-            M = Motor.rotor(B, pi / 4)
-            v_rotated = M.apply_to_euclidean(vectors)
-        """
-        v = array(v)
-        # Calculate cdim: all dimensions except the last are collection dimensions
-        cdim = v.ndim - 1 if v.ndim > 1 else 0
-
-        # Embed as PGA points
-        p = point(v, cdim=cdim)
-
-        # Apply motor
-        p_transformed = self.apply(p, g)
-
-        # Project back to Euclidean
-        return to_euclidean(p_transformed)
 
     def compose(self, other: "Motor", g: Metric | None = None) -> "Motor":
         """
@@ -458,15 +437,15 @@ class Motor(MultiVector):
             # Fallback to MultiVector multiplication
             return super().__mul__(other)
 
-    def __call__(self, target: Blade | NDArray) -> Blade | NDArray:
+    def __call__(self, target: Blade) -> Blade:
         """
         Make motor callable for transformation.
 
         Args:
-            target: PGA point (Blade) or Euclidean vector (NDArray)
+            target: PGA blade of any grade
 
         Returns:
-            Transformed target (same type as input)
+            Transformed blade
 
         Example:
             M = Motor.translator([1, 0, 0])
@@ -476,10 +455,7 @@ class Motor(MultiVector):
         if isinstance(target, Blade):
             return self.apply(target)
 
-        if isinstance(target, ndarray):
-            return self.apply_to_euclidean(target)
-
-        raise TypeError(f"Cannot apply motor to {type(target)}")
+        raise TypeError(f"Cannot apply motor to {type(target)}. Use PGA blades.")
 
     def __invert__(self) -> "Motor":
         """

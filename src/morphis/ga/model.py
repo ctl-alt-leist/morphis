@@ -166,6 +166,9 @@ class Blade(GABaseModel):
     dim: int | None = None  # Inferred from data.shape[-1] if not provided
     cdim: int | None = None  # Inferred from data.ndim - grade if not provided
 
+    # Prevent numpy from intercepting arithmetic - force use of __rmul__ etc.
+    __array_ufunc__ = None
+
     def __init__(self, data=None, /, **kwargs):
         """Allow positional argument for data: Blade(arr, grade=1)."""
         if data is not None:
@@ -423,6 +426,40 @@ class Blade(GABaseModel):
                 f"Power {exponent} not implemented. Only blade**(-1) for multiplicative inverse is supported."
             )
 
+    def copy(self) -> "Blade":
+        """
+        Create a deep copy of this blade.
+
+        Returns a new Blade with copied data, preserving all attributes.
+        """
+        return Blade(
+            data=self.data.copy(),
+            grade=self.grade,
+            dim=self.dim,
+            cdim=self.cdim,
+            context=self.context,
+        )
+
+    def spanning_vectors(self) -> tuple["Blade", ...]:
+        """
+        Factor this blade into its constituent grade-1 blades (vectors).
+
+        For a k-blade B = v₁ ∧ v₂ ∧ ... ∧ vₖ, returns (v₁, v₂, ..., vₖ).
+        These vectors span the k-dimensional subspace represented by B.
+
+        Note: Factorization is not unique - any k vectors spanning the same
+        subspace will work. This returns ONE valid factorization.
+
+        Returns:
+            Tuple of k grade-1 Blades that wedge to produce this blade
+
+        Raises:
+            NotImplementedError: For grades > 4
+        """
+        from morphis.ga.factorization import spanning_vectors
+
+        return spanning_vectors(self)
+
     def __repr__(self) -> str:
         ctx_str = f", context={self.context}" if self.context else ""
         return f"Blade(grade={self.grade}, dim={self.dim}, cdim={self.cdim}, shape={self.shape}{ctx_str})"
@@ -443,6 +480,9 @@ class MultiVector(GABaseModel):
     components: dict[int, Blade]
     dim: int
     cdim: int
+
+    # Prevent numpy from intercepting arithmetic - force use of __rmul__ etc.
+    __array_ufunc__ = None
 
     @model_validator(mode="after")
     def validate_components(self):
@@ -659,6 +699,19 @@ def trivector_blade(data: NDArray, cdim: int = 0) -> Blade:
     dim = arr.shape[-1]
 
     return Blade(data=arr, grade=3, dim=dim, cdim=cdim)
+
+
+def quadvector_blade(data: NDArray, cdim: int = 0) -> Blade:
+    """
+    Create a quadvector (grade-4) blade from array of shape
+    (*collection_shape, dim, dim, dim, dim).
+
+    Returns grade-4 Blade.
+    """
+    arr = asarray(data)
+    dim = arr.shape[-1]
+
+    return Blade(data=arr, grade=4, dim=dim, cdim=cdim)
 
 
 def blade_from_data(data: NDArray, grade: int, cdim: int = 0) -> Blade:

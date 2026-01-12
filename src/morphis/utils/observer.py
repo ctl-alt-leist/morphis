@@ -28,12 +28,16 @@ Example:
 """
 
 from dataclasses import dataclass, field
-from typing import Iterator
+from typing import TYPE_CHECKING, Iterator
 
-from numpy import array, copy as np_copy, ndarray
+from numpy import copy as np_copy, ndarray, stack
 from numpy.linalg import norm
 
 from morphis.ga.model import GABaseModel
+
+
+if TYPE_CHECKING:
+    from morphis.ga.model import Blade
 
 
 @dataclass
@@ -44,6 +48,7 @@ class TrackedObject:
     obj_id: int
     name: str | None
     baseline: ndarray | None = None  # For computing diffs
+    cached_spanning_vectors: list["Blade"] | None = field(default=None, repr=False)
 
 
 class Observer:
@@ -192,7 +197,7 @@ class Observer:
             Dict mapping name to current data (copies)
         """
         result = {}
-        for obj_id, tracked in self._tracked.items():
+        for _obj_id, tracked in self._tracked.items():
             if tracked.name:
                 data = self._get_data(tracked.obj)
                 if data is not None:
@@ -311,8 +316,107 @@ class Observer:
     def print_state(self, prefix: str = ""):
         """Print current state of all tracked objects (for debugging)."""
         print(f"{prefix}Observer tracking {len(self)} objects:")
-        for obj_id, tracked in self._tracked.items():
+        for _obj_id, tracked in self._tracked.items():
             name_str = f" ({tracked.name})" if tracked.name else ""
             data = self._get_data(tracked.obj)
             obj_type = type(tracked.obj).__name__
             print(f"{prefix}  [{obj_type}]{name_str}: {data}")
+
+    def spanning_vectors(self, obj_or_name: GABaseModel | str) -> tuple["Blade", ...] | None:
+        """
+        Get the spanning vectors for a tracked blade.
+
+        For a k-blade B = v₁ ∧ v₂ ∧ ... ∧ vₖ, returns (v₁, v₂, ..., vₖ).
+        This is the primary way to extract visualization-ready data from
+        tracked blades.
+
+        Args:
+            obj_or_name: The blade or its name
+
+        Returns:
+            Tuple of grade-1 Blades that span the blade, or None if not a Blade
+        """
+        from morphis.ga.model import Blade
+
+        if isinstance(obj_or_name, str):
+            obj_id = self._names.get(obj_or_name)
+            if obj_id is None:
+                return None
+        else:
+            obj_id = id(obj_or_name)
+
+        if obj_id not in self._tracked:
+            return None
+
+        tracked = self._tracked[obj_id]
+
+        if not isinstance(tracked.obj, Blade):
+            return None
+
+        return tracked.obj.spanning_vectors()
+
+    def spanning_vectors_as_array(self, obj_or_name: GABaseModel | str) -> ndarray | None:
+        """
+        Get spanning vectors as a stacked numpy array.
+
+        Returns shape (k, dim) where k is the blade grade and dim is the vector
+        space dimension. This is convenient for direct use in visualization code.
+
+        Args:
+            obj_or_name: The blade or its name
+
+        Returns:
+            Array of shape (k, dim) containing the spanning vectors, or None
+        """
+        vectors = self.spanning_vectors(obj_or_name)
+        if vectors is None or len(vectors) == 0:
+            return None
+
+        return stack([v.data for v in vectors])
+
+    def capture_state(self, obj_or_name: GABaseModel | str) -> dict | None:
+        """
+        Capture complete visualization state for a tracked blade.
+
+        This is the primary method for animation systems to extract all
+        needed data for rendering a blade at the current time.
+
+        Args:
+            obj_or_name: The blade or its name
+
+        Returns:
+            Dict with keys:
+                - 'grade': Blade grade
+                - 'dim': Vector space dimension
+                - 'data': Raw blade data (copy)
+                - 'spanning_vectors': Array of shape (k, dim)
+                - 'context': Geometric context (PGA, etc.) or None
+            Or None if not a tracked Blade
+        """
+        from morphis.ga.model import Blade
+
+        if isinstance(obj_or_name, str):
+            obj_id = self._names.get(obj_or_name)
+            if obj_id is None:
+                return None
+        else:
+            obj_id = id(obj_or_name)
+
+        if obj_id not in self._tracked:
+            return None
+
+        tracked = self._tracked[obj_id]
+
+        if not isinstance(tracked.obj, Blade):
+            return None
+
+        blade = tracked.obj
+        vectors = blade.spanning_vectors()
+
+        return {
+            "grade": blade.grade,
+            "dim": blade.dim,
+            "data": np_copy(blade.data),
+            "spanning_vectors": stack([v.data for v in vectors]) if vectors else None,
+            "context": blade.context,
+        }

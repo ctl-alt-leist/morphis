@@ -873,15 +873,15 @@ class TestMotorCallable:
         result = euclidean(p_transformed)
         assert_array_almost_equal(result, [0.0, 1.0, 0.0])
 
-    def test_motor_call_on_ndarray(self):
-        """Motor can be called on Euclidean coordinates directly."""
+    def test_motor_call_on_ndarray_raises(self):
+        """Motor callable rejects raw ndarrays, requiring PGA blades."""
         b = euclidean_bivector(1, 2, dim=4)
         rotor = Motor.rotor(b, pi / 2)
 
         coords = array([1.0, 0.0, 0.0])
-        result = rotor(coords)
 
-        assert_array_almost_equal(result, [0.0, 1.0, 0.0])
+        with pytest.raises(TypeError, match="Cannot apply motor"):
+            rotor(coords)
 
 
 # =============================================================================

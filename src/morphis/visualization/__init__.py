@@ -65,7 +65,6 @@ from morphis.visualization.drawing import (
     draw_basis_blade as draw_basis_blade,
     draw_blade as draw_blade,
     draw_coordinate_basis as draw_coordinate_basis,
-    factor_blade as factor_blade,
 )
 from morphis.visualization.operations import (
     OperationStyle as OperationStyle,

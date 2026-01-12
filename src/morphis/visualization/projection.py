@@ -190,6 +190,49 @@ def project_trivector(blade: Blade, config: ProjectionConfig) -> Blade:
     )
 
 
+def project_quadvector(blade: Blade, config: ProjectionConfig) -> Blade:
+    """
+    Project a quadvector (4-blade) to lower dimension.
+
+    Args:
+        blade: Grade-4 blade with dim > target_dim
+        config: Projection configuration
+
+    Returns:
+        Blade with dim=target_dim, projected quadvector components
+    """
+    if blade.grade != 4:
+        raise ValueError(f"project_quadvector requires grade-4, got {blade.grade}")
+
+    target_dim = config.target_dim
+    if blade.dim <= target_dim:
+        return blade
+
+    if config.method == "principal" or config.axes is None:
+        axes = _extract_principal_axes(blade.data, 4, target_dim)
+    else:
+        axes = config.axes[:target_dim]
+
+    axes_list = list(axes)
+    collection_shape = blade.data.shape[: blade.cdim]
+    projected_shape = collection_shape + (target_dim,) * 4
+    projected_data = zeros(projected_shape, dtype=blade.data.dtype)
+
+    for new_a, old_a in enumerate(axes_list):
+        for new_b, old_b in enumerate(axes_list):
+            for new_c, old_c in enumerate(axes_list):
+                for new_d, old_d in enumerate(axes_list):
+                    projected_data[..., new_a, new_b, new_c, new_d] = blade.data[..., old_a, old_b, old_c, old_d]
+
+    return Blade(
+        data=projected_data,
+        grade=4,
+        dim=target_dim,
+        cdim=blade.cdim,
+        context=blade.context,
+    )
+
+
 def project_blade(blade: Blade, config: ProjectionConfig | None = None) -> Blade:
     """
     Project a blade to lower dimension for visualization.
@@ -226,6 +269,8 @@ def project_blade(blade: Blade, config: ProjectionConfig | None = None) -> Blade
         return project_bivector(blade, config)
     elif blade.grade == 3:
         return project_trivector(blade, config)
+    elif blade.grade == 4:
+        return project_quadvector(blade, config)
     else:
         # For higher grades, project component-wise
         # This is a simplification; full projection is complex

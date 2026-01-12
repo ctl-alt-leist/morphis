@@ -20,14 +20,13 @@ Uses the Observer class internally for core tracking functionality.
 
 import sys
 import time as time_module
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from numpy import array, copy as np_copy, zeros
 from numpy.typing import NDArray
 
 from morphis.ga.model import Blade
 from morphis.utils.observer import Observer
-from morphis.visualization.drawing import factor_blade
 from morphis.visualization.effects import Effect, FadeIn, FadeOut, compute_opacity
 from morphis.visualization.renderer import Renderer
 from morphis.visualization.theme import Color, Theme
@@ -38,7 +37,9 @@ class Snapshot:
     """State of all tracked objects at a specific time."""
 
     t: float
-    states: dict[int, tuple[NDArray, NDArray, float]]  # obj_id -> (origin, vectors, opacity)
+    # obj_id -> (origin, vectors, opacity, projection_axes)
+    states: dict[int, tuple[NDArray, NDArray, float, tuple[int, int, int] | None]]
+    basis_labels: tuple[str, str, str] | None = None  # Optional basis labels for this frame
 
 
 @dataclass
@@ -50,7 +51,8 @@ class AnimationTrack:
     color: Color
     grade: int
     vectors: NDArray | None = None  # Override for spanning vectors
-    origin: NDArray | None = None   # Override for origin
+    origin: NDArray | None = None  # Override for origin
+    projection_axes: tuple[int, int, int] | None = None  # For nD -> 3D projection
 
 
 class Animation:
@@ -168,6 +170,35 @@ class Animation:
             if origin is not None:
                 self._tracks[obj_id].origin = array(origin, dtype=float)
 
+    def set_projection(self, blade: Blade, axes: tuple[int, int, int]):
+        """
+        Set the projection axes for visualizing a high-dimensional blade.
+
+        For blades in dimension > 3, this determines which 3 components
+        are shown. For example:
+        - (0, 1, 2) shows e1, e2, e3 (default)
+        - (1, 2, 3) shows e2, e3, e4
+
+        Args:
+            blade: The tracked blade
+            axes: Tuple of 3 axis indices to project onto
+        """
+        obj_id = id(blade)
+        if obj_id in self._tracks:
+            self._tracks[obj_id].projection_axes = axes
+
+    def set_global_projection(self, axes: tuple[int, int, int]):
+        """
+        Set projection axes for all tracked blades.
+
+        Convenience method for switching the view for all objects at once.
+
+        Args:
+            axes: Tuple of 3 axis indices to project onto
+        """
+        for track in self._tracks.values():
+            track.projection_axes = axes
+
     # =========================================================================
     # Observer Delegation
     # =========================================================================
@@ -203,11 +234,13 @@ class Animation:
             duration: Duration of fade (seconds)
         """
         obj_id = id(blade)
-        self._effects.append(FadeIn(
-            object_id=obj_id,
-            t_start=t,
-            t_end=t + duration,
-        ))
+        self._effects.append(
+            FadeIn(
+                object_id=obj_id,
+                t_start=t,
+                t_end=t + duration,
+            )
+        )
 
     def fade_out(self, blade: Blade, t: float, duration: float):
         """
@@ -219,67 +252,55 @@ class Animation:
             duration: Duration of fade (seconds)
         """
         obj_id = id(blade)
-        self._effects.append(FadeOut(
-            object_id=obj_id,
-            t_start=t,
-            t_end=t + duration,
-        ))
+        self._effects.append(
+            FadeOut(
+                object_id=obj_id,
+                t_start=t,
+                t_end=t + duration,
+            )
+        )
 
     # =========================================================================
     # Blade -> Geometry Conversion
     # =========================================================================
 
-    def _tracked_to_geometry(self, tracked: AnimationTrack) -> tuple[NDArray, NDArray]:
+    def _tracked_to_geometry(self, tracked: AnimationTrack) -> tuple[NDArray, NDArray, tuple[int, int, int] | None]:
         """
         Extract origin and spanning vectors from a tracked blade.
 
         If custom vectors have been set via set_vectors(), those are used.
-        Otherwise, factor_blade() is called (which may not preserve orientation).
+        Otherwise, uses Observer.spanning_vectors_as_array() to factorize the blade.
 
         Returns:
-            (origin, vectors) where origin is 3D point and vectors are
-            the spanning vectors for this blade's grade.
+            (origin, vectors, projection_axes) where origin is the origin point,
+            vectors are the spanning vectors, and projection_axes are the axes
+            to project onto (or None for 3D objects).
         """
+        projection_axes = tracked.projection_axes
+
         # Use custom vectors if set
         if tracked.vectors is not None:
             origin = tracked.origin if tracked.origin is not None else zeros(3)
-            return origin, tracked.vectors
+            return origin, tracked.vectors, projection_axes
 
-        # Fall back to factor_blade
+        # Use Observer's spanning_vectors_as_array for factorization
         blade = tracked.blade
-        origin = zeros(3)
+        dim = blade.dim
 
-        if blade.grade == 1:
-            # Vector: data is the direction
-            direction = blade.data.copy()
-            if len(direction) < 3:
-                direction = array([*direction, *[0.0] * (3 - len(direction))])
-            vectors = array([direction[:3]])
-
-        elif blade.grade == 2:
-            # Bivector: factor into two vectors
-            u, v = factor_blade(blade)
-            if len(u) < 3:
-                u = array([*u, *[0.0] * (3 - len(u))])
-            if len(v) < 3:
-                v = array([*v, *[0.0] * (3 - len(v))])
-            vectors = array([u[:3], v[:3]])
-
-        elif blade.grade == 3:
-            # Trivector: factor into three vectors
-            u, v, w = factor_blade(blade)
-            if len(u) < 3:
-                u = array([*u, *[0.0] * (3 - len(u))])
-            if len(v) < 3:
-                v = array([*v, *[0.0] * (3 - len(v))])
-            if len(w) < 3:
-                w = array([*w, *[0.0] * (3 - len(w))])
-            vectors = array([u[:3], v[:3], w[:3]])
-
+        # Determine origin dimension
+        if dim <= 3:
+            origin = zeros(3)
         else:
-            raise NotImplementedError(f"Grade {blade.grade} not supported")
+            origin = zeros(dim)
 
-        return origin, vectors
+        # Get spanning vectors via Observer (which uses Blade.spanning_vectors())
+        vectors = self._observer.spanning_vectors_as_array(blade)
+
+        if vectors is None:
+            # Fallback for grade 0 or unknown types
+            vectors = array([zeros(dim)])
+
+        return origin, vectors, projection_axes
 
     # =========================================================================
     # Session Control
@@ -302,7 +323,7 @@ class Animation:
         if live:
             # Initialize renderer with all tracked objects (invisible)
             for tracked in self._tracks.values():
-                origin, vectors = self._tracked_to_geometry(tracked)
+                origin, vectors, projection_axes = self._tracked_to_geometry(tracked)
                 self._renderer.add_object(
                     obj_id=tracked.obj_id,
                     grade=tracked.grade,
@@ -310,6 +331,7 @@ class Animation:
                     vectors=vectors,
                     color=tracked.color,
                     opacity=0.0,
+                    projection_axes=projection_axes,
                 )
             self._renderer.show()
             _bring_window_to_front()
@@ -328,10 +350,10 @@ class Animation:
             raise RuntimeError("Must call start() before capture()")
 
         # Build snapshot
-        states: dict[int, tuple[NDArray, NDArray, float]] = {}
+        states: dict[int, tuple[NDArray, NDArray, float, tuple[int, int, int] | None]] = {}
 
         for tracked in self._tracks.values():
-            origin, vectors = self._tracked_to_geometry(tracked)
+            origin, vectors, projection_axes = self._tracked_to_geometry(tracked)
 
             # Compute opacity from effects
             opacity = compute_opacity(self._effects, tracked.obj_id, t)
@@ -339,9 +361,11 @@ class Animation:
                 # No effects scheduled - default to visible
                 opacity = 1.0
 
-            states[tracked.obj_id] = (np_copy(origin), np_copy(vectors), opacity)
+            states[tracked.obj_id] = (np_copy(origin), np_copy(vectors), opacity, projection_axes)
 
-        snapshot = Snapshot(t=t, states=states)
+        # Include current basis labels if set
+        basis_labels = getattr(self, "_basis_labels", None)
+        snapshot = Snapshot(t=t, states=states, basis_labels=basis_labels)
         self._snapshots.append(snapshot)
 
         if self._live:
@@ -360,12 +384,12 @@ class Animation:
                 return
 
         # Render this frame
-        for obj_id, (origin, vectors, opacity) in snapshot.states.items():
+        for obj_id, (origin, vectors, opacity, projection_axes) in snapshot.states.items():
             tracked = self._tracks.get(obj_id)
             if tracked is None:
                 continue
 
-            self._renderer.update_object(obj_id, origin, vectors, opacity)
+            self._renderer.update_object(obj_id, origin, vectors, opacity, projection_axes)
 
         self._renderer.render()
         self._last_render_time = wall_time
@@ -398,9 +422,9 @@ class Animation:
             # Use first snapshot's geometry as initial state
             first_state = self._snapshots[0].states.get(tracked.obj_id)
             if first_state:
-                origin, vectors, opacity = first_state
+                origin, vectors, opacity, projection_axes = first_state
             else:
-                origin, vectors = self._tracked_to_geometry(tracked)
+                origin, vectors, projection_axes = self._tracked_to_geometry(tracked)
                 opacity = 0.0
 
             self._renderer.add_object(
@@ -410,6 +434,7 @@ class Animation:
                 vectors=vectors,
                 color=tracked.color,
                 opacity=opacity,
+                projection_axes=projection_axes,
             )
 
         self._renderer.show()
@@ -418,7 +443,7 @@ class Animation:
         # Playback loop
         t_start = self._snapshots[0].t
         t_end = self._snapshots[-1].t
-        duration = t_end - t_start
+        t_end - t_start
 
         try:
             while True:
@@ -434,8 +459,8 @@ class Animation:
                         time_module.sleep(target_time - now)
 
                     # Render this frame
-                    for obj_id, (origin, vectors, opacity) in snapshot.states.items():
-                        self._renderer.update_object(obj_id, origin, vectors, opacity)
+                    for obj_id, (origin, vectors, opacity, projection_axes) in snapshot.states.items():
+                        self._renderer.update_object(obj_id, origin, vectors, opacity, projection_axes)
 
                     self._renderer.render()
 
@@ -499,13 +524,13 @@ class Animation:
         for tracked in self._tracks.values():
             first_state = self._snapshots[0].states.get(tracked.obj_id)
             if first_state:
-                origin, vectors, opacity = first_state
+                origin, vectors, opacity, projection_axes = first_state
             else:
-                origin, vectors = self._tracked_to_geometry(tracked)
+                origin, vectors, projection_axes = self._tracked_to_geometry(tracked)
                 opacity = 0.0
 
             edges_actor, faces_actor = self._add_object_to_plotter(
-                plotter, tracked, origin, vectors, opacity
+                plotter, tracked, origin, vectors, opacity, projection_axes
             )
             actors[tracked.obj_id] = (edges_actor, faces_actor, tracked.grade)
 
@@ -513,13 +538,13 @@ class Animation:
         frames = []
         for snapshot in self._snapshots:
             # Update all objects
-            for obj_id, (origin, vectors, opacity) in snapshot.states.items():
+            for obj_id, (origin, vectors, opacity, projection_axes) in snapshot.states.items():
                 if obj_id not in actors:
                     continue
 
                 edges_actor, faces_actor, grade = actors[obj_id]
                 self._update_actor_geometry(
-                    plotter, edges_actor, faces_actor, grade, origin, vectors, opacity
+                    plotter, edges_actor, faces_actor, grade, origin, vectors, opacity, projection_axes
                 )
 
             # Capture frame
@@ -537,52 +562,61 @@ class Animation:
 
         print(f"Saved animation to {filename}")
 
-    def _add_object_to_plotter(self, plotter, tracked, origin, vectors, opacity):
+    def _add_object_to_plotter(self, plotter, tracked, origin, vectors, opacity, projection_axes=None):
         """Add an object to an off-screen plotter, return actors."""
         from morphis.visualization.drawing import (
             _create_arrow_mesh,
             _create_origin_marker,
             create_bivector_mesh,
+            create_quadvector_mesh,
             create_trivector_mesh,
         )
 
+        # Helper to project vectors if needed
+        def project_to_3d(vec, axes):
+            if axes is None or len(vec) <= 3:
+                v = vec[:3] if len(vec) >= 3 else array([*vec, *[0.0] * (3 - len(vec))])
+                return v
+            return array([vec[axes[0]], vec[axes[1]], vec[axes[2]]])
+
         if tracked.grade == 1:
             direction = vectors[0] if vectors.ndim > 1 else vectors
-            edges_mesh = _create_arrow_mesh(origin, direction)
-            origin_mesh = _create_origin_marker(origin)
-            edges_actor = plotter.add_mesh(
-                edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-            )
-            plotter.add_mesh(
-                origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-            )
+            direction_3d = project_to_3d(direction, projection_axes)
+            origin_3d = project_to_3d(origin, projection_axes)
+            edges_mesh = _create_arrow_mesh(origin_3d, direction_3d)
+            origin_mesh = _create_origin_marker(origin_3d)
+            edges_actor = plotter.add_mesh(edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
+            plotter.add_mesh(origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
             faces_actor = None
 
         elif tracked.grade == 2:
             u, v = vectors[0], vectors[1]
-            edges_mesh, faces_mesh, origin_mesh = create_bivector_mesh(origin, u, v)
-            edges_actor = plotter.add_mesh(
-                edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-            )
-            faces_actor = plotter.add_mesh(
-                faces_mesh, color=tracked.color, opacity=opacity * 0.25, smooth_shading=True
-            )
-            plotter.add_mesh(
-                origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-            )
+            u_3d = project_to_3d(u, projection_axes)
+            v_3d = project_to_3d(v, projection_axes)
+            origin_3d = project_to_3d(origin, projection_axes)
+            edges_mesh, faces_mesh, origin_mesh = create_bivector_mesh(origin_3d, u_3d, v_3d)
+            edges_actor = plotter.add_mesh(edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
+            faces_actor = plotter.add_mesh(faces_mesh, color=tracked.color, opacity=opacity * 0.25, smooth_shading=True)
+            plotter.add_mesh(origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
 
         elif tracked.grade == 3:
             u, v, w = vectors[0], vectors[1], vectors[2]
-            edges_mesh, faces_mesh, origin_mesh = create_trivector_mesh(origin, u, v, w)
-            edges_actor = plotter.add_mesh(
-                edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-            )
-            faces_actor = plotter.add_mesh(
-                faces_mesh, color=tracked.color, opacity=opacity * 0.2, smooth_shading=True
-            )
-            plotter.add_mesh(
-                origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-            )
+            u_3d = project_to_3d(u, projection_axes)
+            v_3d = project_to_3d(v, projection_axes)
+            w_3d = project_to_3d(w, projection_axes)
+            origin_3d = project_to_3d(origin, projection_axes)
+            edges_mesh, faces_mesh, origin_mesh = create_trivector_mesh(origin_3d, u_3d, v_3d, w_3d)
+            edges_actor = plotter.add_mesh(edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
+            faces_actor = plotter.add_mesh(faces_mesh, color=tracked.color, opacity=opacity * 0.2, smooth_shading=True)
+            plotter.add_mesh(origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
+
+        elif tracked.grade == 4:
+            u, v, w, x = vectors[0], vectors[1], vectors[2], vectors[3]
+            axes = projection_axes or (0, 1, 2)
+            edges_mesh, faces_mesh, origin_mesh = create_quadvector_mesh(origin, u, v, w, x, projection_axes=axes)
+            edges_actor = plotter.add_mesh(edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
+            faces_actor = plotter.add_mesh(faces_mesh, color=tracked.color, opacity=opacity * 0.15, smooth_shading=True)
+            plotter.add_mesh(origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
 
         else:
             raise NotImplementedError(f"Grade {tracked.grade} not supported")
@@ -590,30 +624,55 @@ class Animation:
         return edges_actor, faces_actor
 
     def _update_actor_geometry(
-        self, plotter, edges_actor, faces_actor, grade, origin, vectors, opacity
+        self, plotter, edges_actor, faces_actor, grade, origin, vectors, opacity, projection_axes=None
     ):
         """Update actor geometry and opacity."""
         from morphis.visualization.drawing import (
             _create_arrow_mesh,
             create_bivector_mesh,
+            create_quadvector_mesh,
             create_trivector_mesh,
         )
 
+        # Helper to project vectors if needed
+        def project_to_3d(vec, axes):
+            if axes is None or len(vec) <= 3:
+                v = vec[:3] if len(vec) >= 3 else array([*vec, *[0.0] * (3 - len(vec))])
+                return v
+            return array([vec[axes[0]], vec[axes[1]], vec[axes[2]]])
+
         if grade == 1:
             direction = vectors[0] if vectors.ndim > 1 else vectors
-            edges_mesh = _create_arrow_mesh(origin, direction)
+            direction_3d = project_to_3d(direction, projection_axes)
+            origin_3d = project_to_3d(origin, projection_axes)
+            edges_mesh = _create_arrow_mesh(origin_3d, direction_3d)
             edges_actor.mapper.SetInputData(edges_mesh)
 
         elif grade == 2:
             u, v = vectors[0], vectors[1]
-            edges_mesh, faces_mesh, _ = create_bivector_mesh(origin, u, v)
+            u_3d = project_to_3d(u, projection_axes)
+            v_3d = project_to_3d(v, projection_axes)
+            origin_3d = project_to_3d(origin, projection_axes)
+            edges_mesh, faces_mesh, _ = create_bivector_mesh(origin_3d, u_3d, v_3d)
             edges_actor.mapper.SetInputData(edges_mesh)
             if faces_actor is not None:
                 faces_actor.mapper.SetInputData(faces_mesh)
 
         elif grade == 3:
             u, v, w = vectors[0], vectors[1], vectors[2]
-            edges_mesh, faces_mesh, _ = create_trivector_mesh(origin, u, v, w)
+            u_3d = project_to_3d(u, projection_axes)
+            v_3d = project_to_3d(v, projection_axes)
+            w_3d = project_to_3d(w, projection_axes)
+            origin_3d = project_to_3d(origin, projection_axes)
+            edges_mesh, faces_mesh, _ = create_trivector_mesh(origin_3d, u_3d, v_3d, w_3d)
+            edges_actor.mapper.SetInputData(edges_mesh)
+            if faces_actor is not None:
+                faces_actor.mapper.SetInputData(faces_mesh)
+
+        elif grade == 4:
+            u, v, w, x = vectors[0], vectors[1], vectors[2], vectors[3]
+            axes = projection_axes or (0, 1, 2)
+            edges_mesh, faces_mesh, _ = create_quadvector_mesh(origin, u, v, w, x, projection_axes=axes)
             edges_actor.mapper.SetInputData(edges_mesh)
             if faces_actor is not None:
                 faces_actor.mapper.SetInputData(faces_mesh)
@@ -621,7 +680,14 @@ class Animation:
         # Update opacity
         edges_actor.GetProperty().SetOpacity(opacity)
         if faces_actor is not None:
-            face_opacity = opacity * (0.25 if grade == 2 else 0.2)
+            if grade == 2:
+                face_opacity = opacity * 0.25
+            elif grade == 3:
+                face_opacity = opacity * 0.2
+            elif grade == 4:
+                face_opacity = opacity * 0.15
+            else:
+                face_opacity = opacity * 0.2
             faces_actor.GetProperty().SetOpacity(face_opacity)
 
     def _save_gif(self, filename: str, frames: list, loop: bool):
@@ -664,6 +730,15 @@ class Animation:
             self._camera_position = position
         if focal_point is not None:
             self._camera_focal = focal_point
+
+    def set_basis_labels(self, labels: tuple[str, str, str]):
+        """
+        Set custom labels for the coordinate basis axes.
+
+        Args:
+            labels: Tuple of 3 labels for (x, y, z) axes, e.g., ("e₁", "e₂", "e₃")
+        """
+        self._basis_labels = labels
 
     def close(self):
         """Close the animation window."""
