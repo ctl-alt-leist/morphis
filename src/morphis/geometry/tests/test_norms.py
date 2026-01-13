@@ -1,12 +1,11 @@
-"""Unit tests for morphis.ga.norms"""
+"""Unit tests for morphis.geometry.algebra norms"""
 
 from numpy import array, zeros
 from numpy.random import randn
 from numpy.testing import assert_array_almost_equal
 
-from morphis.ga.model import euclidean_metric, pga_metric, vector_blade
-from morphis.ga.norms import norm, norm_squared, normalize
-from morphis.ga.operations import wedge
+from morphis.geometry.algebra import norm, norm_squared, normalize, wedge
+from morphis.geometry.model import euclidean, pga, vector_blade
 
 
 # =============================================================================
@@ -16,17 +15,17 @@ from morphis.ga.operations import wedge
 
 class TestNormSquared:
     def test_vector(self):
-        g = euclidean_metric(4)
-        e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
-        ns = norm_squared(e_1, g)
+        m = euclidean(4)
+        e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]), metric=m)
+        ns = norm_squared(e_1)
         assert_array_almost_equal(ns, 1.0)
 
     def test_bivector(self):
-        g = euclidean_metric(4)
-        e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
-        e_2 = vector_blade(array([0.0, 1.0, 0.0, 0.0]))
+        m = euclidean(4)
+        e_1 = vector_blade(array([1.0, 0.0, 0.0, 0.0]), metric=m)
+        e_2 = vector_blade(array([0.0, 1.0, 0.0, 0.0]), metric=m)
         biv = wedge(e_1, e_2)
-        ns = norm_squared(biv, g)
+        ns = norm_squared(biv)
         assert ns > 0
 
 
@@ -37,21 +36,21 @@ class TestNormSquared:
 
 class TestNorm:
     def test_vector(self):
-        g = euclidean_metric(4)
-        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]))
-        n = norm(v, g)
+        m = euclidean(4)
+        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]), metric=m)
+        n = norm(v)
         assert_array_almost_equal(n, 5.0)
 
     def test_batch(self):
-        g = euclidean_metric(4)
-        vecs = vector_blade(randn(5, 4), cdim=1)
-        norms = norm(vecs, g)
+        m = euclidean(4)
+        vecs = vector_blade(randn(5, 4), metric=m, collection=(5,))
+        norms = norm(vecs)
         assert norms.shape == (5,)
 
     def test_pga_metric(self):
-        g = pga_metric(3)
-        e_0 = vector_blade(array([1.0, 0.0, 0.0, 0.0]))
-        n = norm(e_0, g)
+        m = pga(3)
+        e_0 = vector_blade(array([1.0, 0.0, 0.0, 0.0]), metric=m)
+        n = norm(e_0)
         assert_array_almost_equal(n, 0.0)
 
 
@@ -62,16 +61,16 @@ class TestNorm:
 
 class TestNormalize:
     def test_normalize(self):
-        g = euclidean_metric(4)
-        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]))
-        v_norm = normalize(v, g)
-        n = norm(v_norm, g)
+        m = euclidean(4)
+        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]), metric=m)
+        v_norm = normalize(v)
+        n = norm(v_norm)
         assert_array_almost_equal(n, 1.0)
 
     def test_zero_blade(self):
-        g = euclidean_metric(4)
-        zero = vector_blade(zeros(4))
-        n = norm(zero, g)
+        m = euclidean(4)
+        zero = vector_blade(zeros(4), metric=m)
+        n = norm(zero)
         assert_array_almost_equal(n, 0.0)
-        normed = normalize(zero, g)
+        normed = normalize(zero)
         assert_array_almost_equal(normed.data, zeros(4))

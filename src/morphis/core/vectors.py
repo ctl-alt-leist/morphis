@@ -76,7 +76,7 @@ def cross(u: NDArray, v: NDArray) -> NDArray:
     Cross product of 3D vectors, with broadcasting.
 
     Note: Cross product is only defined in 3D (and 7D). For general
-    dimensions, use the wedge product from morphis.ga.operations.
+    dimensions, use the wedge product from morphis.geometry.algebra.
     """
     levi = levi_civita(3)
     return einsum("abc, ...b, ...c -> ...a", levi, u, v)

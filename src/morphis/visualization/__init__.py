@@ -13,19 +13,21 @@ Quick start - Canvas primitives:
 
 Blade visualization:
     from morphis.visualization import visualize_blade, visualize_blades
-    from morphis.ga.model import vector_blade, bivector_blade
+    from morphis.geometry.model import vector_blade, bivector_blade
+    from morphis.geometry.model.metric import euclidean
 
-    v = vector_blade([1, 2, 3])
+    g = euclidean(3)
+    v = vector_blade([1, 2, 3], g)
     canvas = visualize_blade(v)
     canvas.show()
 
     # Bivector with different modes
-    B = bivector_blade(...)
+    B = bivector_blade(..., g)
     canvas = visualize_blade(B, mode='circle')  # or 'parallelogram', 'plane'
 
 PGA visualization:
     from morphis.visualization import visualize_pga_blade
-    from morphis.geometry.projective import point, line
+    from morphis.geometry.algebra.projective import point, line
 
     p = point([1, 2, 3])
     canvas = visualize_pga_blade(p)  # Renders at Euclidean location

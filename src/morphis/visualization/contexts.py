@@ -16,9 +16,9 @@ from numpy import array, cross, zeros
 from numpy.linalg import norm as np_norm
 from numpy.typing import NDArray
 
-from morphis.ga.context import degenerate
-from morphis.ga.model import Blade
-from morphis.geometry.projective import bulk, euclidean, is_point
+from morphis.geometry.algebra.projective import bulk, euclidean, is_point
+from morphis.geometry.model import Blade
+from morphis.geometry.model.metric import GAStructure
 from morphis.visualization.blades import BladeStyle
 from morphis.visualization.canvas import Canvas
 
@@ -66,7 +66,7 @@ def render_pga_point(
     style = style or PGAStyle()
 
     # Handle collection dimensions
-    if blade.cdim > 0:
+    if blade.collection:
         _render_pga_points_batch(blade, canvas, style)
         return
 
@@ -85,15 +85,16 @@ def render_pga_point(
 
 def _render_pga_points_batch(blade: Blade, canvas: Canvas, style: PGAStyle) -> None:
     """Render batch of PGA points."""
-    n_points = blade.data.shape[0] if blade.cdim == 1 else blade.data.reshape(-1, blade.dim).shape[0]
+    cdim = len(blade.collection)
+    n_points = blade.data.shape[0] if cdim == 1 else blade.data.reshape(-1, blade.dim).shape[0]
 
     for k in range(n_points):
-        if blade.cdim == 1:
+        if cdim == 1:
             point_data = blade.data[k]
         else:
             point_data = blade.data.reshape(-1, blade.dim)[k]
 
-        single_blade = Blade(data=point_data, grade=1, dim=blade.dim, context=blade.context)
+        single_blade = Blade(data=point_data, grade=1, metric=blade.metric)
 
         if is_point(single_blade):
             coords = euclidean(single_blade)
@@ -132,7 +133,7 @@ def render_pga_line(
     style = style or PGAStyle()
 
     # Handle collection dimensions - render first
-    if blade.cdim > 0:
+    if blade.collection:
         data = blade.data.reshape(-1, blade.dim, blade.dim)[0]
     else:
         data = blade.data
@@ -201,7 +202,7 @@ def render_pga_plane(
     style = style or PGAStyle()
 
     # Handle collection dimensions - render first
-    if blade.cdim > 0:
+    if blade.collection:
         data = blade.data.reshape(-1, blade.dim, blade.dim, blade.dim)[0]
     else:
         data = blade.data
@@ -254,7 +255,7 @@ def render_pga_plane(
 
 def is_pga_context(blade: Blade) -> bool:
     """Check if blade has PGA context."""
-    return blade.context == degenerate.projective
+    return blade.metric.structure == GAStructure.PROJECTIVE
 
 
 def visualize_pga_blade(

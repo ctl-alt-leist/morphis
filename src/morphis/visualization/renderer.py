@@ -16,7 +16,7 @@ import pyvista as pv
 from numpy import array
 from numpy.typing import NDArray
 
-from morphis.visualization.drawing import create_blade_mesh
+from morphis.visualization.drawing import create_blade_mesh, create_frame_mesh
 from morphis.visualization.theme import Color, Theme, get_theme
 
 
@@ -32,6 +32,7 @@ class TrackedObject:
     origin_actor: pv.Actor | None
     opacity: float = 1.0
     projection_axes: tuple[int, int, int] | None = None  # For nD -> 3D projection
+    filled: bool = False  # For frames: whether to show edges and faces
 
 
 class Renderer:
@@ -70,6 +71,8 @@ class Renderer:
         self._plotter: pv.Plotter | None = None
         self._objects: dict[int, TrackedObject] = {}
         self._color_index = 0
+        self._basis_label_actors: list | None = None
+        self._current_basis_labels: tuple[str, str, str] | None = None
 
     def _ensure_plotter(self):
         """Create plotter if not yet created."""
@@ -81,7 +84,11 @@ class Renderer:
             if self._show_basis:
                 from morphis.visualization.drawing import draw_coordinate_basis
 
-                draw_coordinate_basis(self._plotter, color=self.theme.axis_color)
+                self._basis_label_actors = draw_coordinate_basis(
+                    self._plotter,
+                    color=self.theme.axis_color,
+                    labels=self._current_basis_labels,
+                )
 
     def _next_color(self) -> Color:
         """Get the next color from the theme palette."""
@@ -102,18 +109,20 @@ class Renderer:
         color: Color | None = None,
         opacity: float = 1.0,
         projection_axes: tuple[int, int, int] | None = None,
+        filled: bool = False,
     ):
         """
         Add a new object to the renderer.
 
         Args:
             obj_id: Unique identifier for this object
-            grade: Geometric grade (1=vector, 2=bivector, 3=trivector, 4=quadvector)
+            grade: Geometric grade (1=vector, 2=bivector, 3=trivector, 4=quadvector, -1=frame)
             origin: Origin point (nD)
             vectors: Spanning vectors (shape depends on grade)
             color: RGB color tuple (0-1 range), or None for auto
             opacity: Initial opacity [0, 1]
             projection_axes: For nD blades, which 3 axes to project onto
+            filled: For frames, whether to show edges and faces of spanned shape
         """
         self._ensure_plotter()
 
@@ -128,7 +137,16 @@ class Renderer:
         vectors = array(vectors, dtype=float)
 
         # Create meshes using centralized drawing functions
-        edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(grade, origin, vectors, projection_axes=projection_axes)
+        if grade == -1:
+            # Frame: k arrows from origin (optionally with edges/faces)
+            edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
+                origin, vectors, projection_axes=projection_axes, filled=filled
+            )
+        else:
+            # Blade: sequential construction
+            edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(
+                grade, origin, vectors, projection_axes=projection_axes
+            )
 
         # Add to plotter
         edges_actor = None
@@ -143,6 +161,8 @@ class Renderer:
                 face_opacity = opacity * 0.2
             elif grade == 4:
                 face_opacity = opacity * 0.15
+            elif grade == -1:
+                face_opacity = opacity * 0.2  # Frame faces
             else:
                 face_opacity = opacity * 0.2
             faces_actor = self._plotter.add_mesh(faces_mesh, color=color, opacity=face_opacity, smooth_shading=True)
@@ -158,6 +178,7 @@ class Renderer:
             origin_actor=origin_actor,
             opacity=opacity,
             projection_axes=projection_axes,
+            filled=filled,
         )
 
     def update_object(
@@ -192,9 +213,16 @@ class Renderer:
             tracked.projection_axes = projection_axes
 
         # Recreate meshes using centralized drawing functions
-        edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(
-            tracked.grade, origin, vectors, projection_axes=tracked.projection_axes
-        )
+        if tracked.grade == -1:
+            # Frame: k arrows from origin (optionally with edges/faces)
+            edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
+                origin, vectors, projection_axes=tracked.projection_axes, filled=tracked.filled
+            )
+        else:
+            # Blade: sequential construction
+            edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(
+                tracked.grade, origin, vectors, projection_axes=tracked.projection_axes
+            )
 
         # Update actors with new meshes
         if tracked.edges_actor is not None and edges_mesh is not None:
@@ -257,6 +285,63 @@ class Renderer:
             self._plotter.camera.position = position
         if focal_point is not None:
             self._plotter.camera.focal_point = focal_point
+
+    def set_basis_labels(self, labels: tuple[str, str, str]):
+        """
+        Update coordinate basis labels.
+
+        Args:
+            labels: New labels for (x, y, z) axes, e.g. ("$e_1$", "$e_2$", "$e_3$")
+        """
+        if labels == self._current_basis_labels:
+            return  # No change needed
+
+        self._current_basis_labels = labels
+
+        if self._plotter is None or not self._show_basis:
+            return
+
+        # Remove old label actors
+        if self._basis_label_actors:
+            for actor in self._basis_label_actors:
+                self._plotter.remove_actor(actor)
+
+        # Draw new labels only (arrows stay the same)
+        self._basis_label_actors = self._draw_basis_labels(labels)
+
+    def _draw_basis_labels(self, labels: tuple[str, str, str]) -> list:
+        """Draw only the basis labels (not the arrows)."""
+        from numpy import array
+        from numpy.linalg import norm
+
+        directions = [
+            array([1.0, 0.0, 0.0]),
+            array([0.0, 1.0, 0.0]),
+            array([0.0, 0.0, 1.0]),
+        ]
+        offset_dirs = [
+            array([0, -1, -1]),
+            array([-1, 0, -1]),
+            array([-1, -1, 0]),
+        ]
+        label_offset = 0.08
+
+        label_actors = []
+        for direction, offset_dir, axis_name in zip(directions, offset_dirs, labels, strict=False):
+            offset = offset_dir / norm(offset_dir) * label_offset
+            label_pos = direction * 0.5 + offset
+            actor = self._plotter.add_point_labels(
+                [label_pos],
+                [axis_name],
+                font_size=12,
+                text_color=self.theme.axis_color,
+                point_size=0,
+                shape=None,
+                show_points=False,
+                always_visible=True,
+            )
+            label_actors.append(actor)
+        return label_actors
 
     def render(self):
         """Render the current frame."""

@@ -8,8 +8,8 @@ Shows inputs and results together to illustrate geometric relationships.
 from dataclasses import dataclass
 from typing import Literal
 
-from morphis.ga.model import Blade
-from morphis.ga.operations import meet, wedge
+from morphis.geometry.algebra import meet
+from morphis.geometry.model import Blade
 from morphis.visualization.blades import BladeStyle, visualize_blade
 from morphis.visualization.canvas import Canvas
 from morphis.visualization.projection import ProjectionConfig
@@ -75,7 +75,7 @@ def render_join(
     style = style or OperationStyle()
 
     # Compute join
-    result = wedge(u, v)
+    result = u ^ v
 
     # Colors for inputs and result
     color_1 = style.input_color_1 or canvas.theme.palette[0]
@@ -244,7 +244,7 @@ def render_meet_join(
 
     # Render join
     if show in ("join", "both"):
-        join_result = wedge(u, v)
+        join_result = u ^ v
         join_style = BladeStyle(
             color=join_color,
             opacity=style.result_opacity * 0.7,
@@ -282,7 +282,7 @@ def render_with_dual(
     Returns:
         Canvas with blade and dual rendered
     """
-    from morphis.ga.duality import hodge_dual, left_complement, right_complement
+    from morphis.geometry.algebra.duality import hodge_dual, left_complement, right_complement
 
     if canvas is None:
         canvas = Canvas(show_basis=True)

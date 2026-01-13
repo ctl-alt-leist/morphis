@@ -1,10 +1,10 @@
-"""Unit tests for ga_structure.py"""
+"""Unit tests for algebra structure module."""
 
 from numpy import array, einsum, outer
 from numpy.random import randn
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-from morphis.ga.structure import (
+from morphis.geometry.algebra.structure import (
     INDICES,
     antisymmetric_symbol,
     antisymmetrize,

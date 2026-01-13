@@ -11,7 +11,8 @@ from typing import Literal
 from numpy import abs as np_abs, argsort, zeros
 from numpy.typing import NDArray
 
-from morphis.ga.model import Blade
+from morphis.geometry.model import Blade
+from morphis.geometry.model.metric import euclidean
 
 
 @dataclass
@@ -98,9 +99,8 @@ def project_vector(blade: Blade, config: ProjectionConfig) -> Blade:
     return Blade(
         data=projected_data,
         grade=1,
-        dim=target_dim,
-        cdim=blade.cdim,
-        context=blade.context,
+        metric=euclidean(target_dim),
+        collection=blade.collection,
     )
 
 
@@ -131,7 +131,7 @@ def project_bivector(blade: Blade, config: ProjectionConfig) -> Blade:
 
     # Extract submatrix for selected axes
     axes_list = list(axes)
-    collection_shape = blade.data.shape[: blade.cdim]
+    collection_shape = blade.collection
     projected_shape = collection_shape + (target_dim, target_dim)
     projected_data = zeros(projected_shape, dtype=blade.data.dtype)
 
@@ -142,9 +142,8 @@ def project_bivector(blade: Blade, config: ProjectionConfig) -> Blade:
     return Blade(
         data=projected_data,
         grade=2,
-        dim=target_dim,
-        cdim=blade.cdim,
-        context=blade.context,
+        metric=euclidean(target_dim),
+        collection=blade.collection,
     )
 
 
@@ -172,7 +171,7 @@ def project_trivector(blade: Blade, config: ProjectionConfig) -> Blade:
         axes = config.axes[:target_dim]
 
     axes_list = list(axes)
-    collection_shape = blade.data.shape[: blade.cdim]
+    collection_shape = blade.collection
     projected_shape = collection_shape + (target_dim, target_dim, target_dim)
     projected_data = zeros(projected_shape, dtype=blade.data.dtype)
 
@@ -184,9 +183,8 @@ def project_trivector(blade: Blade, config: ProjectionConfig) -> Blade:
     return Blade(
         data=projected_data,
         grade=3,
-        dim=target_dim,
-        cdim=blade.cdim,
-        context=blade.context,
+        metric=euclidean(target_dim),
+        collection=blade.collection,
     )
 
 
@@ -214,7 +212,7 @@ def project_quadvector(blade: Blade, config: ProjectionConfig) -> Blade:
         axes = config.axes[:target_dim]
 
     axes_list = list(axes)
-    collection_shape = blade.data.shape[: blade.cdim]
+    collection_shape = blade.collection
     projected_shape = collection_shape + (target_dim,) * 4
     projected_data = zeros(projected_shape, dtype=blade.data.dtype)
 
@@ -227,9 +225,8 @@ def project_quadvector(blade: Blade, config: ProjectionConfig) -> Blade:
     return Blade(
         data=projected_data,
         grade=4,
-        dim=target_dim,
-        cdim=blade.cdim,
-        context=blade.context,
+        metric=euclidean(target_dim),
+        collection=blade.collection,
     )
 
 
@@ -259,9 +256,8 @@ def project_blade(blade: Blade, config: ProjectionConfig | None = None) -> Blade
         return Blade(
             data=blade.data.copy(),
             grade=0,
-            dim=target_dim,
-            cdim=blade.cdim,
-            context=blade.context,
+            metric=euclidean(target_dim),
+            collection=blade.collection,
         )
     elif blade.grade == 1:
         return project_vector(blade, config)

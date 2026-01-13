@@ -68,7 +68,7 @@ class Canvas:
         title: str | None = None,
         size: tuple[int, int] = (1200, 900),
         show_basis: bool = True,
-        basis_axes: tuple[int, int, int] = (1, 2, 3),
+        basis_axes: tuple[int, int, int] = (0, 1, 2),
     ):
         import pyvista as pv
 
@@ -112,7 +112,7 @@ class Canvas:
     def basis(
         self,
         scale: float = 1.0,
-        axes: tuple[int, int, int] = (1, 2, 3),
+        axes: tuple[int, int, int] = (0, 1, 2),
         labels: bool = True,
     ):
         """
@@ -120,15 +120,15 @@ class Canvas:
 
         Args:
             scale: Not used for native axes (kept for API compatibility)
-            axes: Which basis vectors to label (1-indexed, e.g., (1, 2, 3) or (2, 4, 5))
+            axes: Which basis vectors to label (0-indexed, e.g., (0, 1, 2) or (1, 3, 4))
             labels: Whether to show axis labels
         """
         color = self.theme.axis_color
 
-        # Generate labels based on which axes are displayed
-        xlabel = f"e{axes[0]}" if len(axes) > 0 else "e1"
-        ylabel = f"e{axes[1]}" if len(axes) > 1 else "e2"
-        zlabel = f"e{axes[2]}" if len(axes) > 2 else "e3"
+        # Generate labels based on which axes are displayed (0-indexed to 1-indexed for display)
+        xlabel = f"e{axes[0] + 1}" if len(axes) > 0 else "e1"
+        ylabel = f"e{axes[1] + 1}" if len(axes) > 1 else "e2"
+        zlabel = f"e{axes[2] + 1}" if len(axes) > 2 else "e3"
 
         self.plotter.add_axes_at_origin(
             x_color=color,
@@ -153,7 +153,7 @@ class Canvas:
         selected dimensions.
 
         Args:
-            axes: Tuple of axis indices (1-indexed), e.g., (1, 3, 5) for e1, e3, e5
+            axes: Tuple of axis indices (0-indexed), e.g., (0, 2, 4) for e1, e3, e5
         """
         self.plotter.clear()
         self.plotter.set_background(self.theme.background)

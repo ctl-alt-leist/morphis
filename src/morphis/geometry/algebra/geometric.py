@@ -7,30 +7,38 @@ associative operation. For vectors u and v:
     uv = u . v + u ^ v
 
 This extends to all grades through systematic contraction and antisymmetrization.
+Metrics are obtained from blade attributes and validated for compatibility.
 
 Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 Blade naming convention: u, v, w (never a, b, c for blades).
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from numpy import einsum, newaxis, zeros
 from numpy.typing import NDArray
 
-from morphis.ga.context import GeometricContext
-from morphis.ga.model import Blade, Metric, MultiVector, euclidean, scalar_blade
-from morphis.ga.structure import (
+from morphis.geometry.algebra.structure import (
     generalized_delta,
     geometric_normalization,
     geometric_signature,
 )
-from morphis.ga.utils import broadcast_collection_shape, get_common_cdim, get_common_dim
+from morphis.geometry.utils import broadcast_collection_shape, get_common_dim
+
+
+if TYPE_CHECKING:
+    from morphis.geometry.model.blade import Blade
+    from morphis.geometry.model.multivector import MultiVector
 
 
 # =============================================================================
-# Geometric Product
+# Geometric Product (Blade x Blade)
 # =============================================================================
 
 
-def _geometric_bl_bl(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
+def _geometric_bl_bl(u: Blade, v: Blade) -> MultiVector:
     """
     Geometric product of two blades: uv = sum of <uv>_r over grades r
 
@@ -39,19 +47,20 @@ def _geometric_bl_bl(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector
 
     Each grade r corresponds to (j + k - r)/2 metric contractions.
 
-    Context: Preserves if both match, otherwise None.
+    Both blades must have compatible metrics (validated via Metric.merge).
 
     Returns MultiVector containing all nonzero grade components.
     """
+    from morphis.geometry.model.blade import Blade, scalar_blade
+    from morphis.geometry.model.metric import Metric
+    from morphis.geometry.model.multivector import MultiVector
+
+    # Merge metrics (raises if incompatible)
+    metric = Metric.merge(u.metric, v.metric)
+    g = metric
+
     d = get_common_dim(u, v)
-    g = euclidean(d) if g is None else g
-
-    if d != g.dim:
-        raise ValueError(f"Blade dim {d} != metric dim {g.dim}")
-
     j, k = u.grade, v.grade
-    cdim = get_common_cdim(u, v)
-    merged_context = GeometricContext.merge(u.context, v.context)
 
     components = {}
 
@@ -76,24 +85,91 @@ def _geometric_bl_bl(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector
         if r == 0:
             # Scalar result
             result_data = norm * einsum(sig, *metric_args, u.data, v.data)
-            component = scalar_blade(result_data, dim=d, cdim=cdim)
+            component = scalar_blade(result_data, metric=metric)
 
         elif c == 0:
             # Pure wedge (no contractions)
             delta = generalized_delta(r, d)
             result_data = norm * einsum(sig, u.data, v.data, delta)
-            component = Blade(data=result_data, grade=r, dim=d, cdim=cdim)
+            component = Blade(data=result_data, grade=r, metric=metric)
 
         else:
             # Mixed: contractions + antisymmetrization
             delta = generalized_delta(r, d)
             result_data = norm * einsum(sig, *metric_args, u.data, v.data, delta)
-            component = Blade(data=result_data, grade=r, dim=d, cdim=cdim)
+            component = Blade(data=result_data, grade=r, metric=metric)
 
-        component.context = merged_context
         components[r] = component
 
-    return MultiVector(components=components, dim=d, cdim=cdim)
+    return MultiVector(components=components, metric=metric)
+
+
+# =============================================================================
+# Geometric Product (MultiVector x MultiVector)
+# =============================================================================
+
+
+def _geometric_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
+    """
+    Geometric product of two multivectors.
+
+    Computes all pairwise geometric products of components and sums.
+
+    Both multivectors must have compatible metrics.
+    """
+    from morphis.geometry.model.metric import Metric
+    from morphis.geometry.model.multivector import MultiVector
+
+    # Merge metrics (raises if incompatible)
+    metric = Metric.merge(M.metric, N.metric)
+
+    result_components: dict[int, Blade] = {}
+
+    for _k1, u in M.components.items():
+        for _k2, v in N.components.items():
+            product = _geometric_bl_bl(u, v)
+            for grade, component in product.components.items():
+                if grade in result_components:
+                    result_components[grade] = result_components[grade] + component
+                else:
+                    result_components[grade] = component
+
+    return MultiVector(components=result_components, metric=metric)
+
+
+# =============================================================================
+# Public Interface
+# =============================================================================
+
+
+def geometric(u: Blade | MultiVector, v: Blade | MultiVector) -> MultiVector:
+    """
+    Geometric product of two blades or multivectors: uv = sum of <uv>_r over grades r
+
+    For blades of grade j and k, produces components at grades
+    |j - k|, |j - k| + 2, ..., j + k (same parity as j + k).
+
+    Each grade r corresponds to (j + k - r) / 2 metric contractions.
+
+    Both operands must have compatible metrics (validated via Metric.merge).
+
+    Returns MultiVector containing all nonzero grade components.
+    """
+    from morphis.geometry.model.blade import Blade
+    from morphis.geometry.model.multivector import MultiVector
+
+    # Both blades
+    if isinstance(u, Blade) and isinstance(v, Blade):
+        return _geometric_bl_bl(u, v)
+
+    # Convert blades to multivectors if needed
+    if isinstance(u, Blade):
+        u = MultiVector(components={u.grade: u}, metric=u.metric)
+
+    if isinstance(v, Blade):
+        v = MultiVector(components={v.grade: v}, metric=v.metric)
+
+    return _geometric_mv_mv(u, v)
 
 
 # =============================================================================
@@ -107,6 +183,8 @@ def grade_project(M: MultiVector, k: int) -> Blade:
 
     Returns grade-k blade if present, otherwise zero blade.
     """
+    from morphis.geometry.model.blade import Blade
+
     component = M.grade_select(k)
 
     if component is not None:
@@ -114,10 +192,10 @@ def grade_project(M: MultiVector, k: int) -> Blade:
 
     # Return zero blade of appropriate grade
     d = M.dim
-    cdim = M.cdim
-    shape = (1,) * cdim + (d,) * k if k > 0 else (1,) * cdim
+    collection = M.collection
+    shape = collection + (d,) * k if k > 0 else collection
 
-    return Blade(data=zeros(shape), grade=k, dim=d, cdim=cdim)
+    return Blade(data=zeros(shape), grade=k, metric=M.metric, collection=collection)
 
 
 # =============================================================================
@@ -125,13 +203,13 @@ def grade_project(M: MultiVector, k: int) -> Blade:
 # =============================================================================
 
 
-def scalar_product(u: Blade, v: Blade, g: Metric | None = None) -> NDArray:
+def scalar_product(u: Blade, v: Blade) -> NDArray:
     """
     Scalar part of geometric product: <uv>_0
 
     Returns scalar array with shape collection_shape.
     """
-    M = geometric(u, v, g)
+    M = geometric(u, v)
     s = M.grade_select(0)
 
     if s is not None:
@@ -141,32 +219,32 @@ def scalar_product(u: Blade, v: Blade, g: Metric | None = None) -> NDArray:
     return zeros(broadcast_collection_shape(u, v))
 
 
-def commutator(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
+def commutator(u: Blade, v: Blade) -> MultiVector:
     """
     Commutator product: [u, v] = (1 / 2) (uv - vu)
 
     Extracts antisymmetric part (odd grade differences).
     """
-    uv = geometric(u, v, g)
-    vu = geometric(v, u, g)
+    uv = geometric(u, v)
+    vu = geometric(v, u)
 
     return 0.5 * (uv - vu)
 
 
-def anticommutator(u: Blade, v: Blade, g: Metric | None = None) -> MultiVector:
+def anticommutator(u: Blade, v: Blade) -> MultiVector:
     """
     Anticommutator product: u * v = (1 / 2) (uv + vu)
 
     Extracts symmetric part (even grade differences).
     """
-    uv = geometric(u, v, g)
-    vu = geometric(v, u, g)
+    uv = geometric(u, v)
+    vu = geometric(v, u)
 
     return 0.5 * (uv + vu)
 
 
 # =============================================================================
-# Reversion and Inverse
+# Reversion
 # =============================================================================
 
 
@@ -175,17 +253,17 @@ def _reverse_bl(u: Blade) -> Blade:
     Reverse a blade: reverse(u) = (-1)^(k (k - 1) / 2) u for grade-k blade.
 
     Reverses the order of vector factors in the blade.
-    Context: Preserves input blade context.
     """
+    from morphis.geometry.model.blade import Blade
+
     k = u.grade
     sign = (-1) ** (k * (k - 1) // 2)
 
     return Blade(
         data=sign * u.data,
         grade=k,
-        dim=u.dim,
-        cdim=u.cdim,
-        context=u.context,
+        metric=u.metric,
+        collection=u.collection,
     )
 
 
@@ -195,9 +273,11 @@ def _reverse_mv(M: MultiVector) -> MultiVector:
 
     Returns MultiVector with all components reversed.
     """
+    from morphis.geometry.model.multivector import MultiVector
+
     components = {k: _reverse_bl(blade) for k, blade in M.components.items()}
 
-    return MultiVector(components=components, dim=M.dim, cdim=M.cdim)
+    return MultiVector(components=components, metric=M.metric)
 
 
 def reverse(u: Blade | MultiVector) -> Blade | MultiVector:
@@ -207,25 +287,30 @@ def reverse(u: Blade | MultiVector) -> Blade | MultiVector:
     For multivectors, reverses each component.
 
     Reverses the order of vector factors.
-    Context: Preserves input context.
     """
+    from morphis.geometry.model.blade import Blade
+
     if isinstance(u, Blade):
         return _reverse_bl(u)
 
     return _reverse_mv(u)
 
 
-def _inverse_bl(u: Blade, g: Metric | None = None) -> Blade:
+# =============================================================================
+# Inverse
+# =============================================================================
+
+
+def _inverse_bl(u: Blade) -> Blade:
     """
     Inverse of a blade: u^(-1) = reverse(u) / (u * reverse(u))
 
     Requires u * reverse(u) to be nonzero scalar.
-    Context: Preserves input blade context.
     """
-    g = euclidean(u.dim) if g is None else g
+    from morphis.geometry.model.blade import Blade
 
     u_rev = _reverse_bl(u)
-    u_u_rev = _geometric_bl_bl(u, u_rev, g)
+    u_u_rev = _geometric_bl_bl(u, u_rev)
 
     # Extract scalar part
     s = u_u_rev.grade_select(0)
@@ -240,22 +325,19 @@ def _inverse_bl(u: Blade, g: Metric | None = None) -> Blade:
     return Blade(
         data=u_rev.data / s_expanded,
         grade=u.grade,
-        dim=u.dim,
-        cdim=u.cdim,
-        context=u.context,
+        metric=u.metric,
+        collection=u.collection,
     )
 
 
-def _inverse_mv(M: MultiVector, g: Metric | None = None) -> MultiVector:
+def _inverse_mv(M: MultiVector) -> MultiVector:
     """
     Inverse of a multivector: M^(-1) = reverse(M) / (M * reverse(M))
 
     Requires M * reverse(M) to be invertible scalar.
     """
-    g = euclidean(M.dim) if g is None else g
-
     M_rev = _reverse_mv(M)
-    M_M_rev = _geometric_mv_mv(M, M_rev, g)
+    M_M_rev = _geometric_mv_mv(M, M_rev)
 
     # Extract scalar part
     s = M_M_rev.grade_select(0)
@@ -265,69 +347,18 @@ def _inverse_mv(M: MultiVector, g: Metric | None = None) -> MultiVector:
     return M_rev * (1.0 / s.data)
 
 
-def inverse(u: Blade | MultiVector, g: Metric | None = None) -> Blade | MultiVector:
+def inverse(u: Blade | MultiVector) -> Blade | MultiVector:
     """
     Inverse: u^(-1) = reverse(u) / (u * reverse(u))
 
     Requires u * reverse(u) to be nonzero scalar.
-    Context: Preserves input context.
     """
+    from morphis.geometry.model.blade import Blade
+
     if isinstance(u, Blade):
-        return _inverse_bl(u, g)
+        return _inverse_bl(u)
 
-    return _inverse_mv(u, g)
-
-
-def _geometric_mv_mv(M: MultiVector, N: MultiVector, g: Metric | None = None) -> MultiVector:
-    """
-    Geometric product of two multivectors.
-
-    Computes all pairwise geometric products of components and sums.
-    """
-    g = euclidean(M.dim) if g is None else g
-
-    if M.dim != N.dim:
-        raise ValueError(f"Dimension mismatch: {M.dim} != {N.dim}")
-
-    result_components: dict[int, Blade] = {}
-
-    for _k1, u in M.components.items():
-        for _k2, v in N.components.items():
-            product = _geometric_bl_bl(u, v, g)
-            for grade, component in product.components.items():
-                if grade in result_components:
-                    result_components[grade] = result_components[grade] + component
-                else:
-                    result_components[grade] = component
-
-    return MultiVector(components=result_components, dim=M.dim, cdim=max(M.cdim, N.cdim))
-
-
-def geometric(u: Blade | MultiVector, v: Blade | MultiVector, g: Metric | None = None) -> MultiVector:
-    """
-    Geometric product of two blades or multivectors: uv = sum of <uv>_r over grades r
-
-    For blades of grade j and k, produces components at grades
-    |j - k|, |j - k| + 2, ..., j + k (same parity as j + k).
-
-    Each grade r corresponds to (j + k - r) / 2 metric contractions.
-
-    Context: Preserves if both match, otherwise None.
-
-    Returns MultiVector containing all nonzero grade components.
-    """
-    # Both blades
-    if isinstance(u, Blade) and isinstance(v, Blade):
-        return _geometric_bl_bl(u, v, g)
-
-    # Convert blades to multivectors if needed
-    if isinstance(u, Blade):
-        u = MultiVector(components={u.grade: u}, dim=u.dim, cdim=u.cdim)
-
-    if isinstance(v, Blade):
-        v = MultiVector(components={v.grade: v}, dim=v.dim, cdim=v.cdim)
-
-    return _geometric_mv_mv(u, v, g)
+    return _inverse_mv(u)
 
 
 # =============================================================================
@@ -335,21 +366,24 @@ def geometric(u: Blade | MultiVector, v: Blade | MultiVector, g: Metric | None =
 # =============================================================================
 
 
-def geometric_bl_mv(u: Blade, M: MultiVector, g: Metric | None = None) -> MultiVector:
+def geometric_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
     """
     Geometric product of blade with multivector: u @ M
 
     Distributes over components.
 
-    Context: Preserves if all match, otherwise None.
-
     Returns MultiVector.
     """
-    g = euclidean(u.dim) if g is None else g
+    from morphis.geometry.model.metric import Metric
+    from morphis.geometry.model.multivector import MultiVector
+
+    # Merge metrics (raises if incompatible)
+    metric = Metric.merge(u.metric, M.metric)
+
     result_components: dict[int, Blade] = {}
 
     for _k, component in M.components.items():
-        product = _geometric_bl_bl(u, component, g)
+        product = _geometric_bl_bl(u, component)
 
         for grade, blade in product.components.items():
             if grade in result_components:
@@ -357,28 +391,27 @@ def geometric_bl_mv(u: Blade, M: MultiVector, g: Metric | None = None) -> MultiV
             else:
                 result_components[grade] = blade
 
-    return MultiVector(
-        components=result_components,
-        dim=u.dim,
-        cdim=max(u.cdim, M.cdim),
-    )
+    return MultiVector(components=result_components, metric=metric)
 
 
-def geometric_mv_bl(M: MultiVector, u: Blade, g: Metric | None = None) -> MultiVector:
+def geometric_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
     """
     Geometric product of multivector with blade: M @ u
 
     Distributes over components.
 
-    Context: Preserves if all match, otherwise None.
-
     Returns MultiVector.
     """
-    g = euclidean(M.dim) if g is None else g
+    from morphis.geometry.model.metric import Metric
+    from morphis.geometry.model.multivector import MultiVector
+
+    # Merge metrics (raises if incompatible)
+    metric = Metric.merge(M.metric, u.metric)
+
     result_components: dict[int, Blade] = {}
 
     for _k, component in M.components.items():
-        product = _geometric_bl_bl(component, u, g)
+        product = _geometric_bl_bl(component, u)
 
         for grade, blade in product.components.items():
             if grade in result_components:
@@ -386,8 +419,4 @@ def geometric_mv_bl(M: MultiVector, u: Blade, g: Metric | None = None) -> MultiV
             else:
                 result_components[grade] = blade
 
-    return MultiVector(
-        components=result_components,
-        dim=M.dim,
-        cdim=max(M.cdim, u.cdim),
-    )
+    return MultiVector(components=result_components, metric=metric)

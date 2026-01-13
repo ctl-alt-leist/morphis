@@ -6,7 +6,7 @@ embodying the transformation and adaptation of geometric structures across diffe
 essential nature.
 
 <p align="center">
-  <img src="figures/rotating_trivector.gif" alt="Rotating trivector animation" width="400">
+  <img src="figures/rotations-4d.gif" alt="4D rotations animation" width="400">
 </p>
 
 ## Features

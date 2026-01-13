@@ -6,10 +6,16 @@ Utility functions for blade validation, dimension checking, and broadcasting.
 Blade naming convention: u, v, w (never a, b, c for blades).
 """
 
-from functools import wraps
-from typing import Callable, Tuple, TypeVar
+from __future__ import annotations
 
-from morphis.ga.model import Blade
+from functools import wraps
+from typing import TYPE_CHECKING, Callable, TypeVar
+
+from numpy import broadcast_shapes
+
+
+if TYPE_CHECKING:
+    from morphis.geometry.model.blade import Blade
 
 
 F = TypeVar("F", bound=Callable)
@@ -41,16 +47,18 @@ def get_common_dim(*blades: Blade) -> int:
     return d
 
 
-def get_common_cdim(*blades: Blade) -> int:
+def get_broadcast_collection(*blades: Blade) -> tuple[int, ...]:
     """
-    Get the maximum collection dimension cdim of a collection of blades.
+    Compute the broadcast-compatible collection shape for multiple blades.
 
-    Returns the maximum cdim across all blades.
+    Uses numpy-style broadcasting rules to determine the result collection shape.
+
+    Returns the broadcasted collection shape.
     """
     if not blades:
         raise ValueError("At least one blade required")
 
-    return max(u.cdim for u in blades)
+    return broadcast_shapes(*(u.collection for u in blades))
 
 
 def validate_same_dim(*blades: Blade) -> None:
@@ -80,6 +88,7 @@ def same_dim(func: F) -> F:
         def wedge(*blades: Blade) -> Blade:
             ...
     """
+    from morphis.geometry.model.blade import Blade
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -95,7 +104,7 @@ def same_dim(func: F) -> F:
 # =============================================================================
 
 
-def broadcast_collection_shape(*blades: Blade) -> Tuple[int, ...]:
+def broadcast_collection_shape(*blades: Blade) -> tuple[int, ...]:
     """
     Compute the broadcast shape of collection dimensions for multiple blades.
 
@@ -103,21 +112,7 @@ def broadcast_collection_shape(*blades: Blade) -> Tuple[int, ...]:
     them must be 1.
 
     Returns the broadcast collection shape.
+
+    Note: This is an alias for get_broadcast_collection for backwards compatibility.
     """
-    if not blades:
-        raise ValueError("At least one blade required")
-
-    shapes = [u.collection_shape for u in blades]
-    max_len = max(len(s) for s in shapes)
-
-    # Pad shapes to same length
-    padded = [(1,) * (max_len - len(s)) + s for s in shapes]
-
-    result = []
-    for dims in zip(*padded, strict=False):
-        unique = set(d for d in dims if d != 1)
-        if len(unique) > 1:
-            raise ValueError(f"Cannot broadcast collection shapes: {[u.collection_shape for u in blades]}")
-        result.append(max(dims))
-
-    return tuple(result)
+    return get_broadcast_collection(*blades)

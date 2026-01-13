@@ -1,5 +1,5 @@
 """
-Observer - Track and observe GA objects
+Observer - Watch and observe GA objects
 
 A general-purpose observer that holds references to GA objects and can
 read their current state at any time. The observer is passive - it never
@@ -8,17 +8,18 @@ modifies the objects, only reads them.
 This is useful for:
 - Animation systems that need to snapshot object state over time
 - Debugging to watch how objects change
-- Analysis that needs to track multiple related objects
+- Analysis that needs to watch multiple related objects
 
 Example:
     from morphis.utils.observer import Observer
-    from morphis.ga.constructors import basis_vectors
+    from morphis.geometry.model import basis_vectors
+    from morphis.geometry.model.metric import euclidean
 
-    e1, e2, e3 = basis_vectors(dim=3)
+    e1, e2, e3 = basis_vectors(euclidean(3))
     q = e1 ^ e2 ^ e3
 
     obs = Observer()
-    obs.track(e1, e2, e3, q)
+    obs.watch(e1, e2, e3, q)
 
     # ... modify objects ...
     q.data[...] = transformed.data
@@ -33,18 +34,18 @@ from typing import TYPE_CHECKING, Iterator
 from numpy import copy as np_copy, ndarray, stack
 from numpy.linalg import norm
 
-from morphis.ga.model import GABaseModel
+from morphis.geometry.model.base import GAModel
 
 
 if TYPE_CHECKING:
-    from morphis.ga.model import Blade
+    from morphis.geometry.model import Blade
 
 
 @dataclass
 class TrackedObject:
     """Internal record for a tracked object."""
 
-    obj: GABaseModel
+    obj: GAModel
     obj_id: int
     name: str | None
     baseline: ndarray | None = None  # For computing diffs
@@ -60,7 +61,7 @@ class Observer:
 
     Example:
         obs = Observer()
-        obs.track(blade1, blade2, motor)
+        obs.watch(blade1, blade2)
 
         for t in times:
             # Your code modifies objects
@@ -74,20 +75,20 @@ class Observer:
         self._tracked: dict[int, TrackedObject] = {}
         self._names: dict[str, int] = {}  # name -> obj_id for lookup
 
-    def track(self, *objects: GABaseModel, names: list[str] | None = None) -> "Observer":
+    def watch(self, *objects: GAModel, names: list[str] | None = None) -> "Observer":
         """
         Register one or more objects to observe.
 
         Args:
-            *objects: GA objects to track (Blade, MultiVector, Motor, etc.)
+            *objects: GA objects to watch (Blade, MultiVector, etc.)
             names: Optional list of names for the objects (for easier lookup)
 
         Returns:
             Self for chaining
 
         Example:
-            obs.track(e1, e2, e3)
-            obs.track(q, names=["trivector"])
+            obs.watch(e1, e2, e3)
+            obs.watch(q, names=["trivector"])
         """
         if names is not None and len(names) != len(objects):
             raise ValueError(f"Got {len(names)} names for {len(objects)} objects")
@@ -113,9 +114,12 @@ class Observer:
 
         return self
 
-    def untrack(self, *objects: GABaseModel) -> "Observer":
+    # Alias for backward compatibility
+    track = watch
+
+    def unwatch(self, *objects: GAModel) -> "Observer":
         """
-        Stop tracking one or more objects.
+        Stop watching one or more objects.
 
         Returns:
             Self for chaining
@@ -129,6 +133,9 @@ class Observer:
 
         return self
 
+    # Alias for backward compatibility
+    untrack = unwatch
+
     def clear(self) -> "Observer":
         """
         Stop tracking all objects.
@@ -140,7 +147,7 @@ class Observer:
         self._names.clear()
         return self
 
-    def _get_data(self, obj: GABaseModel) -> ndarray | None:
+    def _get_data(self, obj: GAModel) -> ndarray | None:
         """Extract the data array from a GA object."""
         if hasattr(obj, "data"):
             return obj.data
@@ -151,7 +158,7 @@ class Observer:
                 return blade.data
         return None
 
-    def get(self, obj_or_name: GABaseModel | str) -> ndarray | None:
+    def get(self, obj_or_name: GAModel | str) -> ndarray | None:
         """
         Get the current data for a tracked object.
 
@@ -204,7 +211,7 @@ class Observer:
                     result[tracked.name] = np_copy(data)
         return result
 
-    def reset_baseline(self, *objects: GABaseModel) -> "Observer":
+    def reset_baseline(self, *objects: GAModel) -> "Observer":
         """
         Reset the baseline (for diff computation) to current state.
 
@@ -225,7 +232,7 @@ class Observer:
 
         return self
 
-    def diff(self, obj_or_name: GABaseModel | str) -> ndarray | None:
+    def diff(self, obj_or_name: GAModel | str) -> ndarray | None:
         """
         Compute difference from baseline for an object.
 
@@ -255,7 +262,7 @@ class Observer:
 
         return current - tracked.baseline
 
-    def diff_norm(self, obj_or_name: GABaseModel | str) -> float | None:
+    def diff_norm(self, obj_or_name: GAModel | str) -> float | None:
         """
         Compute norm of difference from baseline.
 
@@ -268,7 +275,7 @@ class Observer:
         d = self.diff(obj_or_name)
         return float(norm(d)) if d is not None else None
 
-    def objects(self) -> list[GABaseModel]:
+    def objects(self) -> list[GAModel]:
         """Return list of all tracked objects."""
         return [t.obj for t in self._tracked.values()]
 
@@ -284,15 +291,15 @@ class Observer:
         """Number of tracked objects."""
         return len(self._tracked)
 
-    def __contains__(self, obj: GABaseModel) -> bool:
+    def __contains__(self, obj: GAModel) -> bool:
         """Check if an object is being tracked."""
         return id(obj) in self._tracked
 
-    def __iter__(self) -> Iterator[GABaseModel]:
+    def __iter__(self) -> Iterator[GAModel]:
         """Iterate over tracked objects."""
         return iter(t.obj for t in self._tracked.values())
 
-    def __getitem__(self, key: str | int) -> GABaseModel | None:
+    def __getitem__(self, key: str | int) -> GAModel | None:
         """
         Get tracked object by name or id.
 
@@ -322,7 +329,7 @@ class Observer:
             obj_type = type(tracked.obj).__name__
             print(f"{prefix}  [{obj_type}]{name_str}: {data}")
 
-    def spanning_vectors(self, obj_or_name: GABaseModel | str) -> tuple["Blade", ...] | None:
+    def spanning_vectors(self, obj_or_name: GAModel | str) -> tuple["Blade", ...] | None:
         """
         Get the spanning vectors for a tracked blade.
 
@@ -336,7 +343,7 @@ class Observer:
         Returns:
             Tuple of grade-1 Blades that span the blade, or None if not a Blade
         """
-        from morphis.ga.model import Blade
+        from morphis.geometry.model import Blade
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)
@@ -355,7 +362,7 @@ class Observer:
 
         return tracked.obj.spanning_vectors()
 
-    def spanning_vectors_as_array(self, obj_or_name: GABaseModel | str) -> ndarray | None:
+    def spanning_vectors_as_array(self, obj_or_name: GAModel | str) -> ndarray | None:
         """
         Get spanning vectors as a stacked numpy array.
 
@@ -374,7 +381,7 @@ class Observer:
 
         return stack([v.data for v in vectors])
 
-    def capture_state(self, obj_or_name: GABaseModel | str) -> dict | None:
+    def capture_state(self, obj_or_name: GAModel | str) -> dict | None:
         """
         Capture complete visualization state for a tracked blade.
 
@@ -393,7 +400,7 @@ class Observer:
                 - 'context': Geometric context (PGA, etc.) or None
             Or None if not a tracked Blade
         """
-        from morphis.ga.model import Blade
+        from morphis.geometry.model import Blade
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)

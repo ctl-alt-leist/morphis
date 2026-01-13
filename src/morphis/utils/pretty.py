@@ -2,7 +2,7 @@
 
 from numpy import ndarray
 
-from morphis.ga.model import Blade, MultiVector
+from morphis.geometry.model import Blade, MultiVector
 
 
 # =============================================================================
@@ -124,7 +124,7 @@ def subsection(title: str) -> None:
 
 def show_blade(name: str, blade: Blade, precision: int = 4) -> None:
     """Print blade info with matrix-style data formatting."""
-    print(f"{name}: grade={blade.grade}, shape={blade.shape}, cdim={blade.cdim}")
+    print(f"{name}: grade={blade.grade}, shape={blade.shape}, collection={blade.collection}")
     formatted = format_matrix(blade.data, precision)
     print(_indent(formatted))
 

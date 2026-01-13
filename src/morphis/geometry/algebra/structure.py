@@ -48,7 +48,7 @@ def antisymmetrize(tensor: NDArray, k: int, cdim: int = 0) -> NDArray:
     Antisymmetrize a tensor over its last k axes. Computes the projection onto
     the antisymmetric subspace via sum over all permutations weighted by sign:
 
-        T^{[m_1 ... m_k]} = (1 / k!) Σ_σ sgn(σ) T^{m_σ(1) ... m_σ(k)}
+        T^{[m_1 ... m_k]} = (1 / k!) Sigma_s sgn(s) T^{m_s(1) ... m_s(k)}
 
     The 1 / k! normalization is NOT applied here; caller handles normalization.
 
@@ -127,15 +127,15 @@ _GENERALIZED_DELTA_CACHE: dict[tuple[int, int], NDArray] = {}
 
 def generalized_delta(k: int, d: int) -> NDArray:
     """
-    Compute the generalized Kronecker delta δ^{m_1 ... m_k}_{n_1 ... n_k} in d
+    Compute the generalized Kronecker delta d^{m_1 ... m_k}_{n_1 ... n_k} in d
     dimensions. This is the antisymmetric projection tensor:
 
-        δ^{m_1 ... m_k}_{n_1 ... n_k} = (1 / k!) Σ_σ sgn(σ) δ^{m_1}_{n_σ(1)} ... δ^{m_k}_{n_σ(k)}
+        d^{m_1 ... m_k}_{n_1 ... n_k} = (1 / k!) Sigma_s sgn(s) d^{m_1}_{n_s(1)} ... d^{m_k}_{n_s(k)}
 
     Shape is (d,) * (2 k), where the first k indices are upper (result) and the
     last k are lower (input). Contracting with a k-tensor antisymmetrizes it:
 
-        T^{[m_1 ... m_k]} = T^{n_1 ... n_k} δ^{m_1 ... m_k}_{n_1 ... n_k}
+        T^{[m_1 ... m_k]} = T^{n_1 ... n_k} d^{m_1 ... m_k}_{n_1 ... n_k}
 
     Warning: This tensor has d^{2 k} elements, which grows quickly. For k = 3,
     d = 4, this is 4^6 = 4096 elements. Use antisymmetrize() for large k.
@@ -246,20 +246,22 @@ def wedge_normalization(grades: tuple[int, ...]) -> float:
 # =============================================================================
 
 
-_INTERIOR_SIGNATURE_CACHE: dict[tuple[int, int], str] = {}
+_INTERIOR_LEFT_SIGNATURE_CACHE: dict[tuple[int, int], str] = {}
 
 
-def interior_signature(j: int, k: int) -> str:
+def interior_left_signature(j: int, k: int) -> str:
     """
-    Einsum signature for interior product (left contraction) of grade j into
-    grade k. Contracts j indices using the metric, result is grade (k - j).
+    Einsum signature for left interior product (left contraction) of grade j
+    into grade k. Contracts all j indices of u with the first j indices of v.
+    Result is grade (k - j).
+
     For j = 1, k = 2 returns "am, ...a, ...mn -> ...n".
 
     Returns the signature string.
     """
     key = (j, k)
 
-    if key not in _INTERIOR_SIGNATURE_CACHE:
+    if key not in _INTERIOR_LEFT_SIGNATURE_CACHE:
         if j == 0:
             if k == 0:
                 sig = "..., ... -> ..."
@@ -274,9 +276,52 @@ def interior_signature(j: int, k: int) -> str:
             result_indices = v_remaining if v_remaining else ""
             sig = f"{metric_parts}, ...{u_indices}, ...{v_indices} -> ...{result_indices}"
 
-        _INTERIOR_SIGNATURE_CACHE[key] = sig
+        _INTERIOR_LEFT_SIGNATURE_CACHE[key] = sig
 
-    return _INTERIOR_SIGNATURE_CACHE[key]
+    return _INTERIOR_LEFT_SIGNATURE_CACHE[key]
+
+
+# Alias for backwards compatibility
+interior_signature = interior_left_signature
+
+
+_INTERIOR_RIGHT_SIGNATURE_CACHE: dict[tuple[int, int], str] = {}
+
+
+def interior_right_signature(j: int, k: int) -> str:
+    """
+    Einsum signature for right interior product (right contraction) of grade j
+    by grade k. Contracts all k indices of v with the last k indices of u.
+    Result is grade (j - k).
+
+    For j = 2, k = 1 returns "bm, ...ab, ...m -> ...a".
+
+    Returns the signature string.
+    """
+    key = (j, k)
+
+    if key not in _INTERIOR_RIGHT_SIGNATURE_CACHE:
+        if k == 0:
+            if j == 0:
+                sig = "..., ... -> ..."
+            else:
+                sig = "..." + INDICES[:j] + ", ... -> ..." + INDICES[:j]
+        else:
+            # u has j indices, v has k indices
+            # Contract last k indices of u with all k indices of v
+            u_remaining = INDICES[: j - k]
+            u_contracted = INDICES[j - k : j]
+            v_indices = INDICES[j : j + k]
+            u_indices = u_remaining + u_contracted
+
+            # Metric contractions pair u_contracted[i] with v_indices[i]
+            metric_parts = ", ".join(f"{u_contracted[m]}{v_indices[m]}" for m in range(k))
+            result_indices = u_remaining if u_remaining else ""
+            sig = f"{metric_parts}, ...{u_indices}, ...{v_indices} -> ...{result_indices}"
+
+        _INTERIOR_RIGHT_SIGNATURE_CACHE[key] = sig
+
+    return _INTERIOR_RIGHT_SIGNATURE_CACHE[key]
 
 
 _COMPLEMENT_SIGNATURE_CACHE: dict[tuple[int, int], str] = {}
@@ -351,7 +396,7 @@ def geometric_signature(j: int, k: int, c: int) -> str:
     The contraction pattern follows standard GA convention: contract the LAST c
     indices of the first blade with the FIRST c indices of the second blade,
     paired in reverse order. For bivector B * bivector B (j=k=c=2):
-        g^{bc} g^{ad} B^{ab} B^{cd} → scalar
+        g^{bc} g^{ad} B^{ab} B^{cd} -> scalar
 
     Returns the cached einsum signature string.
     """

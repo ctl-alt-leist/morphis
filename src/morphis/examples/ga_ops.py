@@ -11,17 +11,20 @@ Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 
 from numpy import array
 
-from morphis.ga.duality import hodge_dual, left_complement, right_complement
-from morphis.ga.model import (
-    bivector_blade,
-    euclidean_metric,
-    pga_metric,
-    scalar_blade,
-    vector_blade,
+from morphis.geometry.algebra import (
+    dot,
+    hodge_dual,
+    interior,
+    left_complement,
+    meet,
+    norm,
+    normalize,
+    project,
+    reject,
+    right_complement,
+    wedge,
 )
-from morphis.ga.norms import norm, normalize
-from morphis.ga.operations import dot, interior, meet, project, reject, wedge
-from morphis.geometry.projective import (
+from morphis.geometry.algebra.projective import (
     are_collinear,
     bulk,
     direction,
@@ -33,6 +36,8 @@ from morphis.geometry.projective import (
     point_on_line,
     weight,
 )
+from morphis.geometry.model import bivector_blade, scalar_blade, vector_blade
+from morphis.geometry.model.metric import euclidean as euclidean_metric, pga
 from morphis.utils.pretty import section, show_array, show_blade, subsection
 
 
@@ -49,11 +54,11 @@ def demo_blade_creation() -> None:
     print(f"Euclidean metric (3D): signature={g.signature}")
 
     subsection("Scalar (Grade 0)")
-    s = scalar_blade(2.5, dim=3)
+    s = scalar_blade(2.5, g)
     show_blade("s", s)
 
     subsection("Vector (Grade 1)")
-    v = vector_blade(array([1.0, 2.0, 3.0]))
+    v = vector_blade(array([1.0, 2.0, 3.0]), g)
     show_blade("v", v)
 
     subsection("Bivector (Grade 2)")
@@ -62,7 +67,8 @@ def demo_blade_creation() -> None:
             [0.0, 1.0, 0.0],
             [-1.0, 0.0, 0.0],
             [0.0, 0.0, 0.0],
-        ])
+        ]),
+        g,
     )
     show_blade("B (e1 ^ e2 plane)", b)
 
@@ -82,8 +88,10 @@ def demo_blade_arithmetic() -> None:
     """Demonstrate addition and subtraction of blades."""
     section("2. BLADE ARITHMETIC (SAME GRADE)")
 
-    u = vector_blade(array([1.0, 0.0, 0.0]))
-    v = vector_blade(array([0.0, 1.0, 0.0]))
+    g = euclidean_metric(3)
+
+    u = vector_blade(array([1.0, 0.0, 0.0]), g)
+    v = vector_blade(array([0.0, 1.0, 0.0]), g)
 
     subsection("Vector Addition")
     show_blade("u", u)
@@ -107,9 +115,9 @@ def demo_single_vs_single() -> None:
 
     g = euclidean_metric(3)
 
-    u = vector_blade(array([1.0, 0.0, 0.0]))
-    v = vector_blade(array([0.0, 1.0, 0.0]))
-    w = vector_blade(array([0.0, 0.0, 1.0]))
+    u = vector_blade(array([1.0, 0.0, 0.0]), g)
+    v = vector_blade(array([0.0, 1.0, 0.0]), g)
+    w = vector_blade(array([0.0, 0.0, 1.0]), g)
 
     subsection("Wedge Product: u ^ v (operator)")
     uv = u ^ v
@@ -126,19 +134,19 @@ def demo_single_vs_single() -> None:
     print("  Single einsum with ε-symbol: optimal for large collections!")
 
     subsection("Dot Product")
-    p = vector_blade(array([1.0, 2.0, 3.0]))
-    q = vector_blade(array([4.0, 5.0, 6.0]))
-    d = dot(p, q, g)
+    p = vector_blade(array([1.0, 2.0, 3.0]), g)
+    q = vector_blade(array([4.0, 5.0, 6.0]), g)
+    d = dot(p, q)
     show_array("p · q", d)
     print(f"  expected: 1*4 + 2*5 + 3*6 = {1 * 4 + 2 * 5 + 3 * 6}")
 
     subsection("Norm")
-    n = norm(p, g)
+    n = norm(p)
     show_array("|p|", n)
     print(f"  expected: sqrt(1 + 4 + 9) = {(1 + 4 + 9) ** 0.5:.6f}")
 
     subsection("Interior Product: u ⌋ B")
-    u_int_b = interior(u, uv, g)
+    u_int_b = interior(u, uv)
     show_blade("u ⌋ (u ∧ v)", u_int_b)
     print("  (contracts u with u in the bivector, leaving v)")
 
@@ -155,7 +163,7 @@ def demo_single_vs_array() -> None:
     g = euclidean_metric(3)
 
     subsection("Create single vector and array of vectors")
-    single = vector_blade(array([1.0, 0.0, 0.0]))
+    single = vector_blade(array([1.0, 0.0, 0.0]), g)
     show_blade("single (e1)", single)
 
     many_data = array([
@@ -164,11 +172,11 @@ def demo_single_vs_array() -> None:
         [0.0, 0.0, 1.0],
         [1.0, 1.0, 0.0],
     ])
-    many = vector_blade(many_data, cdim=1)
+    many = vector_blade(many_data, g, collection=(4,))
     show_blade("many (4 vectors)", many)
 
     subsection("Dot product: single . many (broadcasts)")
-    dots = dot(single, many, g)
+    dots = dot(single, many)
     show_array("e1 . [e1, e2, e3, e1+e2]", dots)
     print("  expected: [1, 0, 0, 1]")
 
@@ -200,13 +208,13 @@ def demo_array_vs_array() -> None:
         [0.0, 0.0, 1.0],
         [1.0, -1.0, 0.0],
     ])
-    u = vector_blade(u_data, cdim=1)
-    v = vector_blade(v_data, cdim=1)
+    u = vector_blade(u_data, g, collection=(3,))
+    v = vector_blade(v_data, g, collection=(3,))
     show_blade("u (3 vectors)", u)
     show_blade("v (3 vectors)", v)
 
     subsection("Element-wise dot product")
-    dots = dot(u, v, g)
+    dots = dot(u, v)
     show_array("u[k] . v[k]", dots)
     print("  expected: [0, 0, 0] (all orthogonal pairs)")
 
@@ -215,7 +223,7 @@ def demo_array_vs_array() -> None:
     show_blade("u ^ v", wedges)
 
     subsection("Element-wise norms")
-    norms = norm(u, g)
+    norms = norm(u)
     show_array("|u[k]|", norms)
 
 
@@ -236,20 +244,20 @@ def demo_array_operations() -> None:
         [0.0, 4.0, 0.0],
         [1.0, 1.0, 1.0],
     ])
-    v = vector_blade(v_data, cdim=1)
+    v = vector_blade(v_data, g, collection=(3,))
     show_blade("v (unnormalized)", v)
 
-    v_norm = normalize(v, g)
+    v_norm = normalize(v)
     show_blade("normalize(v)", v_norm)
-    show_array("check |v|", norm(v_norm, g))
+    show_array("check |v|", norm(v_norm))
 
     subsection("Project vectors onto a direction")
-    axis = vector_blade(array([1.0, 1.0, 0.0]))
-    projections = project(v, axis, g)
+    axis = vector_blade(array([1.0, 1.0, 0.0]), g)
+    projections = project(v, axis)
     show_blade("project(v, [1,1,0])", projections)
 
     subsection("Reject vectors from a direction")
-    rejections = reject(v, axis, g)
+    rejections = reject(v, axis)
     show_blade("reject(v, [1,1,0])", rejections)
 
 
@@ -264,8 +272,8 @@ def demo_complements() -> None:
 
     g = euclidean_metric(3)
 
-    u = vector_blade(array([1.0, 0.0, 0.0]))
-    v = vector_blade(array([0.0, 1.0, 0.0]))
+    u = vector_blade(array([1.0, 0.0, 0.0]), g)
+    v = vector_blade(array([0.0, 1.0, 0.0]), g)
     B = u ^ v
 
     subsection("Right complement of a vector")
@@ -278,7 +286,7 @@ def demo_complements() -> None:
     show_blade("_u (left complement)", u_left)
 
     subsection("Hodge dual of a bivector")
-    dual_B = hodge_dual(B, g)
+    dual_B = hodge_dual(B)
     show_blade("⋆(u ∧ v)", dual_B)
     print("  In 3D Euclidean, ⋆(u ∧ v) ~ w")
 
@@ -292,9 +300,11 @@ def demo_meet() -> None:
     """Demonstrate the meet (intersection) of subspaces."""
     section("8. MEET (INTERSECTION)")
 
-    u = vector_blade(array([1.0, 0.0, 0.0]))
-    v = vector_blade(array([0.0, 1.0, 0.0]))
-    w = vector_blade(array([0.0, 0.0, 1.0]))
+    g = euclidean_metric(3)
+
+    u = vector_blade(array([1.0, 0.0, 0.0]), g)
+    v = vector_blade(array([0.0, 1.0, 0.0]), g)
+    w = vector_blade(array([0.0, 0.0, 1.0]), g)
 
     # Using ^ operator for clean plane definitions
     A = u ^ v  # xy-plane
@@ -318,7 +328,7 @@ def demo_projective() -> None:
     """Demonstrate PGA-specific operations."""
     section("9. PROJECTIVE GEOMETRIC ALGEBRA (PGA)")
 
-    g = pga_metric(3)
+    g = pga(3)
     print(f"PGA metric (3D): signature={g.signature}")
     print("  diag(0, 1, 1, 1) - degenerate in e0")
 
@@ -348,7 +358,7 @@ def demo_projective() -> None:
     show_blade("plane(origin, x, y)", h)
 
     subsection("Distance between points")
-    dist = distance_point_to_point(p1, p2, g)
+    dist = distance_point_to_point(p1, p2)
     show_array("dist(origin, (1,0,0))", dist)
 
     subsection("Collinearity test")
@@ -366,8 +376,6 @@ def demo_projective_arrays() -> None:
     """Demonstrate PGA operations on arrays of points."""
     section("10. PGA WITH ARRAYS OF POINTS")
 
-    g = pga_metric(3)
-
     subsection("Array of points")
     coords = array([
         [0.0, 0.0, 0.0],
@@ -375,12 +383,12 @@ def demo_projective_arrays() -> None:
         [0.0, 1.0, 0.0],
         [1.0, 1.0, 0.0],
     ])
-    points = point(coords, cdim=1)
+    points = point(coords, collection=(4,))
     show_blade("4 points", points)
 
     subsection("Single point to array distances")
     origin = point(array([0.0, 0.0, 0.0]))
-    dists = distance_point_to_point(origin, points, g)
+    dists = distance_point_to_point(origin, points)
     show_array("dist(origin, points[k])", dists)
     print("  expected: [0, 1, 1, sqrt(2)]")
 

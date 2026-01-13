@@ -2,31 +2,39 @@
 Geometric Algebra - Operations
 
 Algebraic operations on Blades: wedge product, interior product, join, meet,
-dot product, and projections. These operations work with any metric and
-support collection dimensions via einsum broadcasting.
+dot product, and projections. Metrics are obtained from blade attributes and
+validated for compatibility using Metric.merge().
 
 Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 Blade naming convention: u, v, w (never a, b, c for blades).
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from numpy import einsum, newaxis, where, zeros
 from numpy.typing import NDArray
 
-from morphis.ga.context import GeometricContext
-from morphis.ga.duality import right_complement
-from morphis.ga.model import Blade, Metric, MultiVector, euclidean
-from morphis.ga.norms import norm_squared
-from morphis.ga.structure import (
+from morphis.geometry.algebra.duality import right_complement
+from morphis.geometry.algebra.norms import norm_squared
+from morphis.geometry.algebra.structure import (
     generalized_delta,
-    interior_signature,
+    interior_left_signature,
+    interior_right_signature,
     wedge_normalization,
     wedge_signature,
 )
-from morphis.ga.utils import (
+from morphis.geometry.utils import (
     broadcast_collection_shape,
-    get_common_cdim,
+    get_broadcast_collection,
     get_common_dim,
 )
+
+
+if TYPE_CHECKING:
+    from morphis.geometry.model.blade import Blade
+    from morphis.geometry.model.multivector import MultiVector
 
 
 # =============================================================================
@@ -49,51 +57,50 @@ def wedge(*blades: Blade) -> Blade:
     where n = g_1 + ... + g_k and delta is the generalized Kronecker delta
     encoding antisymmetric structure.
 
-    The result satisfies:
-    - Anticommutativity: u ^ v = -v ^ u (for odd grade blades)
-    - Associativity: (u ^ v) ^ w = u ^ (v ^ w)
-    - Unit norm: |e_i ^ e_j| = 1 for orthonormal basis vectors
-
-    Context: Preserves context if all inputs match, otherwise None.
+    All blades must have compatible metrics (validated via Metric.merge).
 
     Returns Blade of grade sum(grades), or zero blade if sum(grades) > dim.
     """
+    from morphis.geometry.model.blade import Blade
+    from morphis.geometry.model.metric import Metric
+
     if not blades:
         raise ValueError("wedge() requires at least one blade")
 
-    # Merge contexts from all blades
-    merged_context = GeometricContext.merge(*[u.context for u in blades])
+    # Merge metrics from all blades (raises if incompatible)
+    metric = Metric.merge(*(u.metric for u in blades))
 
     # Single blade: return copy
     if len(blades) == 1:
         u = blades[0]
-        return Blade(data=u.data.copy(), grade=u.grade, dim=u.dim, cdim=u.cdim, context=u.context)
+        return Blade(data=u.data.copy(), grade=u.grade, metric=u.metric, collection=u.collection)
 
-    # Dimensional and grade calculations - important for signature
+    # Dimensional and grade calculations
     d = get_common_dim(*blades)
-    cdim = get_common_cdim(*blades)
     grades = tuple(u.grade for u in blades)
     n = sum(grades)
 
     # Grade exceeds dimension: result is zero
     if n > d:
-        shape = tuple(1 for _ in range(cdim)) + (d,) * n
-        return Blade(data=zeros(shape), grade=n, dim=d, cdim=cdim, context=merged_context)
+        # Need explicit shape for zero blade
+        collection = get_broadcast_collection(*blades)
+        shape = collection + (d,) * n
+        return Blade(data=zeros(shape), grade=n, metric=metric)
 
     # All scalars: just multiply
     if n == 0:
         result = blades[0].data
         for u in blades[1:]:
             result = result * u.data
-        return Blade(data=result, grade=0, dim=d, cdim=cdim, context=merged_context)
+        return Blade(data=result, grade=0, metric=metric)
 
-    # Single einsum with delta contraction
+    # Single einsum with delta contraction - let Blade infer collection from result
     sig = wedge_signature(grades)
     delta = generalized_delta(n, d)
     norm = wedge_normalization(grades)
     result = norm * einsum(sig, *[u.data for u in blades], delta)
 
-    return Blade(data=result, grade=n, dim=d, cdim=cdim, context=merged_context)
+    return Blade(data=result, grade=n, metric=metric)
 
 
 # =============================================================================
@@ -101,64 +108,86 @@ def wedge(*blades: Blade) -> Blade:
 # =============================================================================
 
 
-def interior(u: Blade, v: Blade, g: Metric | None = None) -> Blade:
+def interior_left(u: Blade, v: Blade) -> Blade:
     """
-    Compute the interior product (left contraction) of u into v:
+    Compute the left interior product (left contraction) of u into v:
 
-        (u ⌋ v)^{n_1 ... n_{k - j}}
+        (u _| v)^{n_1 ... n_{k - j}}
             = u^{m_1 ... m_j} v_{m_1 ... m_j}^{n_1 ... n_{k - j}}
 
-    where indices are lowered using the metric g. Contracts all indices of u
+    where indices are lowered using the metric. Contracts all indices of u
     with the first grade(u) indices of v. Result is grade (k - j), or zero
     blade if j > k.
 
-    Context: Preserves context if both inputs match, otherwise None.
+    Both blades must have compatible metrics (validated via Metric.merge).
 
     Returns Blade of grade (grade(v) - grade(u)).
     """
-    g = euclidean(u.dim) if g is None else g
-    d = get_common_dim(u, v)
+    from morphis.geometry.model.blade import Blade
+    from morphis.geometry.model.metric import Metric
 
-    if d != g.dim:
-        raise ValueError(f"Blade dim {d} != metric dim {g.dim}")
+    # Merge metrics (raises if incompatible)
+    metric = Metric.merge(u.metric, v.metric)
+    g = metric
 
+    get_common_dim(u, v)
     j, k = u.grade, v.grade
-    result_cdim = get_common_cdim(u, v)
-    merged_context = GeometricContext.merge(u.context, v.context)
 
+    # j > k: result is zero scalar
     if j > k:
         result_shape = broadcast_collection_shape(u, v)
-        return Blade(data=zeros(result_shape), grade=0, dim=d, cdim=result_cdim, context=merged_context)
+        return Blade(data=zeros(result_shape), grade=0, metric=metric)
 
-    if j == 0:
-        if k == 0:
-            return Blade(data=u.data * v.data, grade=0, dim=d, cdim=result_cdim, context=merged_context)
-
-        result_grade = k
-        result = u.data[..., newaxis] * v.data
-        while result.ndim < result_cdim + result_grade:
-            result = result[..., newaxis]
-
-        return Blade(
-            data=result,
-            grade=result_grade,
-            dim=d,
-            cdim=result_cdim,
-            context=merged_context,
-        )
-
+    # Use einsum for all cases - handles broadcasting naturally
     result_grade = k - j
-    sig = interior_signature(j, k)
+    sig = interior_left_signature(j, k)
     metric_args = [g.data] * j
     result = einsum(sig, *metric_args, u.data, v.data)
 
-    return Blade(
-        data=result,
-        grade=result_grade,
-        dim=d,
-        cdim=result_cdim,
-        context=merged_context,
-    )
+    return Blade(data=result, grade=result_grade, metric=metric)
+
+
+# Alias for backwards compatibility
+interior = interior_left
+
+
+def interior_right(u: Blade, v: Blade) -> Blade:
+    """
+    Compute the right interior product (right contraction) of u by v:
+
+        (u |_ v)^{m_1 ... m_{j - k}}
+            = u^{m_1 ... m_{j - k} n_1 ... n_k} v_{n_1 ... n_k}
+
+    where indices are lowered using the metric. Contracts all indices of v
+    with the last grade(v) indices of u. Result is grade (j - k), or zero
+    blade if k > j.
+
+    Both blades must have compatible metrics (validated via Metric.merge).
+
+    Returns Blade of grade (grade(u) - grade(v)).
+    """
+    from morphis.geometry.model.blade import Blade
+    from morphis.geometry.model.metric import Metric
+
+    # Merge metrics (raises if incompatible)
+    metric = Metric.merge(u.metric, v.metric)
+    g = metric
+
+    get_common_dim(u, v)
+    j, k = u.grade, v.grade
+
+    # k > j: result is zero scalar
+    if k > j:
+        result_shape = broadcast_collection_shape(u, v)
+        return Blade(data=zeros(result_shape), grade=0, metric=metric)
+
+    # Use einsum for all cases - handles broadcasting naturally
+    result_grade = j - k
+    sig = interior_right_signature(j, k)
+    metric_args = [g.data] * k
+    result = einsum(sig, *metric_args, u.data, v.data)
+
+    return Blade(data=result, grade=result_grade, metric=metric)
 
 
 # =============================================================================
@@ -199,39 +228,43 @@ def meet(u: Blade, v: Blade) -> Blade:
 # =============================================================================
 
 
-def dot(u: Blade, v: Blade, g: Metric | None = None) -> NDArray:
+def dot(u: Blade, v: Blade) -> NDArray:
     """
     Compute the inner product of two vectors: g_{mn} u^m v^n.
 
+    Both blades must be grade-1 and have compatible metrics.
+
     Returns scalar array of dot products.
     """
-    d = get_common_dim(u, v)
-    g = euclidean(d) if g is None else g
+    from morphis.geometry.model.metric import Metric
+
+    # Merge metrics (raises if incompatible)
+    metric = Metric.merge(u.metric, v.metric)
+    g = metric
+
+    get_common_dim(u, v)
 
     if u.grade != 1 or v.grade != 1:
         raise ValueError(f"dot() requires grade-1 blades, got {u.grade} and {v.grade}")
-    if d != g.dim:
-        raise ValueError(f"Blade dim {d} != metric dim {g.dim}")
 
     return einsum("mn, ...m, ...n -> ...", g.data, u.data, v.data)
 
 
-def project(u: Blade, v: Blade, g: Metric | None = None) -> Blade:
+def project(u: Blade, v: Blade) -> Blade:
     """
     Project blade u onto blade v:
 
-        proj_v(u) = (u ⌋ v) ⌋ v / |v|²
+        proj_v(u) = (u _| v) _| v / |v|^2
 
-    Context: Preserves context if both inputs match, otherwise None.
+    Both blades must have compatible metrics.
 
     Returns projected blade with same grade as u.
     """
-    d = get_common_dim(u, v)
-    g = euclidean(d) if g is None else g
+    from morphis.geometry.model.blade import Blade
 
-    contraction = interior(u, v, g)
-    result = interior(contraction, v, g)
-    v_norm_sq = norm_squared(v, g)
+    contraction = interior_left(u, v)
+    result = interior_left(contraction, v)
+    v_norm_sq = norm_squared(v)
 
     n_expanded = v_norm_sq
     for _ in range(result.grade):
@@ -242,23 +275,19 @@ def project(u: Blade, v: Blade, g: Metric | None = None) -> Blade:
     return Blade(
         data=result.data / safe_norm,
         grade=result.grade,
-        dim=result.dim,
-        cdim=result.cdim,
-        context=result.context,
+        metric=result.metric,
+        collection=result.collection,
     )
 
 
-def reject(u: Blade, v: Blade, g: Metric | None = None) -> Blade:
+def reject(u: Blade, v: Blade) -> Blade:
     """
     Compute the rejection of blade u from blade v: the component of u
     orthogonal to v.
 
     Returns rejected blade with same grade as u.
     """
-    d = get_common_dim(u, v)
-    g = euclidean(d) if g is None else g
-
-    return u - project(u, v, g)
+    return u - project(u, v)
 
 
 # =============================================================================
@@ -272,10 +301,13 @@ def wedge_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
 
     Distributes over components: u ^ (A + B + ...) = (u ^ A) + (u ^ B) + ...
 
-    Context: Preserves if all match, otherwise None.
+    All components must have compatible metrics.
 
     Returns MultiVector.
     """
+    from morphis.geometry.model.metric import Metric
+    from morphis.geometry.model.multivector import MultiVector
+
     result_components: dict[int, Blade] = {}
 
     for _k, component in M.components.items():
@@ -287,11 +319,7 @@ def wedge_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
         else:
             result_components[result_grade] = product
 
-    return MultiVector(
-        components=result_components,
-        dim=u.dim,
-        cdim=max(u.cdim, M.cdim),
-    )
+    return MultiVector(components=result_components, metric=Metric.merge(u.metric, M.metric))
 
 
 def wedge_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
@@ -300,10 +328,13 @@ def wedge_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
 
     Distributes over components.
 
-    Context: Preserves if all match, otherwise None.
+    All components must have compatible metrics.
 
     Returns MultiVector.
     """
+    from morphis.geometry.model.metric import Metric
+    from morphis.geometry.model.multivector import MultiVector
+
     result_components: dict[int, Blade] = {}
 
     for _k, component in M.components.items():
@@ -315,11 +346,7 @@ def wedge_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
         else:
             result_components[result_grade] = product
 
-    return MultiVector(
-        components=result_components,
-        dim=M.dim,
-        cdim=max(M.cdim, u.cdim),
-    )
+    return MultiVector(components=result_components, metric=Metric.merge(M.metric, u.metric))
 
 
 def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
@@ -328,10 +355,13 @@ def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
 
     Computes all pairwise wedge products of components and sums.
 
-    Context: Preserves if all match, otherwise None.
+    All components must have compatible metrics.
 
     Returns MultiVector.
     """
+    from morphis.geometry.model.metric import Metric
+    from morphis.geometry.model.multivector import MultiVector
+
     result_components: dict[int, Blade] = {}
 
     for _k1, blade1 in M.components.items():
@@ -344,8 +374,4 @@ def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
             else:
                 result_components[result_grade] = product
 
-    return MultiVector(
-        components=result_components,
-        dim=M.dim,
-        cdim=max(M.cdim, N.cdim),
-    )
+    return MultiVector(components=result_components, metric=Metric.merge(M.metric, N.metric))

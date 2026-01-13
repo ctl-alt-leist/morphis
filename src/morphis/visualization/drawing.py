@@ -20,8 +20,8 @@ import pyvista as pv
 from numpy import abs as np_abs, argmax, array, cross, ndarray, zeros
 from numpy.linalg import norm
 
-from morphis.ga.factorization import spanning_vectors
-from morphis.ga.model import Blade
+from morphis.geometry.algebra.factorization import spanning_vectors
+from morphis.geometry.model import Blade
 from morphis.visualization.theme import Color
 
 
@@ -411,6 +411,204 @@ def create_quadvector_mesh(
     return edges_mesh, faces_mesh, marker
 
 
+def create_frame_mesh(
+    origin: ndarray,
+    vectors: ndarray,
+    shaft_radius: float = 0.008,
+    projection_axes: tuple[int, int, int] | None = None,
+    filled: bool = False,
+) -> tuple[pv.PolyData | None, pv.PolyData | None, pv.PolyData]:
+    """
+    Create meshes for a frame (k arrows from origin).
+
+    A frame is visualized as k arrows from origin, one for each spanning vector.
+    When filled=True, also draws the edges and faces of the parallelepiped/
+    parallelogram they span.
+
+    Args:
+        origin: Origin point (nD)
+        vectors: Frame vectors, shape (k, d)
+        shaft_radius: Arrow shaft radius
+        projection_axes: For dim >= 4, which 3 axes to project onto
+        filled: If True, draw edges and faces of spanned shape
+
+    Returns:
+        (edges_mesh, faces_mesh, origin_marker_mesh)
+        faces_mesh is None if filled=False
+    """
+    origin = array(origin, dtype=float)
+    vectors = array(vectors, dtype=float)
+
+    # Ensure vectors is 2D
+    if vectors.ndim == 1:
+        vectors = vectors.reshape(1, -1)
+
+    k = vectors.shape[0]
+
+    # Project to 3D if needed
+    def project_to_3d(vec, axes):
+        if axes is None or len(vec) <= 3:
+            v = vec[:3] if len(vec) >= 3 else array([*vec, *[0.0] * (3 - len(vec))])
+            return v
+        return array([vec[axes[0]], vec[axes[1]], vec[axes[2]]])
+
+    origin_3d = project_to_3d(origin, projection_axes)
+    vecs_3d = [project_to_3d(vectors[i], projection_axes) for i in range(k)]
+
+    edge_meshes = []
+
+    # Create k arrows from origin
+    for i in range(k):
+        arrow = _create_arrow_mesh(origin_3d, vecs_3d[i], shaft_radius=shaft_radius)
+        if arrow is not None:
+            edge_meshes.append(arrow)
+
+    faces_mesh = None
+
+    if filled and k >= 2:
+        # Add the non-origin edges and faces based on k
+        if k == 2:
+            # Parallelogram: 2 more edges (completing the quad)
+            u, v = vecs_3d[0], vecs_3d[1]
+            # Edges: u → u+v and v → u+v
+            tube1 = _create_tube_mesh(origin_3d + u, origin_3d + u + v, radius=shaft_radius * 0.75)
+            tube2 = _create_tube_mesh(origin_3d + v, origin_3d + u + v, radius=shaft_radius * 0.75)
+            if tube1 is not None:
+                edge_meshes.append(tube1)
+            if tube2 is not None:
+                edge_meshes.append(tube2)
+            # Face
+            corners = [origin_3d, origin_3d + u, origin_3d + u + v, origin_3d + v]
+            faces_mesh = pv.Quadrilateral(corners)
+
+        elif k == 3:
+            # Parallelepiped: 9 more edges + 6 faces
+            u, v, w = vecs_3d[0], vecs_3d[1], vecs_3d[2]
+
+            # All 12 edges, but we already have the 3 from origin as arrows
+            # Remaining 9 edges as tubes
+            remaining_edges = [
+                # Edges parallel to u (not from origin)
+                (origin_3d + v, origin_3d + u + v),
+                (origin_3d + w, origin_3d + u + w),
+                (origin_3d + v + w, origin_3d + u + v + w),
+                # Edges parallel to v (not from origin)
+                (origin_3d + u, origin_3d + u + v),
+                (origin_3d + w, origin_3d + v + w),
+                (origin_3d + u + w, origin_3d + u + v + w),
+                # Edges parallel to w (not from origin)
+                (origin_3d + u, origin_3d + u + w),
+                (origin_3d + v, origin_3d + v + w),
+                (origin_3d + u + v, origin_3d + u + v + w),
+            ]
+            for start, end in remaining_edges:
+                tube = _create_tube_mesh(start, end, radius=shaft_radius * 0.75)
+                if tube is not None:
+                    edge_meshes.append(tube)
+
+            # 6 faces of the parallelepiped
+            face_quads = [
+                # Bottom (z=0 plane)
+                [origin_3d, origin_3d + u, origin_3d + u + v, origin_3d + v],
+                # Top (z=w plane)
+                [origin_3d + w, origin_3d + u + w, origin_3d + u + v + w, origin_3d + v + w],
+                # Front (y=0 plane)
+                [origin_3d, origin_3d + u, origin_3d + u + w, origin_3d + w],
+                # Back (y=v plane)
+                [origin_3d + v, origin_3d + u + v, origin_3d + u + v + w, origin_3d + v + w],
+                # Left (x=0 plane)
+                [origin_3d, origin_3d + v, origin_3d + v + w, origin_3d + w],
+                # Right (x=u plane)
+                [origin_3d + u, origin_3d + u + v, origin_3d + u + v + w, origin_3d + u + w],
+            ]
+            face_meshes = [pv.Quadrilateral(corners) for corners in face_quads]
+            faces_mesh = face_meshes[0]
+            for fm in face_meshes[1:]:
+                faces_mesh = faces_mesh.merge(fm)
+
+        elif k == 4:
+            # Tesseract projection: more complex, use quadvector pattern
+            u, v, w, x = vecs_3d[0], vecs_3d[1], vecs_3d[2], vecs_3d[3]
+
+            # 32 edges total, 4 from origin as arrows, 28 as tubes
+            # Generate all vertices of the tesseract
+            vertices = []
+            for i in range(16):
+                vertex = origin_3d.copy()
+                if i & 1:
+                    vertex = vertex + u
+                if i & 2:
+                    vertex = vertex + v
+                if i & 4:
+                    vertex = vertex + w
+                if i & 8:
+                    vertex = vertex + x
+                vertices.append(vertex)
+
+            # All 32 edges (vertices differing by exactly one bit)
+            all_edges = []
+            for i in range(16):
+                for bit in range(4):
+                    j = i ^ (1 << bit)
+                    if i < j:
+                        all_edges.append((vertices[i], vertices[j]))
+
+            # Origin edges (from vertex 0) are already arrows
+            for start, end in all_edges:
+                # Skip edges from origin (vertex 0)
+                is_origin_edge = norm(start - origin_3d) < 1e-10 and any(
+                    norm(end - origin_3d - vecs_3d[b]) < 1e-10 for b in range(4)
+                )
+                if not is_origin_edge:
+                    tube = _create_tube_mesh(start, end, radius=shaft_radius * 0.75)
+                    if tube is not None:
+                        edge_meshes.append(tube)
+
+            # 24 faces (each face is a 2D face of the tesseract)
+            # Each face is determined by fixing 2 coordinates
+            face_quads = []
+            for fixed1 in range(4):
+                for fixed2 in range(fixed1 + 1, 4):
+                    for val1 in [0, 1]:
+                        for val2 in [0, 1]:
+                            # Get corners where fixed1=val1 and fixed2=val2
+                            corners = []
+                            for bits in [(0, 0), (1, 0), (1, 1), (0, 1)]:
+                                idx = 0
+                                bit_pos = 0
+                                for dim in range(4):
+                                    if dim == fixed1:
+                                        if val1:
+                                            idx |= 1 << dim
+                                    elif dim == fixed2:
+                                        if val2:
+                                            idx |= 1 << dim
+                                    else:
+                                        if bits[bit_pos]:
+                                            idx |= 1 << dim
+                                        bit_pos += 1
+                                corners.append(vertices[idx])
+                            face_quads.append(corners)
+
+            face_meshes = [pv.Quadrilateral(corners) for corners in face_quads]
+            faces_mesh = face_meshes[0]
+            for fm in face_meshes[1:]:
+                faces_mesh = faces_mesh.merge(fm)
+
+    # Combine all edge meshes
+    if edge_meshes:
+        edges_mesh = edge_meshes[0]
+        for mesh in edge_meshes[1:]:
+            edges_mesh = edges_mesh.merge(mesh)
+    else:
+        edges_mesh = None
+
+    # Create origin marker
+    origin_mesh = _create_origin_marker(origin_3d)
+
+    return edges_mesh, faces_mesh, origin_mesh
+
+
 def create_blade_mesh(
     grade: int,
     origin: ndarray,
@@ -710,7 +908,7 @@ def draw_coordinate_basis(
     label: bool = True,
     label_offset: float = 0.08,
     labels: tuple[str, str, str] | None = None,
-):
+) -> list | None:
     """
     Draw the standard coordinate basis e1, e2, e3.
 
@@ -726,6 +924,10 @@ def draw_coordinate_basis(
         label: If True, add labels
         label_offset: Distance to offset labels from axes
         labels: Custom labels for (x, y, z) axes. Default: e1, e2, e3
+
+    Returns:
+        List of label actors if label=True, else None. Can be used to
+        remove/update labels later.
     """
     directions = [
         array([1.0, 0.0, 0.0]) * scale,
@@ -745,6 +947,8 @@ def draw_coordinate_basis(
     else:
         names = [r"$\mathbf{e}_1$", r"$\mathbf{e}_2$", r"$\mathbf{e}_3$"]
 
+    label_actors = []
+
     for direction, offset_dir, axis_name in zip(directions, offset_dirs, names, strict=False):
         # Draw the arrow
         if tetrad:
@@ -754,7 +958,7 @@ def draw_coordinate_basis(
         if label:
             offset = offset_dir / norm(offset_dir) * label_offset
             label_pos = direction * 0.5 + offset
-            plotter.add_point_labels(
+            actor = plotter.add_point_labels(
                 [label_pos],
                 [axis_name],
                 font_size=12,
@@ -764,6 +968,9 @@ def draw_coordinate_basis(
                 show_points=False,
                 always_visible=True,
             )
+            label_actors.append(actor)
+
+    return label_actors if label else None
 
 
 def draw_basis_blade(
@@ -807,7 +1014,7 @@ def draw_basis_blade(
     if name is None:
         name = "e" + "".join(str(i) for i in indices)
 
-    # Map indices to directions (1-indexed to 0-indexed)
+    # Map math basis indices (e₁, e₂, e₃) to direction vectors
     directions = {1: array([1, 0, 0]), 2: array([0, 1, 0]), 3: array([0, 0, 1])}
 
     if grade == 1:

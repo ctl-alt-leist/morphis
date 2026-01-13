@@ -3,17 +3,28 @@ Geometric Algebra - Duality Operations
 
 Complement and Hodge duality operations on Blades. These operations map
 k-blades to (d-k)-blades using the Levi-Civita symbol and metric.
+The metric is obtained directly from the blade's metric attribute.
 
 Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 Blade naming convention: u, v, w (never a, b, c for blades).
 """
 
+from __future__ import annotations
+
 from math import factorial
+from typing import TYPE_CHECKING
 
 from numpy import einsum
 
-from morphis.ga.model import Blade, Metric, euclidean
-from morphis.ga.structure import INDICES, complement_signature, levi_civita
+from morphis.geometry.algebra.structure import (
+    INDICES,
+    complement_signature,
+    levi_civita,
+)
+
+
+if TYPE_CHECKING:
+    from morphis.geometry.model.blade import Blade
 
 
 def right_complement(u: Blade) -> Blade:
@@ -25,10 +36,10 @@ def right_complement(u: Blade) -> Blade:
     Maps grade k blade to grade (d - k) blade, representing the orthogonal
     subspace.
 
-    Context: Preserves input blade context.
-
-    Returns Blade of grade (dim - grade).
+    Returns Blade of grade (dim - grade) with same metric.
     """
+    from morphis.geometry.model.blade import Blade
+
     k = u.grade
     d = u.dim
     result_grade = d - k
@@ -39,9 +50,8 @@ def right_complement(u: Blade) -> Blade:
     return Blade(
         data=result_data,
         grade=result_grade,
-        dim=d,
-        cdim=u.cdim,
-        context=u.context,
+        metric=u.metric,
+        collection=u.collection,
     )
 
 
@@ -53,10 +63,10 @@ def left_complement(u: Blade) -> Blade:
 
     Related to right complement by a sign factor. Maps grade k to grade (d - k).
 
-    Context: Preserves input blade context.
-
-    Returns Blade of grade (dim - grade).
+    Returns Blade of grade (dim - grade) with same metric.
     """
+    from morphis.geometry.model.blade import Blade
+
     k = u.grade
     d = u.dim
     result_grade = d - k
@@ -71,13 +81,12 @@ def left_complement(u: Blade) -> Blade:
     return Blade(
         data=result_data,
         grade=result_grade,
-        dim=d,
-        cdim=u.cdim,
-        context=u.context,
+        metric=u.metric,
+        collection=u.collection,
     )
 
 
-def hodge_dual(u: Blade, g: Metric | None = None) -> Blade:
+def hodge_dual(u: Blade) -> Blade:
     """
     Compute the Hodge dual of a blade:
 
@@ -85,17 +94,15 @@ def hodge_dual(u: Blade, g: Metric | None = None) -> Blade:
                                 * eps^{m_1 ... m_d}
 
     Maps grade k to grade (d - k) using the metric for index lowering.
+    The metric is obtained from the blade's metric attribute.
 
-    Context: Preserves input blade context.
-
-    Returns Blade of grade (dim - grade).
+    Returns Blade of grade (dim - grade) with same metric.
     """
-    g = euclidean(u.dim) if g is None else g
+    from morphis.geometry.model.blade import Blade
+
+    g = u.metric
     k = u.grade
     d = u.dim
-
-    if d != g.dim:
-        raise ValueError(f"Blade dim {d} != metric dim {g.dim}")
 
     eps = levi_civita(d)
     result_grade = d - k
@@ -103,7 +110,7 @@ def hodge_dual(u: Blade, g: Metric | None = None) -> Blade:
     if k == 0:
         sig = "..., " + INDICES[:d] + " -> ..." + INDICES[:d]
         result_data = einsum(sig, u.data, eps)
-        return Blade(data=result_data, grade=d, dim=d, cdim=u.cdim, context=u.context)
+        return Blade(data=result_data, grade=d, metric=u.metric, collection=u.collection)
 
     if result_grade == 0:
         blade_indices = INDICES[:k]
@@ -112,7 +119,7 @@ def hodge_dual(u: Blade, g: Metric | None = None) -> Blade:
         sig = f"{metric_parts}, ...{blade_indices}, {lowered_indices} -> ..."
         metric_args = [g.data] * k
         result_data = einsum(sig, *metric_args, u.data, eps) / factorial(k)
-        return Blade(data=result_data, grade=0, dim=d, cdim=u.cdim, context=u.context)
+        return Blade(data=result_data, grade=0, metric=u.metric, collection=u.collection)
 
     blade_indices = INDICES[:k]
     result_indices = INDICES[k : k + result_grade]
@@ -123,4 +130,9 @@ def hodge_dual(u: Blade, g: Metric | None = None) -> Blade:
     metric_args = [g.data] * k
     result_data = einsum(sig, *metric_args, u.data, eps) / factorial(k)
 
-    return Blade(data=result_data, grade=result_grade, dim=d, cdim=u.cdim, context=u.context)
+    return Blade(
+        data=result_data,
+        grade=result_grade,
+        metric=u.metric,
+        collection=u.collection,
+    )

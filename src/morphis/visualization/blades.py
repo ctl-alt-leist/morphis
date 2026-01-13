@@ -26,7 +26,7 @@ from numpy import (
 from numpy.linalg import norm as np_norm, svd
 from numpy.typing import NDArray
 
-from morphis.ga.model import Blade
+from morphis.geometry.model import Blade
 from morphis.visualization.canvas import Canvas
 from morphis.visualization.projection import ProjectionConfig, project_blade
 from morphis.visualization.theme import Color
@@ -98,7 +98,7 @@ def render_scalar(
     position = position or (0.0, 0.0, 0.0)
 
     # Handle collection dimensions - render first element for now
-    scalar_value = float(blade.data.flat[0]) if blade.cdim > 0 else float(blade.data)
+    scalar_value = float(blade.data.flat[0]) if blade.collection else float(blade.data)
 
     magnitude = abs(scalar_value)
     radius = style.scalar_radius_base + magnitude * style.scalar_radius_scale * style.scale
@@ -140,7 +140,7 @@ def render_vector(
     origin = array(style.arrow_origin) if style.arrow_origin else array([0.0, 0.0, 0.0])
 
     # Handle collection dimensions
-    if blade.cdim == 0:
+    if not blade.collection:
         # Single vector
         direction = blade.data * style.scale
         if blade.dim < 3:
@@ -199,7 +199,7 @@ def render_bivector(
         blade = project_blade(blade, projection or ProjectionConfig())
 
     # Handle collection dimensions - render first element
-    if blade.cdim > 0:
+    if blade.collection:
         data = blade.data.reshape(-1, blade.dim, blade.dim)[0]
     else:
         data = blade.data
@@ -428,7 +428,7 @@ def render_trivector(
         blade = project_blade(blade, projection or ProjectionConfig())
 
     # Handle collection dimensions - render first element
-    if blade.cdim > 0:
+    if blade.collection:
         data = blade.data.reshape(-1, blade.dim, blade.dim, blade.dim)[0]
     else:
         data = blade.data
@@ -642,7 +642,7 @@ def _render_higher_grade(
     show_dual: bool,
 ) -> None:
     """Render blades with grade > 3."""
-    from morphis.ga.duality import right_complement
+    from morphis.geometry.algebra.duality import right_complement
 
     # For grade > 3, render the dual which has grade d - k
     dual = right_complement(blade)
@@ -667,7 +667,7 @@ def _render_dual(
     style: BladeStyle,
 ) -> None:
     """Render the dual of a blade."""
-    from morphis.ga.duality import right_complement
+    from morphis.geometry.algebra.duality import right_complement
 
     dual = right_complement(blade)
 
