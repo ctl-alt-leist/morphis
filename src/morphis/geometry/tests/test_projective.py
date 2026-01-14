@@ -1,11 +1,10 @@
-"""Unit tests for ga_projective.py"""
+"""Unit tests for projective geometry (PGA) operations."""
 
 from numpy import array
 from numpy.random import randn
 from numpy.testing import assert_array_almost_equal
 
-from morphis.ga.model import pga_metric
-from morphis.geometry.projective import (
+from morphis.geometry.algebra.projective import (
     are_collinear,
     are_coplanar,
     bulk,
@@ -75,8 +74,8 @@ class TestPGAEmbedding:
         assert not is_point(d)
 
     def test_point_batch(self):
-        pts = point(array([[1, 2, 3], [4, 5, 6]]), cdim=1)
-        assert pts.cdim == 1
+        pts = point(array([[1, 2, 3], [4, 5, 6]]))
+        assert pts.collection == (2,)
         assert pts.shape == (2, 4)
 
 
@@ -115,36 +114,32 @@ class TestGeometricConstructors:
 
 class TestDistances:
     def test_distance_point_to_point(self):
-        g = pga_metric(3)
         p = point(array([0.0, 0.0, 0.0]))
         q = point(array([1.0, 0.0, 0.0]))
-        d = distance_point_to_point(p, q, g)
+        d = distance_point_to_point(p, q)
         assert_array_almost_equal(d, 1.0)
 
     def test_distance_symmetric(self):
-        g = pga_metric(3)
         p = point(array([1.0, 2.0, 3.0]))
         q = point(array([4.0, 5.0, 6.0]))
-        d_1 = distance_point_to_point(p, q, g)
-        d_2 = distance_point_to_point(q, p, g)
+        d_1 = distance_point_to_point(p, q)
+        d_2 = distance_point_to_point(q, p)
         assert_array_almost_equal(d_1, d_2)
 
     def test_distance_point_to_line(self):
         # In PGA, distance computations with the degenerate metric are subtle.
         # This test just checks the function runs without error and returns non-negative
-        g = pga_metric(3)
         p = point(array([0.0, 1.0, 0.0]))
         origin = point(array([0.0, 0.0, 0.0]))
         x_dir = point(array([1.0, 0.0, 0.0]))
         x_axis = line(origin, x_dir)
-        d = distance_point_to_line(p, x_axis, g)
+        d = distance_point_to_line(p, x_axis)
         assert d >= 0
 
     def test_distance_batch(self):
-        g = pga_metric(3)
-        ps = point(randn(5, 3), cdim=1)
-        qs = point(randn(5, 3), cdim=1)
-        ds = distance_point_to_point(ps, qs, g)
+        ps = point(randn(5, 3))
+        qs = point(randn(5, 3))
+        ds = distance_point_to_point(ps, qs)
         assert ds.shape == (5,)
 
 
