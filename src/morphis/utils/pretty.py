@@ -2,7 +2,7 @@
 
 from numpy import ndarray
 
-from morphis.geometry.model import Blade, MultiVector
+from morphis.elements import Blade, MultiVector
 
 
 # =============================================================================

@@ -16,14 +16,11 @@ import argparse
 
 from numpy import diff, pi
 
-from morphis.geometry.algebra import normalize
-from morphis.geometry.model import basis_vectors
-from morphis.geometry.model.frame import frame_from_vectors
-from morphis.geometry.model.metric import euclidean
-from morphis.geometry.transforms.constructors import rotor
+from morphis.elements import basis_vectors, euclidean, frame_from_vectors
+from morphis.operations import normalize
+from morphis.transforms import rotor
 from morphis.utils.easing import ease_in_out_cubic
-from morphis.visualization.animation import Animation
-from morphis.visualization.theme import RED
+from morphis.visuals import RED, Animation
 
 
 # Configuration

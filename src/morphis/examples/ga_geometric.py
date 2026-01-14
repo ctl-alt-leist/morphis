@@ -15,17 +15,16 @@ from math import cos, pi, sin
 
 from numpy import array, zeros
 
-from morphis.geometry.algebra.geometric import (
+from morphis.elements import Blade, Metric, euclidean as euclidean_metric, vector_blade
+from morphis.operations import (
     anticommutator,
     commutator,
     geometric,
     grade_project,
     inverse,
+    norm,
     reverse,
 )
-from morphis.geometry.algebra.norms import norm
-from morphis.geometry.model import Blade, vector_blade
-from morphis.geometry.model.metric import Metric, euclidean as euclidean_metric
 from morphis.utils.pretty import (
     section,
     show_blade,

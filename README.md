@@ -39,15 +39,17 @@ make install
 ```
 morphis/
 ├── src/morphis/
-│   ├── core/              # Dimension-agnostic vector math, rotations, smoothing
-│   ├── geometry/          # Geometric algebra (main module)
-│   │   ├── algebra/       # Operations: wedge, geometric product, duality, norms
-│   │   ├── model/         # Blade, MultiVector, Frame, Metric
-│   │   ├── transforms/    # Rotors, translators, motor constructors
+│   ├── elements/          # Core GA objects: Blade, MultiVector, Frame, Metric
 │   │   └── tests/         # Unit tests
-│   ├── visualization/     # PyVista rendering, animation, themes
+│   ├── operations/        # GA operations: wedge, geometric product, duality, norms
+│   │   └── tests/         # Unit tests
+│   ├── transforms/        # Rotors, translators, PGA, motor constructors
+│   │   └── tests/         # Unit tests
+│   ├── visuals/           # PyVista rendering, animation, themes
+│   │   └── drawing/       # Blade mesh generation
 │   ├── examples/          # Runnable demos (animate_3d.py, animate_4d.py)
-│   └── utils/             # Easing functions, observers, pretty printing
+│   ├── utils/             # Easing functions, observers, pretty printing
+│   └── _legacy/           # Backward-compatible vector math utilities
 ├── docs/                  # Design documents and notes
 ├── Makefile               # Build commands
 ├── pyproject.toml         # Project configuration (uv)
@@ -87,8 +89,9 @@ uv run pre-commit install   # Install hooks (already done if you used make insta
 Tests are co-located with source in `tests/` subdirectories:
 
 ```bash
-make test                              # Run all tests
-uv run pytest src/morphis/geometry -v  # Run geometry module tests
+make test                               # Run all tests
+uv run pytest src/morphis/elements -v   # Run elements module tests
+uv run pytest src/morphis/operations -v # Run operations module tests
 ```
 
 ### Code Style

@@ -12,8 +12,7 @@ This is useful for:
 
 Example:
     from morphis.utils.observer import Observer
-    from morphis.geometry.model import basis_vectors
-    from morphis.geometry.model.metric import euclidean
+    from morphis.elements import basis_vectors, euclidean
 
     e1, e2, e3 = basis_vectors(euclidean(3))
     q = e1 ^ e2 ^ e3
@@ -34,11 +33,11 @@ from typing import TYPE_CHECKING, Iterator
 from numpy import copy as np_copy, ndarray, stack
 from numpy.linalg import norm
 
-from morphis.geometry.model.base import GAModel
+from morphis.elements import GAModel
 
 
 if TYPE_CHECKING:
-    from morphis.geometry.model import Blade
+    from morphis.elements import Blade
 
 
 @dataclass
@@ -343,7 +342,7 @@ class Observer:
         Returns:
             Tuple of grade-1 Blades that span the blade, or None if not a Blade
         """
-        from morphis.geometry.model import Blade
+        from morphis.elements import Blade
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)
@@ -400,7 +399,7 @@ class Observer:
                 - 'context': Geometric context (PGA, etc.) or None
             Or None if not a tracked Blade
         """
-        from morphis.geometry.model import Blade
+        from morphis.elements import Blade
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)
