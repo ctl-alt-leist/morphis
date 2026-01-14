@@ -9,7 +9,7 @@ essential nature.
   <img src="figures/rotations-4d.gif" alt="4D rotations animation" width="400">
 </p>
 
-<p align="center">
+<p align="center" width="500">
   <em>A 4D orthonormal frame rotating through bivector planes, projected to 3D.
   The view switches between e₁e₂e₃ and e₂e₃e₄ projections mid-animation.</em>
 </p>
