@@ -68,3 +68,6 @@ pip-wheel-metadata/
 *.jpg
 *.jpeg
 *.gif
+
+# But allow figures/ for README assets
+!figures/**
