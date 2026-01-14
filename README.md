@@ -9,21 +9,24 @@ essential nature.
   <img src="figures/rotations-4d.gif" alt="4D rotations animation" width="400">
 </p>
 
+<p align="center">
+  <em>A 4D orthonormal frame rotating through bivector planes, projected to 3D.
+  The view switches between e₁e₂e₃ and e₂e₃e₄ projections mid-animation.</em>
+</p>
+
 ## Features
 
-- **Geometric Algebra as Foundation**: All geometric computations use GA structures (blades, multivectors) as the
-  primary representation
-- **Context-Aware**: Geometric objects know their context (Euclidean, projective, conformal, spacetime) when it matters
-- **Mathematical Structures**: Provides geometric and algebraic tools; applications live in examples and downstream
-  packages
+- **Geometric Algebra Core**: Blades, multivectors, and operations (wedge, geometric product, duality)
+- **Metric-Aware**: Objects carry their metric context (Euclidean, projective, etc.)
+- **Visualization**: 3D rendering of blades with PyVista, timeline-based animation, 4D projection
+- **Motor Transforms**: Rotors and translations via sandwich product
 
 ## Installation
 
 Requires Python 3.12+.
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/morphis.git
+git clone https://github.com/ctl-alt-leist/morphis.git
 cd morphis
 
 # Setup with uv
@@ -31,27 +34,23 @@ make setup
 make install
 ```
 
-## Documentation
-
-For detailed project vision, architecture, and design decisions, see
-[docs/the-morphis-project.md](docs/the-morphis-project.md).
-
 ## Project Structure
 
 ```
 morphis/
-├── src/morphis/           # Main package source
-│   ├── algebra/           # Abstract algebraic structures
-│   ├── ga/                # Geometric algebra (computational core)
-│   ├── geometry/          # Geometric contexts (PGA, CGA, spacetime)
-│   ├── manifold/          # Differential geometry on curved spaces
-│   ├── topology/          # Topological structures and invariants
-│   ├── visualization/     # Geometric visualization tools
-│   └── utils/             # Shared utilities
-├── docs/                  # Project documentation
-├── _archive/              # Archived/reference code
-├── Makefile               # Build and development commands
-├── pyproject.toml         # Project configuration (uv/PEP 517)
+├── src/morphis/
+│   ├── core/              # Dimension-agnostic vector math, rotations, smoothing
+│   ├── geometry/          # Geometric algebra (main module)
+│   │   ├── algebra/       # Operations: wedge, geometric product, duality, norms
+│   │   ├── model/         # Blade, MultiVector, Frame, Metric
+│   │   ├── transforms/    # Rotors, translators, motor constructors
+│   │   └── tests/         # Unit tests
+│   ├── visualization/     # PyVista rendering, animation, themes
+│   ├── examples/          # Runnable demos (animate_3d.py, animate_4d.py)
+│   └── utils/             # Easing functions, observers, pretty printing
+├── docs/                  # Design documents and notes
+├── Makefile               # Build commands
+├── pyproject.toml         # Project configuration (uv)
 └── ruff.toml              # Linting configuration
 ```
 
@@ -75,21 +74,28 @@ make clean      # Remove generated files and caches
 make reset      # Clean and reinstall from scratch
 ```
 
-### Code Style
+### Pre-commit Hooks
 
-- Follows PEP 8
-- Uses type hints throughout
-- Pydantic models for data structures
-- Ruff for formatting and linting
+Ruff formatting and linting run automatically on commit:
+
+```bash
+uv run pre-commit install   # Install hooks (already done if you used make install)
+```
 
 ### Testing
 
-Tests are co-located with source code in `tests/` subdirectories within each module:
+Tests are co-located with source in `tests/` subdirectories:
 
 ```bash
-make test                           # Run all tests
-uv run pytest src/morphis/ga -v     # Run specific module tests
+make test                              # Run all tests
+uv run pytest src/morphis/geometry -v  # Run geometry module tests
 ```
+
+### Code Style
+
+- Python 3.12+ with type hints
+- Ruff for formatting and linting
+- PEP 8 compliant
 
 ## License
 
