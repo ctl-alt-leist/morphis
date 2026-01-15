@@ -2,7 +2,7 @@
 
 from numpy import ndarray
 
-from morphis.geometry.model import Blade, MultiVector
+from morphis.elements import Blade, MultiVector
 
 
 # =============================================================================
@@ -146,8 +146,8 @@ def show_scalar(name: str, value, precision: int = 4) -> None:
 
 def show_mv(name: str, mv: MultiVector, precision: int = 4) -> None:
     """Print multivector components with matrix-style formatting."""
-    print(f"{name}: grades={list(mv.components.keys())}")
-    for grade, blade in mv.components.items():
+    print(f"{name}: grades={list(mv.data.keys())}")
+    for grade, blade in mv.data.items():
         formatted = format_matrix(blade.data, precision)
         print(f"  <{name}>_{grade} =")
         print(_indent(formatted, "    "))

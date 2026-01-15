@@ -11,7 +11,14 @@ Tensor indices use the convention: a, b, c, d, m, n, p, q (never i, j).
 
 from numpy import array
 
-from morphis.geometry.algebra import (
+from morphis.elements import (
+    bivector_blade,
+    euclidean as euclidean_metric,
+    pga,
+    scalar_blade,
+    vector_blade,
+)
+from morphis.operations import (
     dot,
     hodge_dual,
     interior,
@@ -24,7 +31,7 @@ from morphis.geometry.algebra import (
     right_complement,
     wedge,
 )
-from morphis.geometry.algebra.projective import (
+from morphis.transforms import (
     are_collinear,
     bulk,
     direction,
@@ -36,8 +43,6 @@ from morphis.geometry.algebra.projective import (
     point_on_line,
     weight,
 )
-from morphis.geometry.model import bivector_blade, scalar_blade, vector_blade
-from morphis.geometry.model.metric import euclidean as euclidean_metric, pga
 from morphis.utils.pretty import section, show_array, show_blade, subsection
 
 

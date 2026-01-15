@@ -12,8 +12,7 @@ This is useful for:
 
 Example:
     from morphis.utils.observer import Observer
-    from morphis.geometry.model import basis_vectors
-    from morphis.geometry.model.metric import euclidean
+    from morphis.elements import basis_vectors, euclidean
 
     e1, e2, e3 = basis_vectors(euclidean(3))
     q = e1 ^ e2 ^ e3
@@ -34,18 +33,18 @@ from typing import TYPE_CHECKING, Iterator
 from numpy import copy as np_copy, ndarray, stack
 from numpy.linalg import norm
 
-from morphis.geometry.model.base import GAModel
+from morphis.elements import Element
 
 
 if TYPE_CHECKING:
-    from morphis.geometry.model import Blade
+    from morphis.elements import Blade
 
 
 @dataclass
 class TrackedObject:
     """Internal record for a tracked object."""
 
-    obj: GAModel
+    obj: Element
     obj_id: int
     name: str | None
     baseline: ndarray | None = None  # For computing diffs
@@ -75,7 +74,7 @@ class Observer:
         self._tracked: dict[int, TrackedObject] = {}
         self._names: dict[str, int] = {}  # name -> obj_id for lookup
 
-    def watch(self, *objects: GAModel, names: list[str] | None = None) -> "Observer":
+    def watch(self, *objects: Element, names: list[str] | None = None) -> "Observer":
         """
         Register one or more objects to observe.
 
@@ -117,7 +116,7 @@ class Observer:
     # Alias for backward compatibility
     track = watch
 
-    def unwatch(self, *objects: GAModel) -> "Observer":
+    def unwatch(self, *objects: Element) -> "Observer":
         """
         Stop watching one or more objects.
 
@@ -147,18 +146,18 @@ class Observer:
         self._names.clear()
         return self
 
-    def _get_data(self, obj: GAModel) -> ndarray | None:
+    def _get_data(self, obj: Element) -> ndarray | None:
         """Extract the data array from a GA object."""
         if hasattr(obj, "data"):
             return obj.data
         elif hasattr(obj, "components"):
             # MultiVector - return dict of component data
             # For simplicity, just return the first component's data
-            for blade in obj.components.values():
+            for blade in obj.data.values():
                 return blade.data
         return None
 
-    def get(self, obj_or_name: GAModel | str) -> ndarray | None:
+    def get(self, obj_or_name: Element | str) -> ndarray | None:
         """
         Get the current data for a tracked object.
 
@@ -211,7 +210,7 @@ class Observer:
                     result[tracked.name] = np_copy(data)
         return result
 
-    def reset_baseline(self, *objects: GAModel) -> "Observer":
+    def reset_baseline(self, *objects: Element) -> "Observer":
         """
         Reset the baseline (for diff computation) to current state.
 
@@ -232,7 +231,7 @@ class Observer:
 
         return self
 
-    def diff(self, obj_or_name: GAModel | str) -> ndarray | None:
+    def diff(self, obj_or_name: Element | str) -> ndarray | None:
         """
         Compute difference from baseline for an object.
 
@@ -262,7 +261,7 @@ class Observer:
 
         return current - tracked.baseline
 
-    def diff_norm(self, obj_or_name: GAModel | str) -> float | None:
+    def diff_norm(self, obj_or_name: Element | str) -> float | None:
         """
         Compute norm of difference from baseline.
 
@@ -275,7 +274,7 @@ class Observer:
         d = self.diff(obj_or_name)
         return float(norm(d)) if d is not None else None
 
-    def objects(self) -> list[GAModel]:
+    def objects(self) -> list[Element]:
         """Return list of all tracked objects."""
         return [t.obj for t in self._tracked.values()]
 
@@ -291,15 +290,15 @@ class Observer:
         """Number of tracked objects."""
         return len(self._tracked)
 
-    def __contains__(self, obj: GAModel) -> bool:
+    def __contains__(self, obj: Element) -> bool:
         """Check if an object is being tracked."""
         return id(obj) in self._tracked
 
-    def __iter__(self) -> Iterator[GAModel]:
+    def __iter__(self) -> Iterator[Element]:
         """Iterate over tracked objects."""
         return iter(t.obj for t in self._tracked.values())
 
-    def __getitem__(self, key: str | int) -> GAModel | None:
+    def __getitem__(self, key: str | int) -> Element | None:
         """
         Get tracked object by name or id.
 
@@ -329,7 +328,7 @@ class Observer:
             obj_type = type(tracked.obj).__name__
             print(f"{prefix}  [{obj_type}]{name_str}: {data}")
 
-    def spanning_vectors(self, obj_or_name: GAModel | str) -> tuple["Blade", ...] | None:
+    def spanning_vectors(self, obj_or_name: Element | str) -> tuple["Blade", ...] | None:
         """
         Get the spanning vectors for a tracked blade.
 
@@ -343,7 +342,7 @@ class Observer:
         Returns:
             Tuple of grade-1 Blades that span the blade, or None if not a Blade
         """
-        from morphis.geometry.model import Blade
+        from morphis.elements import Blade
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)
@@ -362,7 +361,7 @@ class Observer:
 
         return tracked.obj.spanning_vectors()
 
-    def spanning_vectors_as_array(self, obj_or_name: GAModel | str) -> ndarray | None:
+    def spanning_vectors_as_array(self, obj_or_name: Element | str) -> ndarray | None:
         """
         Get spanning vectors as a stacked numpy array.
 
@@ -381,7 +380,7 @@ class Observer:
 
         return stack([v.data for v in vectors])
 
-    def capture_state(self, obj_or_name: GAModel | str) -> dict | None:
+    def capture_state(self, obj_or_name: Element | str) -> dict | None:
         """
         Capture complete visualization state for a tracked blade.
 
@@ -400,7 +399,7 @@ class Observer:
                 - 'context': Geometric context (PGA, etc.) or None
             Or None if not a tracked Blade
         """
-        from morphis.geometry.model import Blade
+        from morphis.elements import Blade
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)
