@@ -14,90 +14,53 @@ This module provides the foundational types for geometric algebra computations:
 # Blade and constructors
 from morphis.elements.blade import (
     Blade,
-    basis_blade,
-    basis_vector,
-    basis_vectors,
-    bivector_blade,
-    blade_from_data,
-    pseudoscalar,
-    quadvector_blade,
-    scalar_blade,
-    trivector_blade,
-    vector_blade,
+    basis_blade as basis_blade,
+    basis_vector as basis_vector,
+    basis_vectors as basis_vectors,
+    bivector_blade as bivector_blade,
+    blade_from_data as blade_from_data,
+    pseudoscalar as pseudoscalar,
+    quadvector_blade as quadvector_blade,
+    scalar_blade as scalar_blade,
+    trivector_blade as trivector_blade,
+    vector_blade as vector_blade,
 )
-from morphis.elements.elements import CompositeElement, Element, GradedElement
+from morphis.elements.elements import (
+    CompositeElement as CompositeElement,
+    Element as Element,
+    GradedElement as GradedElement,
+)
 
 # Frame
 from morphis.elements.frame import (
     Frame,
-    frame_from_vectors,
+    frame_from_vectors as frame_from_vectors,
 )
 
 # Metric and context
 from morphis.elements.metric import (
-    PGA,
-    STA,
-    GASignature,
-    GAStructure,
-    Metric,
-    degenerate_ns,
-    euclidean,
-    euclidean_ns,
-    lorentzian,
-    lorentzian_ns,
-    pga,
+    PGA as PGA,
+    STA as STA,
+    GASignature as GASignature,
+    GAStructure as GAStructure,
+    Metric as Metric,
+    degenerate_ns as degenerate_ns,
+    euclidean as euclidean,
+    euclidean_ns as euclidean_ns,
+    lorentzian as lorentzian,
+    lorentzian_ns as lorentzian_ns,
+    pga as pga,
 )
 
 # MultiVector
 from morphis.elements.multivector import (
     MultiVector,
-    multivector_from_blades,
+    multivector_from_blades as multivector_from_blades,
 )
-from morphis.elements.protocols import Graded, Spanning, Transformable
+from morphis.elements.protocols import Graded as Graded, Spanning as Spanning, Transformable as Transformable
 
 
 # Rebuild models to resolve forward references
 Blade.model_rebuild()
 MultiVector.model_rebuild()
 Frame.model_rebuild()
-
-__all__ = [
-    # Base classes
-    "Element",
-    "GradedElement",
-    "CompositeElement",
-    # Protocols
-    "Graded",
-    "Spanning",
-    "Transformable",
-    # Metric
-    "GASignature",
-    "GAStructure",
-    "Metric",
-    "euclidean",
-    "pga",
-    "lorentzian",
-    "euclidean_ns",
-    "lorentzian_ns",
-    "degenerate_ns",
-    "PGA",
-    "STA",
-    # Blade
-    "Blade",
-    "scalar_blade",
-    "vector_blade",
-    "bivector_blade",
-    "trivector_blade",
-    "quadvector_blade",
-    "blade_from_data",
-    "basis_vector",
-    "basis_vectors",
-    "basis_blade",
-    "pseudoscalar",
-    # MultiVector
-    "MultiVector",
-    "multivector_from_blades",
-    # Frame
-    "Frame",
-    "frame_from_vectors",
-]

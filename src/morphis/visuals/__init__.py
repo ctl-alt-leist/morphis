@@ -13,143 +13,80 @@ For PGA-specific visualization, see the contexts submodule.
 """
 
 # Core visualization
-from morphis.visuals.canvas import Canvas
+from morphis.visuals.canvas import Canvas as Canvas
 
 # Context-aware visualization (PGA)
 from morphis.visuals.contexts import (
-    PGAStyle,
-    is_pga_context,
-    render_pga_line,
-    render_pga_plane,
-    render_pga_point,
-    visualize_pga_blade,
-    visualize_pga_scene,
+    PGAStyle as PGAStyle,
+    is_pga_context as is_pga_context,
+    render_pga_line as render_pga_line,
+    render_pga_plane as render_pga_plane,
+    render_pga_point as render_pga_point,
+    visualize_pga_blade as visualize_pga_blade,
+    visualize_pga_scene as visualize_pga_scene,
 )
 
 # Blade visualization
 from morphis.visuals.drawing.blades import (
-    BladeStyle,
-    draw_blade,
-    render_bivector,
-    render_trivector,
-    render_vector,
-    visualize_blade,
+    BladeStyle as BladeStyle,
+    draw_blade as draw_blade,
+    render_bivector as render_bivector,
+    render_trivector as render_trivector,
+    render_vector as render_vector,
+    visualize_blade as visualize_blade,
 )
 
 # Effects
 from morphis.visuals.effects import (
-    Effect,
-    FadeIn,
-    FadeOut,
-    Hold,
-    compute_opacity,
+    Effect as Effect,
+    FadeIn as FadeIn,
+    FadeOut as FadeOut,
+    Hold as Hold,
+    compute_opacity as compute_opacity,
 )
-from morphis.visuals.loop import Animation
+from morphis.visuals.loop import Animation as Animation
 
 # Operation visualization
 from morphis.visuals.operations import (
-    OperationStyle,
-    render_join,
-    render_meet,
-    render_meet_join,
-    render_with_dual,
+    OperationStyle as OperationStyle,
+    render_join as render_join,
+    render_meet as render_meet,
+    render_meet_join as render_meet_join,
+    render_with_dual as render_with_dual,
 )
 
 # Projection for high-dimensional visualization
 from morphis.visuals.projection import (
-    ProjectionConfig,
-    project_blade,
+    ProjectionConfig as ProjectionConfig,
+    project_blade as project_blade,
 )
-from morphis.visuals.renderer import Renderer
+from morphis.visuals.renderer import Renderer as Renderer
 
 # Themes and styling
 from morphis.visuals.theme import (
     # Standard colors
-    AMBER,
-    BLACK,
-    BLUE,
+    AMBER as AMBER,
+    BLACK as BLACK,
+    BLUE as BLUE,
     # Named themes
-    CHALK,
-    CORAL,
-    CYAN,
-    DEFAULT_THEME,
-    GRAY,
-    GREEN,
-    MIDNIGHT,
-    OBSIDIAN,
-    ORANGE,
-    PAPER,
-    PURPLE,
-    RED,
-    TEAL,
-    VIOLET,
-    WHITE,
-    YELLOW,
-    Color,
-    Palette,
-    Theme,
-    get_theme,
+    CHALK as CHALK,
+    CORAL as CORAL,
+    CYAN as CYAN,
+    DEFAULT_THEME as DEFAULT_THEME,
+    GRAY as GRAY,
+    GREEN as GREEN,
+    MIDNIGHT as MIDNIGHT,
+    OBSIDIAN as OBSIDIAN,
+    ORANGE as ORANGE,
+    PAPER as PAPER,
+    PURPLE as PURPLE,
+    RED as RED,
+    TEAL as TEAL,
+    VIOLET as VIOLET,
+    WHITE as WHITE,
+    YELLOW as YELLOW,
+    Color as Color,
+    Palette as Palette,
+    Theme as Theme,
+    get_theme as get_theme,
 )
-
-
-__all__ = [
-    # Core
-    "Animation",
-    "Canvas",
-    "Renderer",
-    # Standard colors
-    "AMBER",
-    "BLACK",
-    "BLUE",
-    "CORAL",
-    "CYAN",
-    "GRAY",
-    "GREEN",
-    "ORANGE",
-    "PURPLE",
-    "RED",
-    "TEAL",
-    "VIOLET",
-    "WHITE",
-    "YELLOW",
-    # Themes
-    "CHALK",
-    "Color",
-    "DEFAULT_THEME",
-    "MIDNIGHT",
-    "OBSIDIAN",
-    "PAPER",
-    "Palette",
-    "Theme",
-    "get_theme",
-    # Effects
-    "Effect",
-    "FadeIn",
-    "FadeOut",
-    "Hold",
-    "compute_opacity",
-    # Projection
-    "ProjectionConfig",
-    "project_blade",
-    # Blade drawing
-    "BladeStyle",
-    "draw_blade",
-    "render_bivector",
-    "render_trivector",
-    "render_vector",
-    "visualize_blade",
-    # Operations
-    "OperationStyle",
-    "render_join",
-    "render_meet",
-    "render_meet_join",
-    "render_with_dual",
-    # PGA contexts
-    "PGAStyle",
-    "is_pga_context",
-    "render_pga_line",
-    "render_pga_plane",
-    "render_pga_point",
-    "visualize_pga_blade",
-    "visualize_pga_scene",
-]
