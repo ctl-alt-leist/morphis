@@ -41,18 +41,6 @@ from morphis.transforms.rotations import (
     rotor,
 )
 
-# Visual transforms (for animation)
-from morphis.transforms.visual import (
-    AnimationSegment,
-    AnimationSequence,
-    BladeTransform,
-    ease_in_out_cubic,
-    ease_in_out_sine,
-    ease_in_quad,
-    ease_linear,
-    ease_out_quad,
-)
-
 
 __all__ = [
     # Rotations
@@ -83,13 +71,4 @@ __all__ = [
     "rotate",
     "translate",
     "transform",
-    # Visual transforms
-    "BladeTransform",
-    "AnimationSegment",
-    "AnimationSequence",
-    "ease_linear",
-    "ease_in_out_cubic",
-    "ease_in_out_sine",
-    "ease_out_quad",
-    "ease_in_quad",
 ]
