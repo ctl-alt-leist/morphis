@@ -10,9 +10,7 @@ This module provides the foundational types for geometric algebra computations:
 - Metric: geometric context (metric tensor + signature + structure)
 """
 
-# Base model
-from morphis.elements.base import GAModel
-
+# Base classes
 # Blade and constructors
 from morphis.elements.blade import (
     Blade,
@@ -27,6 +25,7 @@ from morphis.elements.blade import (
     trivector_blade,
     vector_blade,
 )
+from morphis.elements.elements import CompositeElement, Element, GradedElement
 
 # Frame
 from morphis.elements.frame import (
@@ -54,7 +53,7 @@ from morphis.elements.multivector import (
     MultiVector,
     multivector_from_blades,
 )
-from morphis.elements.protocols import GAObject, Transformable
+from morphis.elements.protocols import Graded, Spanning, Transformable
 
 
 # Rebuild models to resolve forward references
@@ -63,8 +62,13 @@ MultiVector.model_rebuild()
 Frame.model_rebuild()
 
 __all__ = [
+    # Base classes
+    "Element",
+    "GradedElement",
+    "CompositeElement",
     # Protocols
-    "GAObject",
+    "Graded",
+    "Spanning",
     "Transformable",
     # Metric
     "GASignature",
@@ -80,7 +84,6 @@ __all__ = [
     "STA",
     # Blade
     "Blade",
-    "GAModel",
     "scalar_blade",
     "vector_blade",
     "bivector_blade",

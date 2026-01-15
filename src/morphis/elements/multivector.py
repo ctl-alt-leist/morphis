@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from numpy import broadcast_shapes
 from pydantic import ConfigDict, model_validator
 
-from morphis.elements.base import GAModel
+from morphis.elements.elements import CompositeElement
 from morphis.elements.metric import Metric
 
 
@@ -22,22 +22,17 @@ if TYPE_CHECKING:
     from morphis.elements.blade import Blade
 
 
-class MultiVector(GAModel):
+class MultiVector(CompositeElement):
     """
     A general multivector: sum of blades of different grades.
 
     Stored as a dictionary mapping grade to Blade (sparse representation).
     All component blades must have the same dim and compatible collection shapes.
 
-    Every MultiVector requires a Metric which provides:
-    - The inner product structure (metric tensor g_{ab})
-    - The signature type (EUCLIDEAN, LORENTZIAN, DEGENERATE)
-    - The structure type (FLAT, PROJECTIVE, CONFORMAL, ROUND)
-
     Attributes:
-        components: Dictionary mapping grade to Blade
-        metric: The complete geometric context (required)
-        collection: Shape of the collection dimensions
+        data: Dictionary mapping grade to Blade (inherited)
+        metric: The complete geometric context (inherited)
+        collection: Shape of the collection dimensions (inherited)
 
     Examples:
         >>> from morphis.elements.metric import euclidean
@@ -52,10 +47,6 @@ class MultiVector(GAModel):
         frozen=False,
     )
 
-    components: dict[int, Blade]
-    metric: Metric
-    collection: tuple[int, ...] | None = None  # Inferred from components if not provided
-
     # Prevent numpy from intercepting arithmetic - force use of __rmul__ etc.
     __array_ufunc__ = None
 
@@ -68,16 +59,16 @@ class MultiVector(GAModel):
         """Infer collection if not provided, then verify consistency."""
         # Infer collection from components if not provided
         if self.collection is None:
-            if self.components:
+            if self.data:
                 # Compute broadcast-compatible collection from all components
-                collections = [blade.collection for blade in self.components.values()]
+                collections = [blade.collection for blade in self.data.values()]
                 inferred = broadcast_shapes(*collections)
                 object.__setattr__(self, "collection", inferred)
             else:
                 object.__setattr__(self, "collection", ())
 
         # Validate all components
-        for k, blade in self.components.items():
+        for k, blade in self.data.items():
             if blade.grade != k:
                 raise ValueError(f"Component at key {k} has grade {blade.grade}")
             if not blade.metric.is_compatible(self.metric):
@@ -104,7 +95,7 @@ class MultiVector(GAModel):
     @property
     def grades(self) -> list[int]:
         """List of grades with nonzero components."""
-        return sorted(self.components.keys())
+        return sorted(self.data.keys())
 
     # =========================================================================
     # Grade Selection
@@ -112,7 +103,7 @@ class MultiVector(GAModel):
 
     def grade_select(self, k: int) -> Blade | None:
         """Extract the grade-k component, or None if not present."""
-        return self.components.get(k)
+        return self.data.get(k)
 
     def __getitem__(self, k: int) -> Blade | None:
         """Shorthand for grade_select."""
@@ -133,8 +124,8 @@ class MultiVector(GAModel):
         all_grades = set(self.grades) | set(other.grades)
 
         for k in all_grades:
-            a = self.components.get(k)
-            b = other.components.get(k)
+            a = self.data.get(k)
+            b = other.data.get(k)
             if a is not None and b is not None:
                 components[k] = a + b
             elif a is not None:
@@ -143,7 +134,7 @@ class MultiVector(GAModel):
                 components[k] = b
 
         return MultiVector(
-            components=components,
+            data=components,
             metric=metric,
             collection=collection,
         )
@@ -159,8 +150,8 @@ class MultiVector(GAModel):
         all_grades = set(self.grades) | set(other.grades)
 
         for k in all_grades:
-            a = self.components.get(k)
-            b = other.components.get(k)
+            a = self.data.get(k)
+            b = other.data.get(k)
             if a is not None and b is not None:
                 components[k] = a - b
             elif a is not None:
@@ -169,7 +160,7 @@ class MultiVector(GAModel):
                 components[k] = -b
 
         return MultiVector(
-            components=components,
+            data=components,
             metric=metric,
             collection=collection,
         )
@@ -177,7 +168,7 @@ class MultiVector(GAModel):
     def __mul__(self, scalar) -> MultiVector:
         """Scalar multiplication."""
         return MultiVector(
-            components={k: blade * scalar for k, blade in self.components.items()},
+            data={k: blade * scalar for k, blade in self.data.items()},
             metric=self.metric,
             collection=self.collection,
         )
@@ -189,7 +180,7 @@ class MultiVector(GAModel):
     def __neg__(self) -> MultiVector:
         """Negation."""
         return MultiVector(
-            components={k: -blade for k, blade in self.components.items()},
+            data={k: -blade for k, blade in self.data.items()},
             metric=self.metric,
             collection=self.collection,
         )
@@ -233,7 +224,7 @@ class MultiVector(GAModel):
             from morphis.operations.projections import interior_left
 
             result_components: dict[int, Blade] = {}
-            for _k, component in self.components.items():
+            for _k, component in self.data.items():
                 contracted = interior_left(component, other)
                 result_grade = contracted.grade
                 if result_grade in result_components:
@@ -241,7 +232,7 @@ class MultiVector(GAModel):
                 else:
                     result_components[result_grade] = contracted
 
-            return MultiVector(components=result_components, metric=Metric.merge(self.metric, other.metric))
+            return MultiVector(data=result_components, metric=Metric.merge(self.metric, other.metric))
 
         return NotImplemented
 
@@ -259,7 +250,7 @@ class MultiVector(GAModel):
             from morphis.operations.projections import interior_right
 
             result_components: dict[int, Blade] = {}
-            for _k, component in self.components.items():
+            for _k, component in self.data.items():
                 contracted = interior_right(component, other)
                 result_grade = contracted.grade
                 if result_grade in result_components:
@@ -267,7 +258,7 @@ class MultiVector(GAModel):
                 else:
                     result_components[result_grade] = contracted
 
-            return MultiVector(components=result_components, metric=Metric.merge(self.metric, other.metric))
+            return MultiVector(data=result_components, metric=Metric.merge(self.metric, other.metric))
 
         return NotImplemented
 
@@ -340,7 +331,7 @@ class MultiVector(GAModel):
     def copy(self) -> MultiVector:
         """Create a deep copy of this multivector."""
         return MultiVector(
-            components={k: blade.copy() for k, blade in self.components.items()},
+            data={k: blade.copy() for k, blade in self.data.items()},
             metric=self.metric,
             collection=self.collection,
         )
@@ -348,7 +339,7 @@ class MultiVector(GAModel):
     def with_metric(self, metric: Metric) -> MultiVector:
         """Return a new MultiVector with the specified metric context."""
         return MultiVector(
-            components={k: blade.with_metric(metric) for k, blade in self.components.items()},
+            data={k: blade.with_metric(metric) for k, blade in self.data.items()},
             metric=metric,
             collection=self.collection,
         )
@@ -385,4 +376,4 @@ def multivector_from_blades(*blades: Blade) -> MultiVector:
         else:
             components[blade.grade] = blade
 
-    return MultiVector(components=components, metric=metric, collection=collection)
+    return MultiVector(data=components, metric=metric, collection=collection)

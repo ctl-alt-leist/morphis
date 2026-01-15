@@ -4,7 +4,8 @@ Geometric Algebra - Protocol Definitions
 Protocols define the interfaces for geometric algebra objects. These enable
 duck-typing while providing clear interface contracts for type checking.
 
-GAObject: Any object living in a geometric algebra with a metric.
+Graded: Objects with a single grade and array data (Blade, Frame).
+Spanning: Objects with a span (Frame).
 Transformable: Objects that can be transformed by motors/versors.
 """
 
@@ -16,37 +17,27 @@ from numpy.typing import NDArray
 
 
 if TYPE_CHECKING:
-    from morphis.elements.metric import Metric
     from morphis.elements.multivector import MultiVector
 
-T = TypeVar("T", bound="GAObject")
+G = TypeVar("G", bound="Graded")
 S = TypeVar("S", bound="Transformable")
 
 
 @runtime_checkable
-class GAObject(Protocol):
+class Graded(Protocol):
     """
-    Protocol for all geometric algebra objects.
+    Protocol for objects with a single grade and array data.
 
-    Every GA object (Blade, MultiVector, Frame) must have:
-    - metric: The complete geometric context (tensor + signature + structure)
-    - dim: The vector space dimension
-    - data: The underlying numerical representation
+    Implemented by: Blade, Frame
 
-    The metric provides all information needed for operations:
-    - The metric tensor g_{ab} for inner products
-    - The signature type (EUCLIDEAN, LORENTZIAN, DEGENERATE)
-    - The structure type (FLAT, PROJECTIVE, CONFORMAL, ROUND)
+    Attributes:
+        grade: The grade of the element (0=scalar, 1=vector, 2=bivector, etc.)
+        data: The underlying numerical array
     """
 
     @property
-    def metric(self) -> Metric:
-        """The complete geometric context for this object."""
-        ...
-
-    @property
-    def dim(self) -> int:
-        """Dimension of the underlying vector space."""
+    def grade(self) -> int:
+        """The grade of this element."""
         ...
 
     @property
@@ -54,8 +45,21 @@ class GAObject(Protocol):
         """Underlying numerical data."""
         ...
 
-    def with_metric(self: T, metric: Metric) -> T:
-        """Return a copy with a different metric context."""
+
+@runtime_checkable
+class Spanning(Protocol):
+    """
+    Protocol for objects that span a subspace.
+
+    Implemented by: Frame
+
+    Attributes:
+        span: Number of elements (vectors) spanning the subspace
+    """
+
+    @property
+    def span(self) -> int:
+        """Number of spanning elements."""
         ...
 
 

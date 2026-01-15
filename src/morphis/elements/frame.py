@@ -1,7 +1,7 @@
 """
 Geometric Algebra - Frame
 
-An ordered collection of k vectors in d-dimensional space. A Frame preserves
+An ordered collection of vectors in d-dimensional space. A Frame preserves
 the specific choice of spanning vectors, unlike a Blade which encodes only
 the subspace.
 
@@ -13,10 +13,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from numpy import asarray, stack
-from numpy.typing import NDArray
 from pydantic import ConfigDict, field_validator, model_validator
 
-from morphis.elements.base import GAModel
+from morphis.elements.elements import GradedElement
 from morphis.elements.metric import Metric
 
 
@@ -25,34 +24,35 @@ if TYPE_CHECKING:
     from morphis.elements.multivector import MultiVector
 
 
-class Frame(GAModel):
+class Frame(GradedElement):
     """
-    An ordered collection of k vectors in d-dimensional space.
+    An ordered collection of vectors in d-dimensional space.
 
-    A frame F = {e1, e2, ..., ek} represents k basis vectors that span a
-    k-dimensional subspace. Unlike a blade (which encodes only the subspace),
-    a frame preserves the specific choice of spanning vectors.
+    A frame F = {e1, e2, ..., ek} represents vectors that span a subspace.
+    Unlike a blade (which encodes only the subspace), a frame preserves the
+    specific choice of spanning vectors.
 
-    Storage shape is (*collection, k, d) where:
+    Storage shape is (*collection, span, dim) where:
     - collection: shape of collection dimensions (for batch operations)
-    - k: number of vectors in the frame
-    - d: dimension of each vector
+    - span: number of vectors in the frame
+    - dim: dimension of each vector
 
     Key distinction from Blade:
     - Blade: holistic object, transforms as b' = M b ~M
     - Frame: collection of vectors, transforms component-wise
 
     Attributes:
-        data: The underlying array of frame vectors
-        k: Number of vectors (inferred if not provided)
-        metric: The complete geometric context (required)
-        collection: Shape of the collection dimensions
+        data: The underlying array of frame vectors (inherited)
+        grade: Always 1 for frames (vectors) (inherited)
+        metric: The complete geometric context (inherited)
+        collection: Shape of the collection dimensions (inherited)
+        span: Number of vectors in the frame
 
     Examples:
         >>> from morphis.elements.metric import euclidean
         >>> m = euclidean(3)
         >>> F = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
-        >>> F.k
+        >>> F.span
         2
     """
 
@@ -61,13 +61,8 @@ class Frame(GAModel):
         frozen=False,
     )
 
-    data: NDArray
-    k: int | None = None  # Number of vectors, inferred from data.shape[-2]
-    metric: Metric
-    collection: tuple[int, ...] | None = None  # Inferred from data shape if not provided
-
-    # Prevent numpy from intercepting arithmetic
-    __array_ufunc__ = None
+    grade: int = 1  # Frames contain grade-1 elements (vectors)
+    span: int | None = None  # Number of vectors, inferred from data.shape[-2]
 
     # =========================================================================
     # Constructors
@@ -90,20 +85,20 @@ class Frame(GAModel):
 
     @model_validator(mode="after")
     def _infer_and_validate(self):
-        """Infer k and collection if not provided, then validate shape consistency."""
+        """Infer span and collection if not provided, then validate shape consistency."""
         dim = self.metric.dim
 
-        # Frame data must have at least 2 dimensions: (k, d)
+        # Frame data must have at least 2 dimensions: (span, dim)
         if self.data.ndim < 2:
             raise ValueError(f"Frame data must have at least 2 dimensions, got {self.data.ndim}")
 
-        # Infer k from second-to-last axis
-        if self.k is None:
-            object.__setattr__(self, "k", self.data.shape[-2])
+        # Infer span from second-to-last axis
+        if self.span is None:
+            object.__setattr__(self, "span", self.data.shape[-2])
 
         # Infer collection from data shape if not provided
         if self.collection is None:
-            collection_ndim = self.data.ndim - 2  # everything except (k, d)
+            collection_ndim = self.data.ndim - 2  # everything except (span, dim)
             object.__setattr__(self, "collection", self.data.shape[:collection_ndim])
 
         # Validate: len(collection) + 2 == ndim
@@ -113,11 +108,11 @@ class Frame(GAModel):
                 f"Frame with collection={self.collection} expects {expected_ndim} dimensions, got {self.data.ndim}"
             )
 
-        # Validate shape matches k and dim
+        # Validate shape matches span and dim
         if self.data.shape[-1] != dim:
             raise ValueError(f"Last axis has size {self.data.shape[-1]}, expected dim={dim}")
-        if self.data.shape[-2] != self.k:
-            raise ValueError(f"Second-to-last axis has size {self.data.shape[-2]}, expected k={self.k}")
+        if self.data.shape[-2] != self.span:
+            raise ValueError(f"Second-to-last axis has size {self.data.shape[-2]}, expected span={self.span}")
 
         return self
 
@@ -139,11 +134,6 @@ class Frame(GAModel):
     def collection_shape(self) -> tuple[int, ...]:
         """Shape of the leading collection dimensions."""
         return self.collection
-
-    @property
-    def grade(self) -> int:
-        """Grade of each vector in the frame (always 1)."""
-        return 1
 
     # =========================================================================
     # NumPy Interface
@@ -194,8 +184,8 @@ class Frame(GAModel):
         """
         View frame vectors as a batch of grade-1 blades (internal helper).
 
-        Returns Blade with collection = (*self.collection, k), treating
-        the k vectors as a batch for vectorized geometric operations.
+        Returns Blade with collection = (*self.collection, span), treating
+        the vectors as a batch for vectorized geometric operations.
         """
         from morphis.elements.blade import Blade
 
@@ -203,15 +193,15 @@ class Frame(GAModel):
             data=self.data,
             grade=1,
             metric=self.metric,
-            collection=self.collection + (self.k,),
+            collection=self.collection + (self.span,),
         )
 
     def __matmul__(self, other: Blade | MultiVector) -> MultiVector:
         """
         Geometric product: F @ M
 
-        Treats frame as batch of k vectors and applies geometric product.
-        Result is MultiVector with collection (*self.collection, k).
+        Treats frame as batch of vectors and applies geometric product.
+        Result is MultiVector with collection (*self.collection, span).
 
         For sandwich products: (M @ F @ ~M)[1] gives transformed vectors.
         """
@@ -229,8 +219,8 @@ class Frame(GAModel):
         """
         Geometric product (reversed): M @ F
 
-        Treats frame as batch of k vectors and applies geometric product.
-        Result is MultiVector with collection (*self.collection, k).
+        Treats frame as batch of vectors and applies geometric product.
+        Result is MultiVector with collection (*self.collection, span).
 
         For sandwich products: (M @ F @ ~M)[1] gives transformed vectors.
         """
@@ -288,13 +278,13 @@ class Frame(GAModel):
         """
         Convert frame to blade by wedging all vectors.
 
-        Returns the k-blade: e1 ^ e2 ^ ... ^ ek
+        Returns the blade: e1 ^ e2 ^ ... ^ e_span
         """
         from morphis.operations.products import wedge
 
         # Wedge all vectors together
         result = self.vector(0)
-        for i in range(1, self.k):
+        for i in range(1, self.span):
             result = wedge(result, self.vector(i))
 
         return result
@@ -317,7 +307,7 @@ class Frame(GAModel):
         from numpy.linalg import norm as np_norm
 
         new_data = self.data.copy()
-        for i in range(self.k):
+        for i in range(self.span):
             vec = new_data[..., i, :]
             n = np_norm(vec, axis=-1, keepdims=True)
             # Safe division - avoid divide by zero
@@ -326,7 +316,7 @@ class Frame(GAModel):
 
         return Frame(
             data=new_data,
-            k=self.k,
+            span=self.span,
             metric=self.metric,
             collection=self.collection,
         )
@@ -335,7 +325,7 @@ class Frame(GAModel):
         """Create a deep copy of this frame."""
         return Frame(
             data=self.data.copy(),
-            k=self.k,
+            span=self.span,
             metric=self.metric,
             collection=self.collection,
         )
@@ -344,13 +334,13 @@ class Frame(GAModel):
         """Return a new Frame with the specified metric context."""
         return Frame(
             data=self.data.copy(),
-            k=self.k,
+            span=self.span,
             metric=metric,
             collection=self.collection,
         )
 
     def __repr__(self) -> str:
-        return f"Frame(k={self.k}, dim={self.dim}, collection={self.collection}, shape={self.shape})"
+        return f"Frame(span={self.span}, dim={self.dim}, collection={self.collection}, shape={self.shape})"
 
 
 # =============================================================================
@@ -362,8 +352,8 @@ def frame_from_vectors(*vectors: Blade) -> Frame:
     """
     Create a Frame from a collection of grade-1 Blades (vectors).
 
-    All vectors must have the same metric. The resulting Frame has shape (k, d)
-    where k is the number of vectors and d is the dimension.
+    All vectors must have the same metric. The resulting Frame has shape (span, dim)
+    where span is the number of vectors and dim is the dimension.
 
     Args:
         *vectors: Grade-1 Blades to include in the frame
@@ -390,7 +380,7 @@ def frame_from_vectors(*vectors: Blade) -> Frame:
     # Merge all metrics (raises if incompatible)
     metric = Metric.merge(*(v.metric for v in vectors))
 
-    # Stack vector data: each is shape (d,), result is (k, d)
+    # Stack vector data: each is shape (dim,), result is (span, dim)
     data = stack([v.data for v in vectors], axis=0)
 
-    return Frame(data=data, k=len(vectors), metric=metric, collection=())
+    return Frame(data=data, span=len(vectors), metric=metric, collection=())

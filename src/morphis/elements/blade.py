@@ -16,7 +16,7 @@ from numpy import asarray, broadcast_shapes
 from numpy.typing import NDArray
 from pydantic import ConfigDict, field_validator, model_validator
 
-from morphis.elements.base import GAModel
+from morphis.elements.elements import GradedElement
 from morphis.elements.metric import Metric
 
 
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class Blade(GAModel):
+class Blade(GradedElement):
     """
     A k-blade in geometric algebra.
 
@@ -39,16 +39,15 @@ class Blade(GAModel):
     The components B^{m_1 ... m_k} are stored with full redundancy (all d^k
     elements), satisfying antisymmetry: B^{...m...n...} = -B^{...n...m...}.
 
-    Every Blade requires a Metric which provides:
-    - The inner product structure (metric tensor g_{ab})
-    - The signature type (EUCLIDEAN, LORENTZIAN, DEGENERATE)
-    - The structure type (FLAT, PROJECTIVE, CONFORMAL, ROUND)
+    Note: Despite the name, this class represents general k-vectors which may
+    not be simple (factorizable) blades. A true blade can be written as
+    v1 ^ v2 ^ ... ^ vk; a general k-vector is a sum of such terms.
 
     Attributes:
-        data: The underlying array of blade components
-        grade: The grade (0=scalar, 1=vector, 2=bivector, etc.)
-        metric: The complete geometric context (required)
-        collection: Shape of the collection dimensions (inferred if not provided)
+        data: The underlying array of blade components (inherited)
+        grade: The grade (0=scalar, 1=vector, 2=bivector, etc.) (inherited)
+        metric: The complete geometric context (inherited)
+        collection: Shape of the collection dimensions (inherited)
 
     Examples:
         >>> from morphis.elements.metric import euclidean
@@ -62,14 +61,6 @@ class Blade(GAModel):
         arbitrary_types_allowed=True,
         frozen=False,
     )
-
-    data: NDArray
-    grade: int
-    metric: Metric
-    collection: tuple[int, ...] | None = None  # Inferred from data shape if not provided
-
-    # Prevent numpy from intercepting arithmetic - force use of __rmul__ etc.
-    __array_ufunc__ = None
 
     # =========================================================================
     # Constructors

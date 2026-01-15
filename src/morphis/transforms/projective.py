@@ -323,7 +323,7 @@ def translator(
         2: Blade(data=bivector_data, grade=2, metric=metric, collection=collection),
     }
 
-    return MultiVector(components=components, metric=metric, collection=collection)
+    return MultiVector(data=components, metric=metric, collection=collection)
 
 
 # =============================================================================
@@ -382,7 +382,7 @@ def screw_motion(
         result = geometric(T, R)
 
     # Project to motor grades {0, 2}
-    motor_components = {k: v for k, v in result.components.items() if k in {0, 2}}
+    motor_components = {k: v for k, v in result.data.items() if k in {0, 2}}
 
     return MultiVector(
         components=motor_components,

@@ -66,8 +66,8 @@ class TestGeometricBasicProperties:
         result_right = geometric(e_1, grade_project(e_2_e_1, 2))
 
         # Both should give grade-1 result
-        assert 1 in result_left.components
-        assert 1 in result_right.components
+        assert 1 in result_left.data
+        assert 1 in result_right.data
 
     def test_associativity_3d_basis(self):
         """Test associativity with 3D basis vectors."""
@@ -88,9 +88,9 @@ class TestGeometricBasicProperties:
         right = geometric(e_1, b_23)
 
         # Both should have grade-3 component (trivector)
-        assert 3 in left.components
-        assert 3 in right.components
-        assert_array_almost_equal(left.components[3].data, right.components[3].data)
+        assert 3 in left.data
+        assert 3 in right.data
+        assert_array_almost_equal(left.data[3].data, right.data[3].data)
 
     def test_distributivity(self):
         """Test u(v + w) = uv + uw."""
@@ -111,11 +111,11 @@ class TestGeometricBasicProperties:
         uv_plus_uw = uv + uw
 
         # Compare components
-        for grade in u_vw.components:
-            assert grade in uv_plus_uw.components
+        for grade in u_vw.data:
+            assert grade in uv_plus_uw.data
             assert_array_almost_equal(
-                u_vw.components[grade].data,
-                uv_plus_uw.components[grade].data,
+                u_vw.data[grade].data,
+                uv_plus_uw.data[grade].data,
             )
 
     def test_vector_contraction_unit(self):
@@ -126,12 +126,12 @@ class TestGeometricBasicProperties:
         v_sq = geometric(e_1, e_1)
 
         # Should be scalar = 1
-        assert 0 in v_sq.components
-        scalar = v_sq.components[0]
+        assert 0 in v_sq.data
+        scalar = v_sq.data[0]
         assert_array_almost_equal(scalar.data, 1.0)
 
         # Should have no bivector part
-        assert 2 not in v_sq.components or allclose(v_sq.components[2].data, 0.0)
+        assert 2 not in v_sq.data or allclose(v_sq.data[2].data, 0.0)
 
     def test_vector_contraction_arbitrary(self):
         """Test v^2 = |v|^2 for arbitrary vectors."""
@@ -141,9 +141,9 @@ class TestGeometricBasicProperties:
         v_sq = geometric(v, v)
 
         # Should be scalar = 25
-        assert 0 in v_sq.components
+        assert 0 in v_sq.data
         expected = 3**2 + 4**2
-        assert_array_almost_equal(v_sq.components[0].data, expected)
+        assert_array_almost_equal(v_sq.data[0].data, expected)
 
     def test_orthogonal_anticommute(self):
         """Test uv = -vu for orthogonal vectors."""
@@ -245,7 +245,7 @@ class TestGeometricGradeDecomposition:
         result = geometric(e_1, e_12)
 
         # Grade-1: contraction exists
-        assert 1 in result.components
+        assert 1 in result.data
         v = grade_project(result, 1)
         assert norm(v) > 0.1
 
@@ -266,7 +266,7 @@ class TestGeometricGradeDecomposition:
         assert_array_almost_equal(v.data, 0.0)
 
         # Grade-3: trivector e_123
-        assert 3 in result.components
+        assert 3 in result.data
         t = grade_project(result, 3)
         assert norm(t) > 0.1
 
@@ -279,7 +279,7 @@ class TestGeometricGradeDecomposition:
         result = geometric(e_12, e_23)
 
         # Should have grades 0 and 2 (no grade-4 in 3D)
-        assert 0 in result.components or 2 in result.components
+        assert 0 in result.data or 2 in result.data
 
 
 # =============================================================================
@@ -331,11 +331,11 @@ class TestReversion:
         vu_rev = geometric(v_rev, u_rev)
 
         # Compare components
-        for grade in uv_rev.components:
-            assert grade in vu_rev.components
+        for grade in uv_rev.data:
+            assert grade in vu_rev.data
             assert_array_almost_equal(
-                uv_rev.components[grade].data,
-                vu_rev.components[grade].data,
+                uv_rev.data[grade].data,
+                vu_rev.data[grade].data,
             )
 
 

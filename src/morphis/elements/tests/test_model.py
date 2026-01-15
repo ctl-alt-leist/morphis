@@ -277,21 +277,21 @@ class TestMultiVector:
         m = euclidean(4)
         b_0 = scalar_blade(1.0, metric=m)
         b_2 = bivector_blade(zeros((4, 4)), metric=m)
-        mv = MultiVector(components={0: b_0, 2: b_2}, metric=m, collection=())
+        mv = MultiVector(data={0: b_0, 2: b_2}, metric=m, collection=())
         assert mv.grades == [0, 2]
 
     def test_grade_select(self):
         m = euclidean(4)
         b_0 = scalar_blade(1.0, metric=m)
         b_2 = bivector_blade(zeros((4, 4)), metric=m)
-        mv = MultiVector(components={0: b_0, 2: b_2}, metric=m, collection=())
+        mv = MultiVector(data={0: b_0, 2: b_2}, metric=m, collection=())
         assert mv.grade_select(2) is b_2
         assert mv.grade_select(1) is None
 
     def test_getitem(self):
         m = euclidean(4)
         b_0 = scalar_blade(1.0, metric=m)
-        mv = MultiVector(components={0: b_0}, metric=m, collection=())
+        mv = MultiVector(data={0: b_0}, metric=m, collection=())
         assert mv[0] is b_0
 
     def test_add(self):
@@ -299,8 +299,8 @@ class TestMultiVector:
         b_0a = scalar_blade(1.0, metric=m)
         b_0b = scalar_blade(2.0, metric=m)
         b_1 = vector_blade(ones(4), metric=m)
-        mv_1 = MultiVector(components={0: b_0a}, metric=m, collection=())
-        mv_2 = MultiVector(components={0: b_0b, 1: b_1}, metric=m, collection=())
+        mv_1 = MultiVector(data={0: b_0a}, metric=m, collection=())
+        mv_2 = MultiVector(data={0: b_0b, 1: b_1}, metric=m, collection=())
         mv_3 = mv_1 + mv_2
         assert mv_3.grades == [0, 1]
         assert mv_3[0].data == 3.0
@@ -309,22 +309,22 @@ class TestMultiVector:
         m = euclidean(4)
         b_0a = scalar_blade(5.0, metric=m)
         b_0b = scalar_blade(2.0, metric=m)
-        mv_1 = MultiVector(components={0: b_0a}, metric=m, collection=())
-        mv_2 = MultiVector(components={0: b_0b}, metric=m, collection=())
+        mv_1 = MultiVector(data={0: b_0a}, metric=m, collection=())
+        mv_2 = MultiVector(data={0: b_0b}, metric=m, collection=())
         mv_3 = mv_1 - mv_2
         assert mv_3[0].data == 3.0
 
     def test_scalar_multiply(self):
         m = euclidean(4)
         b_0 = scalar_blade(2.0, metric=m)
-        mv = MultiVector(components={0: b_0}, metric=m, collection=())
+        mv = MultiVector(data={0: b_0}, metric=m, collection=())
         mv_2 = 2.0 * mv
         assert mv_2[0].data == 4.0
 
     def test_negate(self):
         m = euclidean(4)
         b_0 = scalar_blade(3.0, metric=m)
-        mv = MultiVector(components={0: b_0}, metric=m, collection=())
+        mv = MultiVector(data={0: b_0}, metric=m, collection=())
         mv_2 = -mv
         assert mv_2[0].data == -3.0
 
@@ -348,7 +348,7 @@ class TestMultiVector:
         m = euclidean(4)
         b_1 = vector_blade(zeros(4), metric=m)
         with pytest.raises(ValueError, match="grade"):
-            MultiVector(components={2: b_1}, metric=m, collection=())
+            MultiVector(data={2: b_1}, metric=m, collection=())
 
 
 # =============================================================================

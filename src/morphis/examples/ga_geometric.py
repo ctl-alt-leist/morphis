@@ -285,14 +285,14 @@ def demo_grade_structure() -> None:
     e_1 = basis_vector(0, g)
     e_2 = basis_vector(1, g)
     result = geometric(e_1, e_2)
-    print(f"  e_1 * e_2 has grades: {list(result.components.keys())}")
+    print(f"  e_1 * e_2 has grades: {list(result.data.keys())}")
     print("  Grade 0: scalar (dot product)")
     print("  Grade 2: bivector (wedge product)")
 
     subsection("Vector * Bivector (grades 1+2 -> 1, 3)")
     B = e_1 ^ e_2
     result = geometric(e_1, B)
-    print(f"  e_1 * (e_1 ^ e_2) has grades: {list(result.components.keys())}")
+    print(f"  e_1 * (e_1 ^ e_2) has grades: {list(result.data.keys())}")
     print("  Grade 1: vector (contraction)")
     print("  Grade 3: trivector (extension, if possible)")
 
@@ -301,7 +301,7 @@ def demo_grade_structure() -> None:
     B_1 = e_1 ^ e_2
     B_2 = e_2 ^ e_3
     result = geometric(B_1, B_2)
-    print(f"  (e_1^e_2) * (e_2^e_3) has grades: {list(result.components.keys())}")
+    print(f"  (e_1^e_2) * (e_2^e_3) has grades: {list(result.data.keys())}")
     print("  Grade 0: scalar")
     print("  Grade 2: bivector")
     print("  (Grade 4 not possible in 3D)")

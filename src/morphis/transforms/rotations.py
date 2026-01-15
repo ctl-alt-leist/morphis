@@ -83,7 +83,7 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
         2: Blade(data=bivector_data, grade=2, metric=metric, collection=collection),
     }
 
-    return MultiVector(components=components, metric=metric, collection=collection)
+    return MultiVector(data=components, metric=metric, collection=collection)
 
 
 # =============================================================================
@@ -136,7 +136,7 @@ def rotation_about_point(
     result = geometric(T2, temp)
 
     # Project to motor grades {0, 2}
-    motor_components = {k: v for k, v in result.components.items() if k in {0, 2}}
+    motor_components = {k: v for k, v in result.data.items() if k in {0, 2}}
 
     return MultiVector(
         components=motor_components,

@@ -117,7 +117,7 @@ def wedge_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
 
     result_components: dict[int, Blade] = {}
 
-    for _k, component in M.components.items():
+    for _k, component in M.data.items():
         product = wedge(u, component)
         result_grade = product.grade
 
@@ -126,7 +126,7 @@ def wedge_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
         else:
             result_components[result_grade] = product
 
-    return MultiVector(components=result_components, metric=Metric.merge(u.metric, M.metric))
+    return MultiVector(data=result_components, metric=Metric.merge(u.metric, M.metric))
 
 
 def wedge_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
@@ -144,7 +144,7 @@ def wedge_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
 
     result_components: dict[int, Blade] = {}
 
-    for _k, component in M.components.items():
+    for _k, component in M.data.items():
         product = wedge(component, u)
         result_grade = product.grade
 
@@ -153,7 +153,7 @@ def wedge_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
         else:
             result_components[result_grade] = product
 
-    return MultiVector(components=result_components, metric=Metric.merge(M.metric, u.metric))
+    return MultiVector(data=result_components, metric=Metric.merge(M.metric, u.metric))
 
 
 def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
@@ -171,8 +171,8 @@ def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
 
     result_components: dict[int, Blade] = {}
 
-    for _k1, blade1 in M.components.items():
-        for _k2, blade2 in N.components.items():
+    for _k1, blade1 in M.data.items():
+        for _k2, blade2 in N.data.items():
             product = wedge(blade1, blade2)
             result_grade = product.grade
 
@@ -181,7 +181,7 @@ def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
             else:
                 result_components[result_grade] = product
 
-    return MultiVector(components=result_components, metric=Metric.merge(M.metric, N.metric))
+    return MultiVector(data=result_components, metric=Metric.merge(M.metric, N.metric))
 
 
 # =============================================================================
@@ -252,7 +252,7 @@ def _geometric_bl_bl(u: Blade, v: Blade) -> MultiVector:
 
         components[r] = component
 
-    return MultiVector(components=components, metric=metric)
+    return MultiVector(data=components, metric=metric)
 
 
 # =============================================================================
@@ -276,16 +276,16 @@ def _geometric_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
 
     result_components: dict[int, Blade] = {}
 
-    for _k1, u in M.components.items():
-        for _k2, v in N.components.items():
+    for _k1, u in M.data.items():
+        for _k2, v in N.data.items():
             product = _geometric_bl_bl(u, v)
-            for grade, component in product.components.items():
+            for grade, component in product.data.items():
                 if grade in result_components:
                     result_components[grade] = result_components[grade] + component
                 else:
                     result_components[grade] = component
 
-    return MultiVector(components=result_components, metric=metric)
+    return MultiVector(data=result_components, metric=metric)
 
 
 # =============================================================================
@@ -315,10 +315,10 @@ def geometric(u: Blade | MultiVector, v: Blade | MultiVector) -> MultiVector:
 
     # Convert blades to multivectors if needed
     if isinstance(u, Blade):
-        u = MultiVector(components={u.grade: u}, metric=u.metric)
+        u = MultiVector(data={u.grade: u}, metric=u.metric)
 
     if isinstance(v, Blade):
-        v = MultiVector(components={v.grade: v}, metric=v.metric)
+        v = MultiVector(data={v.grade: v}, metric=v.metric)
 
     return _geometric_mv_mv(u, v)
 
@@ -426,9 +426,9 @@ def _reverse_mv(M: MultiVector) -> MultiVector:
     """
     from morphis.elements.multivector import MultiVector
 
-    components = {k: _reverse_bl(blade) for k, blade in M.components.items()}
+    components = {k: _reverse_bl(blade) for k, blade in M.data.items()}
 
-    return MultiVector(components=components, metric=M.metric)
+    return MultiVector(data=components, metric=M.metric)
 
 
 def reverse(u: Blade | MultiVector) -> Blade | MultiVector:
@@ -533,16 +533,16 @@ def geometric_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
 
     result_components: dict[int, Blade] = {}
 
-    for _k, component in M.components.items():
+    for _k, component in M.data.items():
         product = _geometric_bl_bl(u, component)
 
-        for grade, blade in product.components.items():
+        for grade, blade in product.data.items():
             if grade in result_components:
                 result_components[grade] = result_components[grade] + blade
             else:
                 result_components[grade] = blade
 
-    return MultiVector(components=result_components, metric=metric)
+    return MultiVector(data=result_components, metric=metric)
 
 
 def geometric_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
@@ -561,13 +561,13 @@ def geometric_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
 
     result_components: dict[int, Blade] = {}
 
-    for _k, component in M.components.items():
+    for _k, component in M.data.items():
         product = _geometric_bl_bl(component, u)
 
-        for grade, blade in product.components.items():
+        for grade, blade in product.data.items():
             if grade in result_components:
                 result_components[grade] = result_components[grade] + blade
             else:
                 result_components[grade] = blade
 
-    return MultiVector(components=result_components, metric=metric)
+    return MultiVector(data=result_components, metric=metric)
