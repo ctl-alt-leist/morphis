@@ -5,6 +5,18 @@ description = "A unified mathematical framework for geometric computation"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
+authors = [
+    { name = "ctl-alt-leist", email = "ctl-alt-leist@users.noreply.github.com" }
+]
+keywords = ["geometric-algebra", "mathematics", "visualization", "multivector", "pga"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
 dependencies = [
     "imageio>=2.37.2",
     "imageio-ffmpeg>=0.6.0",
@@ -30,6 +42,11 @@ dev = [
 
 [project.scripts]
 morphis = "morphis:main"
+
+[project.urls]
+Homepage = "https://github.com/ctl-alt-leist/morphis"
+Repository = "https://github.com/ctl-alt-leist/morphis"
+Issues = "https://github.com/ctl-alt-leist/morphis/issues"
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]

@@ -26,11 +26,14 @@ essential nature.
 Requires Python 3.12+.
 
 ```bash
+pip install morphis
+```
+
+### From Source
+
+```bash
 git clone https://github.com/ctl-alt-leist/morphis.git
 cd morphis
-
-# Setup with uv
-make setup
 make install
 ```
 
@@ -39,21 +42,20 @@ make install
 ```
 morphis/
 ├── src/morphis/
-│   ├── elements/          # Core GA objects: Blade, MultiVector, Frame, Metric
-│   │   └── tests/         # Unit tests
-│   ├── operations/        # GA operations: wedge, geometric product, duality, norms
-│   │   └── tests/         # Unit tests
-│   ├── transforms/        # Rotors, translators, PGA, motor constructors
-│   │   └── tests/         # Unit tests
-│   ├── visuals/           # PyVista rendering, animation, themes
-│   │   └── drawing/       # Blade mesh generation
-│   ├── examples/          # Runnable demos (animate_3d.py, animate_4d.py)
-│   ├── utils/             # Easing functions, observers, pretty printing
-│   └── _legacy/           # Backward-compatible vector math utilities
-├── docs/                  # Design documents and notes
-├── Makefile               # Build commands
-├── pyproject.toml         # Project configuration (uv)
-└── ruff.toml              # Linting configuration
+│   ├── elements/       # Core GA objects: Blade, MultiVector, Frame, Metric
+│   │   └── tests/
+│   ├── operations/     # GA operations: wedge, geometric product, duality, norms
+│   │   └── tests/
+│   ├── transforms/     # Rotors, translators, PGA, motor constructors
+│   │   └── tests/
+│   ├── visuals/        # PyVista rendering, animation, themes
+│   │   └── drawing/    # Blade mesh generation
+│   ├── examples/       # Runnable demos
+│   └── utils/          # Easing functions, observers, pretty printing
+├── docs/               # Design documents
+├── pyproject.toml      # Project configuration
+├── Makefile            # Development commands
+└── ruff.toml           # Linting configuration
 ```
 
 ## Development
@@ -63,42 +65,64 @@ This project uses [uv](https://docs.astral.sh/uv/) for Python project management
 ### Setup
 
 ```bash
-make setup      # Create virtual environment
-make install    # Install package with dev dependencies
+make install    # Create venv, install dependencies, setup pre-commit hooks
+```
+
+Or step by step:
+
+```bash
+make setup      # Create venv and sync dependencies
+uv run pre-commit install  # Install git hooks
 ```
 
 ### Common Commands
 
-```bash
-make lint       # Format and lint code with ruff
-make test       # Run tests with pytest
-make clean      # Remove generated files and caches
-make reset      # Clean and reinstall from scratch
-```
-
-### Pre-commit Hooks
-
-Ruff formatting and linting run automatically on commit:
-
-```bash
-uv run pre-commit install   # Install hooks (already done if you used make install)
-```
+| Command       | Description                          |
+|---------------|--------------------------------------|
+| `make lint`   | Format and lint code with ruff       |
+| `make test`   | Run tests with pytest                |
+| `make build`  | Build distribution packages          |
+| `make clean`  | Remove generated files and caches    |
+| `make reset`  | Clean and reinstall from scratch     |
 
 ### Testing
 
 Tests are co-located with source in `tests/` subdirectories:
 
 ```bash
-make test                               # Run all tests
-uv run pytest src/morphis/elements -v   # Run elements module tests
-uv run pytest src/morphis/operations -v # Run operations module tests
+make test                                # Run all tests
+uv run pytest src/morphis/elements -v    # Run specific module tests
 ```
 
 ### Code Style
 
 - Python 3.12+ with type hints
 - Ruff for formatting and linting
-- PEP 8 compliant
+- Pre-commit hooks run automatically on commit
+
+## Release Workflow
+
+Releases are triggered by git tags. When a tag matching `v*` is pushed, GitHub Actions
+automatically builds and publishes to PyPI.
+
+### To Release a New Version
+
+1. Update version in `pyproject.toml`
+2. Commit the change
+3. Run `make publish`
+
+```bash
+# Example: releasing version 0.2.0
+# Edit pyproject.toml: version = "0.2.0"
+git add pyproject.toml
+git commit -m "Bump version to 0.2.0"
+make publish
+```
+
+The `make publish` command will:
+- Read the version from `pyproject.toml`
+- Create a git tag `v{version}`
+- Push the tag to trigger the release workflow
 
 ## License
 
