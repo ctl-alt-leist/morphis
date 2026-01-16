@@ -19,6 +19,7 @@ from morphis.elements.blade import (
     basis_vectors as basis_vectors,
     bivector_blade as bivector_blade,
     blade_from_data as blade_from_data,
+    geometric_basis as geometric_basis,
     pseudoscalar as pseudoscalar,
     quadvector_blade as quadvector_blade,
     scalar_blade as scalar_blade,
@@ -49,6 +50,7 @@ from morphis.elements.metric import (
     euclidean_ns as euclidean_ns,
     lorentzian as lorentzian,
     lorentzian_ns as lorentzian_ns,
+    metric as metric,
     pga as pga,
 )
 

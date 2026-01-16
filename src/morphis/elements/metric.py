@@ -200,6 +200,96 @@ _PGA_METRIC_CACHE: dict[int, Metric] = {}
 _LORENTZIAN_METRIC_CACHE: dict[int, Metric] = {}
 
 
+def metric(
+    dim: int,
+    signature: str = "euclidean",
+    structure: str = "flat",
+) -> Metric:
+    """
+    Create a metric with specified signature and structure.
+
+    Unified interface for creating all metric types. This is the recommended
+    way to create metrics. Accepts flexible input with case-insensitive
+    matching and common aliases.
+
+    Args:
+        dim: For flat/lorentzian structures, this is the total dimension.
+             For projective structure, this is the Euclidean dimension
+             (actual dimension will be dim+1).
+        signature: Metric signature (case-insensitive):
+            - "euclidean" or "Euclidean" (all positive)
+            - "lorentzian" or "Lorentzian" (one negative)
+            - "degenerate" or "Degenerate" (one zero - used for PGA)
+            - "spacetime" (alias for lorentzian)
+        structure: Geometric structure (case-insensitive):
+            - "flat" or "vga" (standard vector GA)
+            - "projective" or "pga" (projective GA)
+            - "conformal" or "cga" (conformal GA)
+            - "round" (combined projective + conformal)
+
+    Returns:
+        Cached Metric instance
+
+    Examples:
+        >>> m = metric(3)  # 3D Euclidean VGA (default)
+        >>> m = metric(3, "Euclidean", "Projective")  # 3D PGA (case-insensitive)
+        >>> m = metric(3, "euclidean", "pga")  # 3D PGA (using alias)
+        >>> m = metric(4, "spacetime")  # 4D Minkowski spacetime (alias)
+        >>> m = metric(3, "degenerate", "projective")  # 3D PGA (explicit)
+    """
+    # Normalize to lowercase
+    signature = signature.lower()
+    structure = structure.lower()
+
+    # Map string to enum with aliases
+    sig_map = {
+        "euclidean": GASignature.EUCLIDEAN,
+        "lorentzian": GASignature.LORENTZIAN,
+        "spacetime": GASignature.LORENTZIAN,  # Alias
+        "degenerate": GASignature.DEGENERATE,
+    }
+
+    struct_map = {
+        "flat": GAStructure.FLAT,
+        "vga": GAStructure.FLAT,  # Alias: Vector Geometric Algebra
+        "projective": GAStructure.PROJECTIVE,
+        "pga": GAStructure.PROJECTIVE,  # Alias: Projective Geometric Algebra
+        "conformal": GAStructure.CONFORMAL,
+        "cga": GAStructure.CONFORMAL,  # Alias: Conformal Geometric Algebra
+        "round": GAStructure.ROUND,
+    }
+
+    if signature not in sig_map:
+        raise ValueError(f"Unknown signature '{signature}'. Must be one of: {', '.join(sorted(set(sig_map.keys())))}")
+
+    if structure not in struct_map:
+        raise ValueError(
+            f"Unknown structure '{structure}'. Must be one of: {', '.join(sorted(set(struct_map.keys())))}"
+        )
+
+    sig_enum = sig_map[signature]
+    struct_enum = struct_map[structure]
+
+    # Dispatch to appropriate factory
+    if sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.FLAT:
+        return euclidean(dim)
+    elif sig_enum == GASignature.LORENTZIAN and struct_enum == GAStructure.FLAT:
+        return lorentzian(dim)
+    elif sig_enum == GASignature.DEGENERATE and struct_enum == GAStructure.PROJECTIVE:
+        return pga(dim)
+    elif sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.PROJECTIVE:
+        # Euclidean PGA is the same as degenerate projective
+        return pga(dim)
+    elif sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.CONFORMAL:
+        return _cga_metric(dim)
+    else:
+        raise ValueError(
+            f"Unsupported metric combination: {signature}.{structure}. "
+            f"Available combinations: euclidean.flat, euclidean.projective, "
+            f"lorentzian.flat, degenerate.projective, euclidean.conformal"
+        )
+
+
 def euclidean(dim: int) -> Metric:
     """
     Get cached Euclidean metric for d-dimensional space.
@@ -208,6 +298,9 @@ def euclidean(dim: int) -> Metric:
     - Metric tensor: diag(1, 1, ..., 1)
     - Signature: EUCLIDEAN
     - Structure: FLAT
+
+    Note: Consider using the unified :func:`metric` function instead:
+    ``metric(dim)`` or ``metric(dim, "euclidean", "flat")``
 
     Args:
         dim: Vector space dimension
@@ -242,6 +335,9 @@ def pga(euclidean_dim: int) -> Metric:
 
     The first basis vector e_0 is the degenerate (null) direction representing
     the ideal point at infinity.
+
+    Note: Consider using the unified :func:`metric` function instead:
+    ``metric(euclidean_dim, "euclidean", "projective")``
 
     Args:
         euclidean_dim: The Euclidean dimension (resulting space is d+1)

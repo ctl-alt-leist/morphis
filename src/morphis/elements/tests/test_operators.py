@@ -15,12 +15,8 @@ import pytest
 from morphis.elements import (
     Blade,
     MultiVector,
-    bivector_blade,
     euclidean,
     multivector_from_blades,
-    scalar_blade,
-    trivector_blade,
-    vector_blade,
 )
 from morphis.operations import geometric, wedge
 
@@ -36,8 +32,8 @@ class TestWedgeOperatorBladeBlade:
     def test_vector_wedge_vector(self):
         """u ^ v for two vectors produces bivector."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
-        v = vector_blade([0, 1, 0], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        v = Blade([0, 1, 0], grade=1, metric=m)
 
         result_op = u ^ v
         result_fn = wedge(u, v)
@@ -49,8 +45,8 @@ class TestWedgeOperatorBladeBlade:
     def test_vector_wedge_bivector(self):
         """u ^ B produces trivector."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
-        B = bivector_blade(np.array([[0, 0, 0], [0, 0, 1], [0, -1, 0]]), metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        B = Blade(np.array([[0, 0, 0], [0, 0, 1], [0, -1, 0]]), grade=2, metric=m)
 
         result_op = u ^ B
         result_fn = wedge(u, B)
@@ -62,8 +58,8 @@ class TestWedgeOperatorBladeBlade:
     def test_anticommutativity(self):
         """u ^ v = -v ^ u for vectors."""
         m = euclidean(3)
-        u = vector_blade([1, 2, 0], metric=m)
-        v = vector_blade([0, 1, 3], metric=m)
+        u = Blade([1, 2, 0], grade=1, metric=m)
+        v = Blade([0, 1, 3], grade=1, metric=m)
 
         uv = u ^ v
         vu = v ^ u
@@ -73,9 +69,9 @@ class TestWedgeOperatorBladeBlade:
     def test_associativity_chaining(self):
         """(u ^ v) ^ w via operator chaining."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
-        v = vector_blade([0, 1, 0], metric=m)
-        w = vector_blade([0, 0, 1], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        v = Blade([0, 1, 0], grade=1, metric=m)
+        w = Blade([0, 0, 1], grade=1, metric=m)
 
         # Chained operator
         result_chain = u ^ v ^ w
@@ -92,9 +88,9 @@ class TestWedgeOperatorBladeBlade:
     def test_grade_exceeds_dim(self):
         """Wedge product yielding grade > dim is zero."""
         m = euclidean(2)
-        u = vector_blade([1, 0], metric=m)
-        v = vector_blade([0, 1], metric=m)
-        w = vector_blade([1, 1], metric=m)
+        u = Blade([1, 0], grade=1, metric=m)
+        v = Blade([0, 1], grade=1, metric=m)
+        w = Blade([1, 1], grade=1, metric=m)
 
         # In 2D, u ^ v ^ w = 0
         result = u ^ v ^ w
@@ -104,8 +100,8 @@ class TestWedgeOperatorBladeBlade:
     def test_4d_vectors(self):
         """Wedge in higher dimensions."""
         m = euclidean(4)
-        u = vector_blade([1, 0, 0, 0], metric=m)
-        v = vector_blade([0, 1, 0, 0], metric=m)
+        u = Blade([1, 0, 0, 0], grade=1, metric=m)
+        v = Blade([0, 1, 0, 0], grade=1, metric=m)
 
         result = u ^ v
         assert result.grade == 2
@@ -116,8 +112,8 @@ class TestWedgeOperatorBladeBlade:
         m = euclidean(3)
         # Batch of 3 vectors
         u_data = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        u = vector_blade(u_data, metric=m, collection=(3,))
-        v = vector_blade([0, 1, 0], metric=m)
+        u = Blade(u_data, grade=1, metric=m, collection=(3,))
+        v = Blade([0, 1, 0], grade=1, metric=m)
 
         result = u ^ v
         assert result.collection == (3,)
@@ -130,9 +126,9 @@ class TestWedgeOperatorBladeMultiVector:
     def test_vector_wedge_multivector(self):
         """u ^ M distributes over components."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
-        v1 = vector_blade([0, 1, 0], metric=m)
-        v2 = vector_blade([0, 0, 1], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        v1 = Blade([0, 1, 0], grade=1, metric=m)
+        v2 = Blade([0, 0, 1], grade=1, metric=m)
         M = multivector_from_blades(v1, v2)
 
         result = u ^ M
@@ -148,10 +144,10 @@ class TestWedgeOperatorMultiVectorBlade:
     def test_multivector_wedge_vector(self):
         """M ^ u distributes over components."""
         m = euclidean(3)
-        v1 = vector_blade([1, 0, 0], metric=m)
-        v2 = vector_blade([0, 1, 0], metric=m)
+        v1 = Blade([1, 0, 0], grade=1, metric=m)
+        v2 = Blade([0, 1, 0], grade=1, metric=m)
         M = multivector_from_blades(v1, v2)
-        u = vector_blade([0, 0, 1], metric=m)
+        u = Blade([0, 0, 1], grade=1, metric=m)
 
         result = M ^ u
 
@@ -165,8 +161,8 @@ class TestWedgeOperatorMultiVectorMultiVector:
     def test_multivector_wedge_multivector(self):
         """M ^ N computes all pairwise wedge products."""
         m = euclidean(3)
-        v1 = vector_blade([1, 0, 0], metric=m)
-        v2 = vector_blade([0, 1, 0], metric=m)
+        v1 = Blade([1, 0, 0], grade=1, metric=m)
+        v2 = Blade([0, 1, 0], grade=1, metric=m)
         M = multivector_from_blades(v1)
         N = multivector_from_blades(v2)
 
@@ -189,17 +185,17 @@ class TestOperatorFunctionEquivalence:
         m = euclidean(3)
 
         # scalar ^ vector
-        s = scalar_blade(2.0, metric=m)
-        v = vector_blade([1, 2, 3], metric=m)
+        s = Blade(2.0, grade=0, metric=m)
+        v = Blade([1, 2, 3], grade=1, metric=m)
         assert np.allclose((s ^ v).data, wedge(s, v).data)
 
         # vector ^ vector
-        u = vector_blade([1, 0, 0], metric=m)
-        v = vector_blade([0, 1, 0], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        v = Blade([0, 1, 0], grade=1, metric=m)
         assert np.allclose((u ^ v).data, wedge(u, v).data)
 
         # vector ^ bivector
-        B = bivector_blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), metric=m)
+        B = Blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), grade=2, metric=m)
         result_op = v ^ B
         result_fn = wedge(v, B)
         assert np.allclose(result_op.data, result_fn.data)
@@ -207,9 +203,9 @@ class TestOperatorFunctionEquivalence:
     def test_chained_wedge_equivalence(self):
         """Chained wedge via operators equals nested function calls."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
-        v = vector_blade([0, 1, 0], metric=m)
-        w = vector_blade([0, 0, 1], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        v = Blade([0, 1, 0], grade=1, metric=m)
+        w = Blade([0, 0, 1], grade=1, metric=m)
 
         result_op = u ^ v ^ w
         result_fn = wedge(wedge(u, v), w)
@@ -228,8 +224,8 @@ class TestMetricPreservation:
     def test_wedge_preserves_metric(self):
         """Wedge preserves metric when both operands match."""
         m = euclidean(4)
-        u = vector_blade([0, 1, 0, 0], metric=m)
-        v = vector_blade([0, 0, 1, 0], metric=m)
+        u = Blade([0, 1, 0, 0], grade=1, metric=m)
+        v = Blade([0, 0, 1, 0], grade=1, metric=m)
 
         result = u ^ v
         assert result.metric == m
@@ -246,8 +242,8 @@ class TestEdgeCases:
     def test_wedge_zero_blade(self):
         """Wedge with zero blade produces zero."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
-        zero = vector_blade([0, 0, 0], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        zero = Blade([0, 0, 0], grade=1, metric=m)
 
         result = u ^ zero
         assert np.allclose(result.data, 0)
@@ -255,14 +251,14 @@ class TestEdgeCases:
     def test_wedge_same_vector(self):
         """u ^ u = 0."""
         m = euclidean(3)
-        u = vector_blade([1, 2, 3], metric=m)
+        u = Blade([1, 2, 3], grade=1, metric=m)
         result = u ^ u
         assert np.allclose(result.data, 0)
 
     def test_notimplemented_for_invalid_types(self):
         """Operators return NotImplemented for invalid types."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
 
         # These should not raise, but return NotImplemented
         # which Python converts to TypeError
@@ -284,8 +280,8 @@ class TestCollectionDimensions:
     def test_wedge_no_collection(self):
         """Wedge with collection=() operands."""
         m = euclidean(3)
-        u = vector_blade([1, 0, 0], metric=m)
-        v = vector_blade([0, 1, 0], metric=m)
+        u = Blade([1, 0, 0], grade=1, metric=m)
+        v = Blade([0, 1, 0], grade=1, metric=m)
         assert u.collection == ()
         assert v.collection == ()
 
@@ -296,8 +292,8 @@ class TestCollectionDimensions:
         """Wedge with collection=(2,) and collection=()."""
         m = euclidean(3)
         u_data = np.array([[1, 0, 0], [0, 1, 0]])
-        u = vector_blade(u_data, metric=m, collection=(2,))
-        v = vector_blade([0, 0, 1], metric=m)
+        u = Blade(u_data, grade=1, metric=m, collection=(2,))
+        v = Blade([0, 0, 1], grade=1, metric=m)
 
         result = u ^ v
         assert result.collection == (2,)
@@ -308,8 +304,8 @@ class TestCollectionDimensions:
         m = euclidean(3)
         u_data = np.array([[1, 0, 0], [0, 1, 0]])
         v_data = np.array([[0, 1, 0], [0, 0, 1]])
-        u = vector_blade(u_data, metric=m, collection=(2,))
-        v = vector_blade(v_data, metric=m, collection=(2,))
+        u = Blade(u_data, grade=1, metric=m, collection=(2,))
+        v = Blade(v_data, grade=1, metric=m, collection=(2,))
 
         result = u ^ v
         assert result.collection == (2,)
@@ -326,7 +322,7 @@ class TestInvertOperatorBlade:
     def test_vector_reverse_unchanged(self):
         """~v = v for vectors (grade 1)."""
         m = euclidean(3)
-        v = vector_blade([1, 2, 3], metric=m)
+        v = Blade([1, 2, 3], grade=1, metric=m)
         v_rev = ~v
 
         assert isinstance(v_rev, Blade)
@@ -336,7 +332,7 @@ class TestInvertOperatorBlade:
     def test_bivector_reverse_negates(self):
         """~B = -B for bivectors (grade 2)."""
         m = euclidean(3)
-        B = bivector_blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), metric=m)
+        B = Blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), grade=2, metric=m)
         B_rev = ~B
 
         assert isinstance(B_rev, Blade)
@@ -346,7 +342,7 @@ class TestInvertOperatorBlade:
     def test_trivector_reverse_negates(self):
         """~T = -T for trivectors (grade 3)."""
         m = euclidean(3)
-        T = trivector_blade(np.ones((3, 3, 3)), metric=m)
+        T = Blade(np.ones((3, 3, 3)), grade=3, metric=m)
         T_rev = ~T
 
         assert isinstance(T_rev, Blade)
@@ -356,7 +352,7 @@ class TestInvertOperatorBlade:
     def test_scalar_reverse_unchanged(self):
         """~s = s for scalars (grade 0)."""
         m = euclidean(3)
-        s = scalar_blade(5.0, metric=m)
+        s = Blade(5.0, grade=0, metric=m)
         s_rev = ~s
 
         assert isinstance(s_rev, Blade)
@@ -366,8 +362,8 @@ class TestInvertOperatorBlade:
     def test_double_reverse_identity(self):
         """~~u = u (double reverse is identity)."""
         m = euclidean(3)
-        v = vector_blade([1, 2, 3], metric=m)
-        B = bivector_blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), metric=m)
+        v = Blade([1, 2, 3], grade=1, metric=m)
+        B = Blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), grade=2, metric=m)
 
         assert np.allclose((~~v).data, v.data)
         assert np.allclose((~~B).data, B.data)
@@ -375,7 +371,7 @@ class TestInvertOperatorBlade:
     def test_reverse_preserves_metric(self):
         """Reverse preserves metric."""
         m = euclidean(4)
-        v = vector_blade([0, 1, 0, 0], metric=m)
+        v = Blade([0, 1, 0, 0], grade=1, metric=m)
         v_rev = ~v
 
         assert v_rev.metric == m
@@ -387,8 +383,8 @@ class TestInvertOperatorMultiVector:
     def test_multivector_reverse(self):
         """~M reverses each component."""
         m = euclidean(3)
-        v = vector_blade([1, 0, 0], metric=m)
-        B = bivector_blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), metric=m)
+        v = Blade([1, 0, 0], grade=1, metric=m)
+        B = Blade(np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 0]]), grade=2, metric=m)
         M = multivector_from_blades(v, B)
 
         M_rev = ~M
@@ -411,7 +407,7 @@ class TestPowerOperatorBlade:
     def test_vector_inverse(self):
         """v**(-1) gives multiplicative inverse."""
         m = euclidean(3)
-        v = vector_blade([3, 4, 0], metric=m)  # |v|^2 = 25
+        v = Blade([3, 4, 0], grade=1, metric=m)  # |v|^2 = 25
 
         v_inv = v ** (-1)
 
@@ -424,7 +420,7 @@ class TestPowerOperatorBlade:
     def test_power_one_identity(self):
         """v**(1) returns self."""
         m = euclidean(3)
-        v = vector_blade([1, 2, 3], metric=m)
+        v = Blade([1, 2, 3], grade=1, metric=m)
         result = v**1
 
         assert result is v
@@ -432,7 +428,7 @@ class TestPowerOperatorBlade:
     def test_power_unsupported_raises(self):
         """Unsupported powers raise NotImplementedError."""
         m = euclidean(3)
-        v = vector_blade([1, 2, 3], metric=m)
+        v = Blade([1, 2, 3], grade=1, metric=m)
 
         with pytest.raises(NotImplementedError):
             _ = v**2
@@ -443,7 +439,7 @@ class TestPowerOperatorBlade:
     def test_inverse_times_original_is_one(self):
         """v * v^{-1} = 1 (scalar)."""
         m = euclidean(3)
-        v = vector_blade([3, 4, 0], metric=m)
+        v = Blade([3, 4, 0], grade=1, metric=m)
         v_inv = v ** (-1)
 
         product = geometric(v, v_inv)
@@ -459,7 +455,7 @@ class TestPowerOperatorMultiVector:
     def test_multivector_power_one(self):
         """M**(1) returns self."""
         m = euclidean(3)
-        v = vector_blade([1, 0, 0], metric=m)
+        v = Blade([1, 0, 0], grade=1, metric=m)
         M = multivector_from_blades(v)
         result = M**1
 
@@ -468,7 +464,7 @@ class TestPowerOperatorMultiVector:
     def test_multivector_power_unsupported_raises(self):
         """Unsupported powers raise NotImplementedError."""
         m = euclidean(3)
-        v = vector_blade([1, 0, 0], metric=m)
+        v = Blade([1, 0, 0], grade=1, metric=m)
         M = multivector_from_blades(v)
 
         with pytest.raises(NotImplementedError):

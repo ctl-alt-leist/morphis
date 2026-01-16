@@ -47,16 +47,25 @@ class MultiVector(CompositeElement):
         frozen=False,
     )
 
-    # Prevent numpy from intercepting arithmetic - force use of __rmul__ etc.
-    __array_ufunc__ = None
-
     # =========================================================================
     # Validators
     # =========================================================================
 
     @model_validator(mode="after")
     def _validate_components(self):
-        """Infer collection if not provided, then verify consistency."""
+        """Infer metric and collection if not provided, then verify consistency."""
+        # Infer metric from first component if not provided
+        if self.metric is None:
+            if self.data:
+                # Use metric from first component
+                first_blade = next(iter(self.data.values()))
+                object.__setattr__(self, "metric", first_blade.metric)
+            else:
+                # Empty multivector: default to 3D Euclidean
+                from morphis.elements.metric import euclidean
+
+                object.__setattr__(self, "metric", euclidean(3))
+
         # Infer collection from components if not provided
         if self.collection is None:
             if self.data:
@@ -86,16 +95,7 @@ class MultiVector(CompositeElement):
     # =========================================================================
     # Properties
     # =========================================================================
-
-    @property
-    def dim(self) -> int:
-        """Dimension of the underlying vector space."""
-        return self.metric.dim
-
-    @property
-    def grades(self) -> list[int]:
-        """List of grades with nonzero components."""
-        return sorted(self.data.keys())
+    # (dim, grades inherited from Element and CompositeElement)
 
     # =========================================================================
     # Grade Selection

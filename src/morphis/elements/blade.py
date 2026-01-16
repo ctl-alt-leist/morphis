@@ -76,11 +76,6 @@ class Blade(GradedElement):
     # Validators
     # =========================================================================
 
-    @field_validator("data", mode="before")
-    @classmethod
-    def _convert_to_array(cls, v):
-        return asarray(v, dtype=float)
-
     @field_validator("grade")
     @classmethod
     def _validate_grade(cls, v):
@@ -103,6 +98,15 @@ class Blade(GradedElement):
                     f"requires at least {self.grade} geometric axes"
                 )
             object.__setattr__(self, "collection", self.data.shape[:collection_ndim])
+        else:
+            # Collection was explicitly provided - validate it matches actual shape
+            expected_collection = self.data.shape[: len(self.collection)]
+            if expected_collection != self.collection:
+                raise ValueError(
+                    f"Explicit collection {self.collection} does not match "
+                    f"actual data shape {self.data.shape}. "
+                    f"Expected collection {expected_collection} from shape."
+                )
 
         # Validate: len(collection) + grade == ndim
         if len(self.collection) + self.grade != actual_ndim:
@@ -121,47 +125,9 @@ class Blade(GradedElement):
     # =========================================================================
 
     @property
-    def dim(self) -> int:
-        """Dimension of the underlying vector space."""
-        return self.metric.dim
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        """Full shape of the underlying array."""
-        return self.data.shape
-
-    @property
-    def collection_shape(self) -> tuple[int, ...]:
-        """Shape of the leading collection dimensions."""
-        return self.collection
-
-    @property
     def geometric_shape(self) -> tuple[int, ...]:
         """Shape of the trailing geometric dimensions."""
         return self.data.shape[len(self.collection) :]
-
-    @property
-    def ndim(self) -> int:
-        """Total number of dimensions."""
-        return self.data.ndim
-
-    # =========================================================================
-    # NumPy Interface
-    # =========================================================================
-
-    def __getitem__(self, index):
-        """Index into the blade's data array."""
-        return self.data[index]
-
-    def __setitem__(self, index, value):
-        """Set values in the underlying array."""
-        self.data[index] = value
-
-    def __array__(self, dtype=None):
-        """Allow np.asarray(blade) to work."""
-        if dtype is None:
-            return self.data
-        return self.data.astype(dtype)
 
     # =========================================================================
     # Arithmetic Operators
@@ -429,8 +395,19 @@ def scalar_blade(value: NDArray, metric: Metric, collection: tuple[int, ...] | N
     """
     Create a scalar (grade-0) blade.
 
+    .. deprecated::
+        Use ``Blade(value, grade=0, metric=metric)`` instead.
+        This function will be removed in a future version.
+
     Returns grade-0 Blade.
     """
+    import warnings
+
+    warnings.warn(
+        "scalar_blade() is deprecated. Use Blade(data, grade=0, metric=metric) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return Blade(data=asarray(value), grade=0, metric=metric, collection=collection)
 
 
@@ -438,8 +415,19 @@ def vector_blade(data: NDArray, metric: Metric, collection: tuple[int, ...] | No
     """
     Create a vector (grade-1) blade from array of shape (*collection, dim).
 
+    .. deprecated::
+        Use ``Blade(data, grade=1, metric=metric)`` instead.
+        This function will be removed in a future version.
+
     Returns grade-1 Blade.
     """
+    import warnings
+
+    warnings.warn(
+        "vector_blade() is deprecated. Use Blade(data, grade=1, metric=metric) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return Blade(data=asarray(data), grade=1, metric=metric, collection=collection)
 
 
@@ -447,8 +435,19 @@ def bivector_blade(data: NDArray, metric: Metric, collection: tuple[int, ...] | 
     """
     Create a bivector (grade-2) blade from array.
 
+    .. deprecated::
+        Use ``Blade(data, grade=2, metric=metric)`` instead.
+        This function will be removed in a future version.
+
     Returns grade-2 Blade.
     """
+    import warnings
+
+    warnings.warn(
+        "bivector_blade() is deprecated. Use Blade(data, grade=2, metric=metric) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return Blade(data=asarray(data), grade=2, metric=metric, collection=collection)
 
 
@@ -456,8 +455,19 @@ def trivector_blade(data: NDArray, metric: Metric, collection: tuple[int, ...] |
     """
     Create a trivector (grade-3) blade from array.
 
+    .. deprecated::
+        Use ``Blade(data, grade=3, metric=metric)`` instead.
+        This function will be removed in a future version.
+
     Returns grade-3 Blade.
     """
+    import warnings
+
+    warnings.warn(
+        "trivector_blade() is deprecated. Use Blade(data, grade=3, metric=metric) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return Blade(data=asarray(data), grade=3, metric=metric, collection=collection)
 
 
@@ -465,8 +475,19 @@ def quadvector_blade(data: NDArray, metric: Metric, collection: tuple[int, ...] 
     """
     Create a quadvector (grade-4) blade from array.
 
+    .. deprecated::
+        Use ``Blade(data, grade=4, metric=metric)`` instead.
+        This function will be removed in a future version.
+
     Returns grade-4 Blade.
     """
+    import warnings
+
+    warnings.warn(
+        "quadvector_blade() is deprecated. Use Blade(data, grade=4, metric=metric) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return Blade(data=asarray(data), grade=4, metric=metric, collection=collection)
 
 
@@ -503,7 +524,7 @@ def basis_vector(index: int, metric: Metric) -> Blade:
     dim = metric.dim
     data = zeros(dim)
     data[index] = 1.0
-    return vector_blade(data, metric=metric)
+    return Blade(data, grade=1, metric=metric)
 
 
 def basis_vectors(metric: Metric) -> tuple[Blade, ...]:
@@ -521,6 +542,61 @@ def basis_vectors(metric: Metric) -> tuple[Blade, ...]:
         e01 = e0 ^ e1  # Wedge product creates bivector
     """
     return tuple(basis_vector(k, metric) for k in range(metric.dim))
+
+
+def geometric_basis(metric: Metric) -> dict[int, tuple[Blade, ...]]:
+    """
+    Create complete geometric basis for a metric.
+
+    Returns dictionary mapping grade to tuple of basis blades:
+    {0: (1,), 1: (e0, e1, ...), 2: (e01, e02, ...), ..., d: (e0...d,)}
+
+    The number of basis blades at grade k is C(d, k) (binomial coefficient).
+    Total number of basis blades is 2^d.
+
+    Args:
+        metric: Metric defining the geometric algebra
+
+    Returns:
+        Dictionary mapping grade to tuple of basis blades
+
+    Examples:
+        >>> from morphis.elements import geometric_basis, euclidean
+        >>> basis = geometric_basis(euclidean(3))
+        >>> basis[0]  # Scalar
+        (Blade(data=1.0, grade=0),)
+        >>> len(basis[1])  # Vectors
+        3
+        >>> len(basis[2])  # Bivectors
+        3
+        >>> len(basis[3])  # Trivector (pseudoscalar)
+        1
+
+        >>> # Total basis elements: 1 + 3 + 3 + 1 = 8 = 2^3
+    """
+    from itertools import combinations
+
+    from numpy import ones
+
+    dim = metric.dim
+    result = {}
+
+    # Grade 0: scalar basis element (the scalar 1)
+    result[0] = (Blade(ones(()), grade=0, metric=metric),)
+
+    # Grades 1 through dim
+    for grade in range(1, dim + 1):
+        basis_blades = []
+
+        # Generate all combinations of indices for this grade
+        for indices in combinations(range(dim), grade):
+            # Create basis blade for these indices
+            blade = basis_blade(indices, metric)
+            basis_blades.append(blade)
+
+        result[grade] = tuple(basis_blades)
+
+    return result
 
 
 def basis_blade(indices: tuple[int, ...], metric: Metric) -> Blade:

@@ -6,15 +6,7 @@ from numpy import allclose, array
 from numpy.random import randn
 from numpy.testing import assert_array_almost_equal
 
-from morphis.elements import (
-    Blade,
-    basis_vector,
-    bivector_blade,
-    euclidean,
-    scalar_blade,
-    trivector_blade,
-    vector_blade,
-)
+from morphis.elements import Blade, basis_vector, euclidean
 from morphis.operations import (
     geometric,
     grade_project,
@@ -95,9 +87,9 @@ class TestGeometricBasicProperties:
     def test_distributivity(self):
         """Test u(v + w) = uv + uw."""
         m = euclidean(3)
-        u = vector_blade(array([1.0, 0.0, 0.0]), metric=m)
-        v = vector_blade(array([0.0, 1.0, 0.0]), metric=m)
-        w = vector_blade(array([0.0, 0.0, 1.0]), metric=m)
+        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
+        v = Blade(array([0.0, 1.0, 0.0]), grade=1, metric=m)
+        w = Blade(array([0.0, 0.0, 1.0]), grade=1, metric=m)
 
         # v + w
         vw_sum = v + w
@@ -136,7 +128,7 @@ class TestGeometricBasicProperties:
     def test_vector_contraction_arbitrary(self):
         """Test v^2 = |v|^2 for arbitrary vectors."""
         m = euclidean(4)
-        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]), metric=m)
+        v = Blade(array([3.0, 4.0, 0.0, 0.0]), grade=1, metric=m)
 
         v_sq = geometric(v, v)
 
@@ -168,8 +160,8 @@ class TestGeometricBasicProperties:
     def test_parallel_commute(self):
         """Test uv = vu = u.v for parallel vectors."""
         m = euclidean(3)
-        u = vector_blade(array([1.0, 0.0, 0.0]), metric=m)
-        v = vector_blade(array([2.0, 0.0, 0.0]), metric=m)  # v = 2u
+        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
+        v = Blade(array([2.0, 0.0, 0.0]), grade=1, metric=m)  # v = 2u
 
         uv = geometric(u, v)
         vu = geometric(v, u)
@@ -191,8 +183,8 @@ class TestGeometricGradeDecomposition:
     def test_vector_vector_2d_orthogonal(self):
         """Test grade decomposition of orthogonal vector product in 2D."""
         m = euclidean(2)
-        u = vector_blade(array([1.0, 0.0]), metric=m)
-        v = vector_blade(array([0.0, 1.0]), metric=m)
+        u = Blade(array([1.0, 0.0]), grade=1, metric=m)
+        v = Blade(array([0.0, 1.0]), grade=1, metric=m)
 
         uv = geometric(u, v)
 
@@ -206,8 +198,8 @@ class TestGeometricGradeDecomposition:
     def test_vector_vector_3d_perpendicular(self):
         """Test vector product for perpendicular vectors in 3D."""
         m = euclidean(3)
-        u = vector_blade(array([1.0, 0.0, 0.0]), metric=m)
-        v = vector_blade(array([0.0, 1.0, 0.0]), metric=m)
+        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
+        v = Blade(array([0.0, 1.0, 0.0]), grade=1, metric=m)
 
         uv = geometric(u, v)
 
@@ -223,8 +215,8 @@ class TestGeometricGradeDecomposition:
         """Test vector product at arbitrary angle."""
         m = euclidean(3)
         theta = pi / 4  # 45 degrees
-        u = vector_blade(array([1.0, 0.0, 0.0]), metric=m)
-        v = vector_blade(array([cos(theta), sin(theta), 0.0]), metric=m)
+        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
+        v = Blade(array([cos(theta), sin(theta), 0.0]), grade=1, metric=m)
 
         uv = geometric(u, v)
 
@@ -293,35 +285,35 @@ class TestReversion:
         m = euclidean(3)
 
         # Grade 0: +1
-        s = scalar_blade(2.0, metric=m)
+        s = Blade(2.0, grade=0, metric=m)
         assert_array_almost_equal(reverse(s).data, s.data)
 
         # Grade 1: +1
-        v = vector_blade(array([1.0, 2.0, 3.0]), metric=m)
+        v = Blade(array([1.0, 2.0, 3.0]), grade=1, metric=m)
         assert_array_almost_equal(reverse(v).data, v.data)
 
         # Grade 2: -1
-        b = bivector_blade(randn(3, 3), metric=m)
+        b = Blade(randn(3, 3), grade=2, metric=m)
         assert_array_almost_equal(reverse(b).data, -b.data)
 
         # Grade 3: -1
-        t = trivector_blade(randn(3, 3, 3), metric=m)
+        t = Blade(randn(3, 3, 3), grade=3, metric=m)
         assert_array_almost_equal(reverse(t).data, -t.data)
 
     def test_involution(self):
         """Test reverse(reverse(u)) = u."""
         m = euclidean(4)
-        v = vector_blade(randn(4), metric=m)
+        v = Blade(randn(4), grade=1, metric=m)
         assert_array_almost_equal(reverse(reverse(v)).data, v.data)
 
-        b = bivector_blade(randn(4, 4), metric=m)
+        b = Blade(randn(4, 4), grade=2, metric=m)
         assert_array_almost_equal(reverse(reverse(b)).data, b.data)
 
     def test_reverse_of_product(self):
         """Test reverse(AB) = reverse(B) reverse(A)."""
         m = euclidean(3)
-        u = vector_blade(array([1.0, 0.0, 0.0]), metric=m)
-        v = vector_blade(array([0.0, 1.0, 0.0]), metric=m)
+        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
+        v = Blade(array([0.0, 1.0, 0.0]), grade=1, metric=m)
 
         uv = geometric(u, v)
         uv_rev = reverse(uv)
@@ -348,7 +340,7 @@ class TestInverse:
     def test_vector_inverse(self):
         """Test v^{-1} v = 1 for vectors."""
         m = euclidean(4)
-        v = vector_blade(array([3.0, 4.0, 0.0, 0.0]), metric=m)
+        v = Blade(array([3.0, 4.0, 0.0, 0.0]), grade=1, metric=m)
 
         v_inv = inverse(v)
         product = geometric(v_inv, v)
@@ -360,7 +352,7 @@ class TestInverse:
     def test_vector_inverse_formula(self):
         """Test v^{-1} = v / |v|^2."""
         m = euclidean(2)
-        v = vector_blade(array([3.0, 4.0]), metric=m)  # |v|^2 = 25
+        v = Blade(array([3.0, 4.0]), grade=1, metric=m)  # |v|^2 = 25
 
         v_inv = inverse(v)
 
@@ -389,8 +381,8 @@ class TestGeometricEdgeCases:
     def test_batch_geometric_product(self):
         """Test geometric product with batch vectors."""
         m = euclidean(3)
-        batch_v = vector_blade(randn(5, 3), metric=m, collection=(5,))
-        single_u = vector_blade(array([1.0, 0.0, 0.0]), metric=m)
+        batch_v = Blade(randn(5, 3), grade=1, metric=m, collection=(5,))
+        single_u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
 
         result = geometric(single_u, batch_v)
 
@@ -400,8 +392,8 @@ class TestGeometricEdgeCases:
     def test_scalar_product_extraction(self):
         """Test scalar_product function."""
         m = euclidean(3)
-        u = vector_blade(array([1.0, 2.0, 3.0]), metric=m)
-        v = vector_blade(array([4.0, 5.0, 6.0]), metric=m)
+        u = Blade(array([1.0, 2.0, 3.0]), grade=1, metric=m)
+        v = Blade(array([4.0, 5.0, 6.0]), grade=1, metric=m)
 
         s = scalar_product(u, v)
 

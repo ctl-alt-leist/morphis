@@ -52,7 +52,7 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
         M = rotor(B, pi/2)
         v_rotated = M @ v @ ~M
     """
-    from morphis.elements.blade import Blade, scalar_blade
+    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
 
     angle = array(angle)
@@ -79,7 +79,7 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
         bivector_data = -sin_expanded * B.data
 
     components = {
-        0: scalar_blade(scalar_data, metric=metric, collection=collection),
+        0: Blade(scalar_data, grade=0, metric=metric, collection=collection),
         2: Blade(data=bivector_data, grade=2, metric=metric, collection=collection),
     }
 

@@ -202,7 +202,7 @@ def _geometric_bl_bl(u: Blade, v: Blade) -> MultiVector:
 
     Returns MultiVector containing all nonzero grade components.
     """
-    from morphis.elements.blade import Blade, scalar_blade
+    from morphis.elements.blade import Blade
     from morphis.elements.metric import Metric
     from morphis.elements.multivector import MultiVector
 
@@ -236,7 +236,7 @@ def _geometric_bl_bl(u: Blade, v: Blade) -> MultiVector:
         if r == 0:
             # Scalar result
             result_data = norm * einsum(sig, *metric_args, u.data, v.data)
-            component = scalar_blade(result_data, metric=metric)
+            component = Blade(result_data, grade=0, metric=metric)
 
         elif c == 0:
             # Pure wedge (no contractions)

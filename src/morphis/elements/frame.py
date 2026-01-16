@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numpy import asarray, stack
-from pydantic import ConfigDict, field_validator, model_validator
+from numpy import stack
+from pydantic import ConfigDict, model_validator
 
 from morphis.elements.elements import GradedElement
 from morphis.elements.metric import Metric
@@ -78,11 +78,6 @@ class Frame(GradedElement):
     # Validators
     # =========================================================================
 
-    @field_validator("data", mode="before")
-    @classmethod
-    def _convert_to_array(cls, v):
-        return asarray(v, dtype=float)
-
     @model_validator(mode="after")
     def _infer_and_validate(self):
         """Infer span and collection if not provided, then validate shape consistency."""
@@ -100,6 +95,15 @@ class Frame(GradedElement):
         if self.collection is None:
             collection_ndim = self.data.ndim - 2  # everything except (span, dim)
             object.__setattr__(self, "collection", self.data.shape[:collection_ndim])
+        else:
+            # Collection was explicitly provided - validate it matches actual shape
+            expected_collection = self.data.shape[: len(self.collection)]
+            if expected_collection != self.collection:
+                raise ValueError(
+                    f"Explicit collection {self.collection} does not match "
+                    f"actual data shape {self.data.shape}. "
+                    f"Expected collection {expected_collection} from shape."
+                )
 
         # Validate: len(collection) + 2 == ndim
         expected_ndim = len(self.collection) + 2
@@ -119,39 +123,7 @@ class Frame(GradedElement):
     # =========================================================================
     # Properties
     # =========================================================================
-
-    @property
-    def dim(self) -> int:
-        """Dimension of each vector in the frame."""
-        return self.metric.dim
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        """Full shape of the underlying array."""
-        return self.data.shape
-
-    @property
-    def collection_shape(self) -> tuple[int, ...]:
-        """Shape of the leading collection dimensions."""
-        return self.collection
-
-    # =========================================================================
-    # NumPy Interface
-    # =========================================================================
-
-    def __getitem__(self, index):
-        """Index into the frame's data array."""
-        return self.data[index]
-
-    def __setitem__(self, index, value):
-        """Set values in the underlying array."""
-        self.data[index] = value
-
-    def __array__(self, dtype=None):
-        """Allow np.asarray(frame) to work."""
-        if dtype is None:
-            return self.data
-        return self.data.astype(dtype)
+    # (dim, shape, collection_shape inherited from GradedElement)
 
     # =========================================================================
     # Vector Access

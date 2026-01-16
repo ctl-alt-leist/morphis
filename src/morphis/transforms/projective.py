@@ -288,7 +288,7 @@ def translator(
         M = translator([1, 0, 0])
         p_translated = M @ p @ ~M
     """
-    from morphis.elements.blade import Blade, scalar_blade
+    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
 
     displacement = array(displacement)
@@ -319,7 +319,7 @@ def translator(
         bivector_data[..., 0, m] = 0.5 * displacement[..., m - 1]
 
     components = {
-        0: scalar_blade(scalar_data, metric=metric, collection=collection),
+        0: Blade(scalar_data, grade=0, metric=metric, collection=collection),
         2: Blade(data=bivector_data, grade=2, metric=metric, collection=collection),
     }
 
