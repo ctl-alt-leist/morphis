@@ -368,6 +368,28 @@ class Blade(GradedElement):
 
         return normalize(self)
 
+    def conj(self) -> Blade:
+        """
+        Return blade with complex-conjugated coefficients.
+
+        For real blades, returns a copy (conjugation is identity).
+        For complex blades (phasors), conjugates all coefficients.
+        """
+        from morphis.operations.norms import conjugate
+
+        return conjugate(self)
+
+    def hodge(self) -> Blade:
+        """
+        Return Hodge dual of this blade.
+
+        Maps grade-k blade to grade-(dim-k) blade using the metric.
+        The Hodge dual represents the orthogonal complement.
+        """
+        from morphis.operations.duality import hodge_dual
+
+        return hodge_dual(self)
+
     def spanning_vectors(self) -> tuple[Blade, ...]:
         """
         Factor this blade into its constituent grade-1 blades (vectors).

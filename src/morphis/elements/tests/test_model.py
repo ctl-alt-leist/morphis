@@ -366,7 +366,6 @@ class TestEdgeCases:
         assert b.collection_shape == (10, 20)
 
     def test_blade_float_dtype(self):
-        # Note: Complex dtype is no longer supported (cast to float)
         m = euclidean(4)
         data = array([1.0, 2.0, 3.0, 4.0])
         b = Blade(data, grade=1, metric=m)

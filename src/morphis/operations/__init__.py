@@ -21,6 +21,9 @@ from morphis.operations.factorization import (
 
 # Norms
 from morphis.operations.norms import (
+    conjugate as conjugate,
+    hermitian_norm as hermitian_norm,
+    hermitian_norm_squared as hermitian_norm_squared,
     norm as norm,
     norm_squared as norm_squared,
     normalize as normalize,

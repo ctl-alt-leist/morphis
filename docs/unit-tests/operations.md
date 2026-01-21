@@ -168,7 +168,7 @@ $$
 
 ## Norms
 
-### Squared Norm
+### Squared Norm (Bilinear)
 
 For grade-$k$ blade $\mathbf{B}$:
 
@@ -176,13 +176,31 @@ $$
 |\mathbf{B}|^2 = \frac{1}{k!} B^{m_1 \ldots m_k} B^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
 $$
 
-The factorial prevents overcounting.
+The factorial prevents overcounting. For complex blades, this can return complex values.
+
+### Hermitian Norm Squared (Sesquilinear)
+
+For complex (phasor) blades, the Hermitian norm uses conjugation:
+
+$$
+|\mathbf{B}|^2_H = \frac{1}{k!} \overline{B^{m_1 \ldots m_k}} B^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+$$
+
+This always returns real values for real metrics, giving the physical magnitude squared.
 
 ### Norm
 
 $$
 |\mathbf{B}| = \sqrt{||\mathbf{B}|^2|}
 $$
+
+### Hermitian Norm
+
+$$
+|\mathbf{B}|_H = \sqrt{|\mathbf{B}|^2_H}
+$$
+
+For phasors $\mathbf{v} = \mathbf{A} e^{i\phi}$, this gives the RMS amplitude $|\mathbf{A}|$.
 
 ### Properties
 
@@ -216,6 +234,34 @@ PGA ideal basis:
 
 $$
 |\mathbf{e}_0|^2 = g_{00} = 0
+$$
+
+## Complex Conjugation
+
+For complex blades representing phasors:
+
+$$
+\overline{\mathbf{B}}^{m_1 \ldots m_k} = \overline{B^{m_1 \ldots m_k}}
+$$
+
+Conjugation acts on the coefficients only—the imaginary unit represents temporal phase, not geometric structure.
+
+### Properties
+
+$$
+\overline{\overline{\mathbf{B}}} = \mathbf{B}
+$$
+
+$$
+\overline{\mathbf{A} + \mathbf{B}} = \overline{\mathbf{A}} + \overline{\mathbf{B}}
+$$
+
+### Physical Applications
+
+Time-averaged Poynting vector:
+
+$$
+\mathbf{S} = \frac{1}{2} \text{Re}(\mathbf{E} \wedge \overline{\mathbf{B}})
 $$
 
 ## Dot Product
