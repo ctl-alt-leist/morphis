@@ -13,7 +13,7 @@ from __future__ import annotations
 from math import factorial
 from typing import TYPE_CHECKING
 
-from numpy import abs as np_abs, einsum, newaxis, sqrt, where
+from numpy import abs as np_abs, conj, einsum, newaxis, sqrt, where
 from numpy.typing import NDArray
 
 from morphis.operations.structure import norm_squared_signature
@@ -81,3 +81,65 @@ def normalize(u: Blade) -> Blade:
         metric=u.metric,
         collection=u.collection,
     )
+
+
+def conjugate(u: Blade) -> Blade:
+    """
+    Return blade with complex-conjugated coefficients.
+
+    For real blades, returns a copy (conjugation is identity on reals).
+    For complex blades, applies np.conj to all coefficients.
+
+    This is the coefficient conjugation, not a GA operation. The complex
+    numbers represent temporal phasors, not geometric structure.
+
+    Returns Blade with conjugated data.
+    """
+    from morphis.elements.blade import Blade
+
+    return Blade(
+        data=conj(u.data),
+        grade=u.grade,
+        metric=u.metric,
+        collection=u.collection,
+    )
+
+
+def hermitian_norm_squared(u: Blade) -> NDArray:
+    """
+    Compute Hermitian (sesquilinear) squared norm:
+
+        |u|^2_H = (1 / k!) conj(u^{m_1 ... m_k}) u^{n_1 ... n_k} g_{m_1 n_1} ... g_{m_k n_k}
+
+    This is the physical magnitude squared, always real for real metrics.
+    For real blades, equivalent to norm_squared.
+    For complex blades (phasors), gives the squared RMS amplitude.
+
+    Use this for physical quantities. Use norm_squared for algebraic
+    (bilinear) inner product computations.
+
+    Returns real scalar array of squared norms with shape collection_shape.
+    """
+    k = u.grade
+    g = u.metric
+
+    if k == 0:
+        return (conj(u.data) * u.data).real
+
+    sig = norm_squared_signature(k)
+    metric_args = [g.data] * k
+    result = einsum(sig, *metric_args, conj(u.data), u.data) / factorial(k)
+    return result.real
+
+
+def hermitian_norm(u: Blade) -> NDArray:
+    """
+    Compute Hermitian norm: sqrt of hermitian_norm_squared.
+
+    Always returns real non-negative values for positive-definite metrics.
+    For real blades, equivalent to norm.
+    For complex blades (phasors), gives the RMS amplitude.
+
+    Returns real scalar array of norms with shape collection_shape.
+    """
+    return sqrt(hermitian_norm_squared(u))

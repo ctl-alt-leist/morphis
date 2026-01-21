@@ -86,8 +86,16 @@ class GradedElement(Element):
     @field_validator("data", mode="before")
     @classmethod
     def _convert_to_array(cls, v):
-        """Convert lists, tuples, or arrays to numpy ndarray."""
-        return asarray(v, dtype=float)
+        """Convert lists, tuples, or arrays to numpy ndarray.
+
+        Preserves complex dtype for phasor support. Integer and float
+        arrays are coerced to float64 for consistency.
+        """
+        arr = asarray(v)
+        # Coerce int/float to float64, preserve complex
+        if arr.dtype.kind in ("i", "u", "f"):
+            return arr.astype(float)
+        return arr
 
     @model_validator(mode="after")
     def _infer_metric_if_needed(self):
