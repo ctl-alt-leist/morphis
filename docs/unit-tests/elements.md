@@ -161,6 +161,73 @@ $$
 \mathbf{M}_{\langle k \rangle} = \sum_{i: \text{grade}(\mathbf{B}_i) = k} \mathbf{B}_i
 $$
 
+## Linear Operators
+
+An Operator represents a structured linear map $L: V \to W$ between blade spaces.
+
+### BladeSpec
+
+A `BladeSpec` defines the structure of a blade space:
+
+$$
+\text{BladeSpec} = (\text{grade}, \text{collection\_dims}, \text{dim})
+$$
+
+- $\text{grade}$: The grade of blades (0=scalar, 1=vector, 2=bivector, etc.)
+- $\text{collection\_dims}$: Number of batch dimensions
+- $\text{dim}$: Dimension of the underlying vector space
+
+### Operator Storage
+
+Operator data is stored with shape:
+
+$$
+\text{shape} = (*\text{output\_geometric}, *\text{output\_collection}, *\text{input\_collection}, *\text{input\_geometric})
+$$
+
+For example, an operator mapping scalar currents $(N,)$ to bivector fields $(M, d, d)$ has data shape $(d, d, M, N)$.
+
+### Operator Properties
+
+| Property | Description |
+|----------|-------------|
+| `input_collection` | Shape of input collection dimensions |
+| `output_collection` | Shape of output collection dimensions |
+| `input_shape` | Full expected shape for input blade data |
+| `output_shape` | Full shape of output blade data |
+
+### Operator Methods
+
+**Forward Application:**
+$$y = L(x)$$
+
+Via `L * x` or `L.apply(x)` or `L(x)`.
+
+**Adjoint (conjugate transpose):**
+$$\langle Lx, y \rangle = \langle x, L^H y \rangle$$
+
+Via `L.adjoint()`, `L.adj()`, or `L.H`.
+
+**Transpose:**
+$$L^T$$
+
+Via `L.transpose()`, `L.trans()`, or `L.T`.
+
+**Pseudoinverse:**
+$$L^+ : L L^+ L = L, \quad L^+ L L^+ = L^+$$
+
+Via `L.pseudoinverse()` or `L.pinv()`.
+
+**SVD Decomposition:**
+$$L = U \cdot \text{diag}(S) \cdot V^T$$
+
+Via `U, S, Vt = L.svd()`.
+
+**Composition:**
+$$(L_1 \circ L_2)(x) = L_1(L_2(x))$$
+
+Via `L1 * L2` or `L1.compose(L2)`.
+
 ## Utility Functions
 
 ### Permutation Sign

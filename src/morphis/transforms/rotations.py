@@ -2,8 +2,8 @@
 Geometric Algebra - Rotation Constructors
 
 Constructor functions for rotors that return MultiVector objects. These work
-with the geometric product operator `@` for transformations via sandwich
-products: rotated = M @ b @ ~M
+with the geometric product operator `*` for transformations via sandwich
+products: rotated = M * b * ~M
 
 All operations support collection dimensions via einsum broadcasting.
 """
@@ -36,7 +36,7 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
     M = exp(-B theta/2) = cos(theta/2) - sin(theta/2) B
 
     The rotor is a MultiVector with grades {0, 2}. Apply via sandwich product:
-        rotated = M @ b @ ~M
+        rotated = M * b * ~M
 
     Args:
         B: Bivector (grade-2) defining the rotation plane. Should be normalized
@@ -50,7 +50,7 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
         # Create rotor for 90-degree rotation in xy-plane
         B = e1 ^ e2  # bivector
         M = rotor(B, pi/2)
-        v_rotated = M @ v @ ~M
+        v_rotated = M * v * ~M
     """
     from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
@@ -100,7 +100,7 @@ def rotation_about_point(
     Create a motor for rotation about an arbitrary center point (PGA).
 
     Implemented as composition: translate to origin, rotate, translate back.
-    M = T2 @ R @ T1 where T1 = translator(-c), R = rotor(B, theta), T2 = translator(c)
+    M = T2 * R * T1 where T1 = translator(-c), R = rotor(B, theta), T2 = translator(c)
 
     Args:
         p: PGA point (grade-1) defining the rotation center.
@@ -114,7 +114,7 @@ def rotation_about_point(
         p = point([1, 0, 0])  # Center at x=1
         B = e1 ^ e2
         M = rotation_about_point(p, B, pi/2)
-        v_rotated = M @ v @ ~M
+        v_rotated = M * v * ~M
     """
     from morphis.elements.metric import Metric
     from morphis.elements.multivector import MultiVector
@@ -131,7 +131,7 @@ def rotation_about_point(
     R = rotor(B, angle)  # Rotate
     T2 = translator(c, metric=metric)  # Translate back
 
-    # Compose via geometric product: T2 @ R @ T1
+    # Compose via geometric product: T2 * R * T1
     temp = geometric(R, T1)
     result = geometric(T2, temp)
 

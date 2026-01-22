@@ -56,11 +56,17 @@ Create modules when duplication emerges, not preemptively. Let actual usage patt
 ```
 morphis/
 ├── elements/       # Core GA objects
-│   ├── blade.py       # Blade class
-│   ├── multivector.py # MultiVector class
-│   ├── metric.py      # Metric definitions
-│   ├── frame.py       # Orthonormal frames
+│   ├── blade.py       # Blade class (k-vectors)
+│   ├── multivector.py # MultiVector class (sums of blades)
+│   ├── metric.py      # Metric definitions (Euclidean, PGA, etc.)
+│   ├── frame.py       # Ordered vector collections
+│   ├── operator.py    # Linear maps between blade spaces
 │   └── elements.py    # GradedElement, CompositeElement base classes
+│
+├── algebra/        # Linear algebra for operators
+│   ├── specs.py       # BladeSpec for operator I/O structure
+│   ├── patterns.py    # Einsum signature generation
+│   └── solvers.py     # SVD, pseudoinverse, least squares
 │
 ├── operations/     # GA operations
 │   ├── products.py    # Wedge, interior, geometric products
@@ -93,14 +99,32 @@ morphis/
 
 ## Key Design Decisions
 
-### 1. Full Antisymmetric Tensor Storage
+### 1. Three-Layer API Naming Convention
+
+Mathematical operations follow a consistent naming pattern with three forms:
+
+| Long Form | Short Form | Symbol Form | Description |
+|-----------|------------|-------------|-------------|
+| `reverse()` | `rev()` | `~x` | Reverses blade factor order |
+| `inverse()` | `inv()` | `x**(-1)` | Multiplicative inverse |
+| `conjugate()` | `conj()` | — | Complex conjugation |
+| `adjoint()` | `adj()` | `.H` | Conjugate transpose (Operator) |
+| `transpose()` | `trans()` | `.T` | Transpose (Operator) |
+| `pseudoinverse()` | `pinv()` | — | Moore-Penrose inverse (Operator) |
+
+This allows users to choose the form that best fits their context:
+- Long form for clarity in documentation and teaching
+- Short form for concise mathematical expressions
+- Symbol form when it matches standard notation
+
+### 2. Full Antisymmetric Tensor Storage
 
 Blades store all $d^k$ components, not just independent ones. This enables:
 - Direct einsum operations without index bookkeeping
 - Uniform batch dimension handling via `...`
 - Simple grade-agnostic algorithms
 
-### 2. Collection Dimensions
+### 3. Collection Dimensions
 
 All operations support leading batch dimensions:
 
@@ -110,7 +134,7 @@ All operations support leading batch dimensions:
 # Einsum ... absorbs batch dimensions automatically
 ```
 
-### 3. Metric as Parameter
+### 4. Metric as Parameter
 
 Metric-dependent operations take an optional metric parameter rather than relying on global state:
 
@@ -119,12 +143,64 @@ norm(blade, metric=g)
 interior(u, v, metric=g)
 ```
 
-### 4. Separation of Animation and Rendering
+### 5. Separation of Animation and Rendering
 
 The animation system separates transformation logic from rendering:
 - External code owns and modifies transforms
 - Canvas reads transforms and renders
 - No bidirectional coupling
+
+### 6. Linear Operators
+
+The `Operator` class represents structured linear maps between blade spaces. Unlike matrix representations, operators maintain geometric structure throughout:
+
+```python
+from morphis.elements import Operator, Blade, euclidean
+from morphis.algebra import BladeSpec
+
+# Define transfer operator G mapping scalars to bivectors
+G = Operator(
+    data=G_data,  # shape: (d, d, M, N) for scalar->bivector
+    input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
+    output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+    metric=euclidean(d),
+)
+
+# Forward application: B = G * I
+B = G * I
+
+# Inverse operations
+x = G.solve(B)          # Least squares
+G_inv = G.pinv()        # Pseudoinverse
+U, S, Vt = G.svd()      # Structured SVD
+```
+
+Key properties:
+- `input_collection`: Shape of input collection dimensions
+- `output_collection`: Shape of output collection dimensions
+- `input_shape`: Full shape expected for input blade data
+- `output_shape`: Full shape of output blade data
+
+### 7. Element Operations
+
+The four core elements (Blade, Frame, MultiVector, Operator) have well-defined multiplication semantics:
+
+| Left | Right | Result | Operation |
+|------|-------|--------|-----------|
+| Blade | Blade | MultiVector | Geometric product |
+| Blade | MultiVector | MultiVector | Geometric product |
+| MultiVector | Blade | MultiVector | Geometric product |
+| MultiVector | MultiVector | MultiVector | Geometric product |
+| scalar | any | same type | Scalar multiplication |
+| Operator | Blade | Blade | Apply operator |
+| Operator | Frame | Frame | Apply to each vector |
+| Operator | Operator | Operator | Composition |
+
+Some operations are explicitly not supported (raise `TypeError`):
+- `Blade * Operator` — use `Operator * Blade`
+- `Frame * Operator` — use `Operator * Frame`
+- `Operator * MultiVector` — outermorphism not yet implemented
+- `Frame ^ anything` — wedge with Frame not yet implemented
 
 ## The Manifest Generality Challenge
 

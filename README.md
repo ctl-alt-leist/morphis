@@ -18,6 +18,7 @@ essential nature.
 
 - **Geometric Algebra Core**: Blades, multivectors, and operations (wedge, geometric product, duality)
 - **Metric-Aware**: Objects carry their metric context (Euclidean, projective, etc.)
+- **Linear Operators**: Structured linear maps between blade spaces with SVD, pseudoinverse, least squares
 - **Visualization**: 3D rendering of blades with PyVista, timeline-based animation, 4D projection
 - **Motor Transforms**: Rotors and translations via sandwich product
 
@@ -42,7 +43,9 @@ make install
 ```
 morphis/
 ├── src/morphis/
-│   ├── elements/       # Core GA objects: Blade, MultiVector, Frame, Metric
+│   ├── elements/       # Core GA objects: Blade, MultiVector, Frame, Operator, Metric
+│   │   └── tests/
+│   ├── algebra/        # Linear algebra: BladeSpec, einsum patterns, solvers
 │   │   └── tests/
 │   ├── operations/     # GA operations: wedge, geometric product, duality, norms
 │   │   └── tests/

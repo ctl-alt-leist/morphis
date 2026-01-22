@@ -167,18 +167,64 @@ class Blade(GradedElement):
             collection=collection,
         )
 
-    def __mul__(self, scalar) -> Blade:
-        """Scalar multiplication."""
-        return Blade(
-            data=self.data * scalar,
-            grade=self.grade,
-            metric=self.metric,
-            collection=self.collection,
-        )
+    def __mul__(self, other) -> Blade | MultiVector:
+        """Multiplication: scalar or geometric product.
 
-    def __rmul__(self, scalar) -> Blade:
-        """Scalar multiplication (reversed)."""
-        return self.__mul__(scalar)
+        - Scalar: returns Blade with scaled data
+        - Blade/MultiVector: returns geometric product (MultiVector)
+        - Grade-0 Blade * Frame/Operator: delegates to other's __rmul__
+        """
+        from morphis.elements.frame import Frame
+        from morphis.elements.multivector import MultiVector
+        from morphis.elements.operator import Operator
+
+        if isinstance(other, Blade):
+            from morphis.operations.products import geometric
+
+            return geometric(self, other)
+        elif isinstance(other, MultiVector):
+            from morphis.operations.products import geometric_bl_mv
+
+            return geometric_bl_mv(self, other)
+        elif isinstance(other, Operator):
+            # Grade-0 Blade (scalar) can multiply Operator via Operator.__rmul__
+            if self.grade == 0 and self.collection == ():
+                return NotImplemented
+            raise TypeError("Blade * Operator not currently supported (use L * b)")
+        elif isinstance(other, Frame):
+            # Grade-0 Blade (scalar) can multiply Frame via Frame.__rmul__
+            if self.grade == 0 and self.collection == ():
+                return NotImplemented
+            raise TypeError("Blade * Frame geometric product not currently supported")
+        else:
+            # Scalar multiplication
+            return Blade(
+                data=self.data * other,
+                grade=self.grade,
+                metric=self.metric,
+                collection=self.collection,
+            )
+
+    def __rmul__(self, other) -> Blade | MultiVector:
+        """Right multiplication: scalar or geometric product."""
+        from morphis.elements.multivector import MultiVector
+
+        if isinstance(other, Blade):
+            from morphis.operations.products import geometric
+
+            return geometric(other, self)
+        elif isinstance(other, MultiVector):
+            from morphis.operations.products import geometric_mv_bl
+
+            return geometric_mv_bl(other, self)
+        else:
+            # Scalar multiplication (commutative)
+            return Blade(
+                data=self.data * other,
+                grade=self.grade,
+                metric=self.metric,
+                collection=self.collection,
+            )
 
     def __truediv__(self, scalar) -> Blade:
         """Scalar division."""
@@ -211,6 +257,7 @@ class Blade(GradedElement):
 
         Returns Blade or MultiVector depending on operands.
         """
+        from morphis.elements.frame import Frame
         from morphis.elements.multivector import MultiVector
 
         if isinstance(other, Blade):
@@ -221,6 +268,8 @@ class Blade(GradedElement):
             from morphis.operations.products import wedge_bl_mv
 
             return wedge_bl_mv(self, other)
+        elif isinstance(other, Frame):
+            raise TypeError("Wedge product Blade ^ Frame not currently supported")
 
         return NotImplemented
 
@@ -252,63 +301,56 @@ class Blade(GradedElement):
 
         return NotImplemented
 
-    def __matmul__(self, other: Blade | MultiVector) -> MultiVector:
+    def reverse(self) -> Blade:
         """
-        Geometric product: u @ v
-
-        Computes the full geometric product, which combines inner and outer
-        products. For transformations (sandwich products): rotated = M @ b @ ~M
-
-        Returns MultiVector (geometric products generally produce mixed grades).
-        """
-        from morphis.elements.multivector import MultiVector
-
-        if isinstance(other, (Blade, MultiVector)):
-            from morphis.operations.products import geometric
-
-            return geometric(self, other)
-
-        return NotImplemented
-
-    def __rmatmul__(self, other: Blade | MultiVector) -> MultiVector:
-        """
-        Geometric product (reversed): v @ u (when v doesn't have __matmul__)
-        """
-        from morphis.elements.multivector import MultiVector
-
-        if isinstance(other, (Blade, MultiVector)):
-            from morphis.operations.products import geometric
-
-            return geometric(other, self)
-
-        return NotImplemented
-
-    def __invert__(self) -> Blade:
-        """
-        Reverse operator: ~u
+        Reverse operator.
 
         Reverses the order of vector factors:
-        ~(u ^ v ^ w) = w ^ v ^ u = (-1)^(k(k-1)/2) * (u ^ v ^ w)
+        reverse(u ^ v ^ w) = w ^ v ^ u = (-1)^(k(k-1)/2) * (u ^ v ^ w)
+
+        Returns:
+            Reversed blade
         """
         from morphis.operations.products import reverse
 
         return reverse(self)
+
+    def rev(self) -> Blade:
+        """Short form of reverse()."""
+        return self.reverse()
+
+    def __invert__(self) -> Blade:
+        """Reverse operator: ~u. Symbol form of reverse()."""
+        return self.reverse()
+
+    def inverse(self) -> Blade:
+        """
+        Multiplicative inverse.
+
+        For unit blades, inverse equals reverse.
+        For non-unit blades: u^(-1) = ~u / (u * ~u)
+
+        Returns:
+            Inverse blade such that u * u.inverse() = 1
+        """
+        from morphis.operations.products import inverse
+
+        return inverse(self)
+
+    def inv(self) -> Blade:
+        """Short form of inverse()."""
+        return self.inverse()
 
     def __pow__(self, exponent: int) -> Blade:
         """
         Power operation for blades.
 
         Currently supports:
-            blade**(-1) - multiplicative inverse
+            blade**(-1) - multiplicative inverse (symbol form of inverse())
             blade**(1)  - identity (returns self)
-
-        For unit blades, inverse equals reverse.
-        For non-unit blades: u^(-1) = ~u / (u * ~u)
         """
         if exponent == -1:
-            from morphis.operations.products import inverse
-
-            return inverse(self)
+            return self.inverse()
         elif exponent == 1:
             return self
         else:
@@ -324,7 +366,7 @@ class Blade(GradedElement):
         """
         Transform this blade in-place by a motor/versor.
 
-        Performs the sandwich product M @ self @ ~M and updates self.data.
+        Performs the sandwich product M * self * ~M and updates self.data.
         This is efficient for animation since no new Blade object is created.
 
         Args:
@@ -368,16 +410,23 @@ class Blade(GradedElement):
 
         return normalize(self)
 
-    def conj(self) -> Blade:
+    def conjugate(self) -> Blade:
         """
         Return blade with complex-conjugated coefficients.
 
         For real blades, returns a copy (conjugation is identity).
         For complex blades (phasors), conjugates all coefficients.
+
+        Returns:
+            Blade with conjugated coefficients
         """
         from morphis.operations.norms import conjugate
 
         return conjugate(self)
+
+    def conj(self) -> Blade:
+        """Short form of conjugate()."""
+        return self.conjugate()
 
     def hodge(self) -> Blade:
         """

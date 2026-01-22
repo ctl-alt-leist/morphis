@@ -59,6 +59,9 @@ from morphis.elements.multivector import (
     MultiVector,
     multivector_from_blades as multivector_from_blades,
 )
+
+# Operator (linear maps between blade spaces)
+from morphis.elements.operator import Operator as Operator
 from morphis.elements.protocols import Graded as Graded, Spanning as Spanning, Transformable as Transformable
 
 

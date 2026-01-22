@@ -37,7 +37,7 @@ def rotate(
     """
     Rotate a blade by angle in the plane defined by bivector B.
 
-    Creates a rotor and applies it via sandwich product: M @ b @ ~M
+    Creates a rotor and applies it via sandwich product: M * b * ~M
 
     Args:
         b: Blade to rotate (any grade).
@@ -55,7 +55,7 @@ def rotate(
 
     M = rotor(B, angle)
 
-    # Sandwich product: M @ b @ ~M
+    # Sandwich product: M * b * ~M
     M_rev = reverse(M)
     temp = geometric(M, b)
     result = geometric(temp, M_rev)
@@ -75,7 +75,7 @@ def translate(
     """
     Translate a blade by displacement vector (PGA only).
 
-    Creates a translator and applies it via sandwich product: M @ b @ ~M
+    Creates a translator and applies it via sandwich product: M * b * ~M
 
     Args:
         b: PGA blade to translate (any grade).
@@ -89,7 +89,7 @@ def translate(
     """
     M = translator(displacement, metric=b.metric)
 
-    # Sandwich product: M @ b @ ~M
+    # Sandwich product: M * b * ~M
     M_rev = reverse(M)
     temp = geometric(M, b)
     result = geometric(temp, M_rev)
@@ -109,7 +109,7 @@ def transform(
     """
     Apply a motor/versor transformation to a blade via sandwich product.
 
-    Computes: M @ b @ ~M
+    Computes: M * b * ~M
 
     Args:
         b: Blade to transform (any grade).
@@ -125,7 +125,7 @@ def transform(
     # Validate compatible metrics
     Metric.merge(b.metric, M.metric)
 
-    # Sandwich product: M @ b @ ~M
+    # Sandwich product: M * b * ~M
     M_rev = reverse(M)
     temp = geometric(M, b)
     result = geometric(temp, M_rev)
