@@ -1,5 +1,5 @@
 """
-Linear Operators - Blade Specifications
+Linear Algebra - Blade Specifications
 
 Defines BladeSpec for describing the structure of blades in linear operator contexts.
 A BladeSpec captures the grade, collection dimensions, and vector space dimension.

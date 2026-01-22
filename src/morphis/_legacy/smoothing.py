@@ -19,7 +19,7 @@ Usage:
         t = i * dt
         delta_angle = smooth_in_out_cubic(t, T) * dt * total_angle
         M = rotor(B, delta_angle)
-        blade.data[...] = (M @ blade @ ~M)[blade.grade].data
+        blade.data[...] = (M * blade * ~M)[blade.grade].data
 """
 
 from math import pi, sin

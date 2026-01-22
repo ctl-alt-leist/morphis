@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from morphis.elements import Blade, euclidean
-from morphis.operations.linear import BladeSpec, LinearOperator
+from morphis.algebra import BladeSpec
+from morphis.elements import Blade, Operator, euclidean
 
 
 class TestLeastSquares:
@@ -17,7 +17,7 @@ class TestLeastSquares:
         G_data = np.random.randn(d, d, M, N)
         G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -26,7 +26,7 @@ class TestLeastSquares:
 
         # Generate data
         I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
-        B = op.apply(I_true)
+        B = op * (I_true)
 
         # Solve
         I_recovered = op.solve(B, method="lstsq")
@@ -40,7 +40,7 @@ class TestLeastSquares:
         G_data = np.random.randn(d, d, M, N)
         G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -49,13 +49,13 @@ class TestLeastSquares:
 
         # Generate data
         I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
-        B = op.apply(I_true)
+        B = op * (I_true)
 
         # Solve (will give minimum norm solution)
         I_recovered = op.solve(B, method="lstsq")
 
         # The recovered solution should satisfy the forward equation
-        B_recovered = op.apply(I_recovered)
+        B_recovered = op * (I_recovered)
         assert_allclose(B_recovered.data, B.data, rtol=1e-10)
 
     def test_lstsq_regularization(self):
@@ -72,7 +72,7 @@ class TestLeastSquares:
         # Reorder to (*out_geo, *out_coll, *in_coll, *in_geo)
         G_data = G_data.transpose(1, 2, 0, 3)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -80,7 +80,7 @@ class TestLeastSquares:
         )
 
         I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
-        B = op.apply(I_true)
+        B = op * (I_true)
 
         # Add small noise
         noise = Blade(0.01 * np.random.randn(*B.shape), grade=2, metric=euclidean(d))
@@ -98,7 +98,7 @@ class TestLeastSquares:
         M, N, d = 20, 5, 3
         G_data = np.random.randn(d, d, M, N) + 1j * np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -110,7 +110,7 @@ class TestLeastSquares:
             grade=0,
             metric=euclidean(d),
         )
-        B = op.apply(I_true)
+        B = op * (I_true)
 
         I_recovered = op.solve(B, method="lstsq")
 
@@ -121,11 +121,11 @@ class TestSVD:
     """Tests for SVD decomposition."""
 
     def test_svd_reconstruction(self):
-        """Test that U @ diag(S) @ Vt reconstructs original operator."""
+        """Test that U * diag(S) * Vt reconstructs original operator."""
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -134,16 +134,16 @@ class TestSVD:
 
         U, S, Vt = op.svd()
 
-        # Reconstruct: for each input, compute U @ (S * (Vt @ x))
+        # Reconstruct: for each input, compute U * (S * (Vt * x))
         x = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
 
         # Original
-        y_orig = op.apply(x)
+        y_orig = op * (x)
 
         # Via SVD
-        vt_x = Vt.apply(x)  # shape (r,)
+        vt_x = Vt * (x)  # shape (r,)
         s_vt_x = Blade(S * vt_x.data, grade=0, metric=euclidean(d))
-        y_svd = U.apply(s_vt_x)
+        y_svd = U * (s_vt_x)
 
         assert_allclose(y_svd.data, y_orig.data, rtol=1e-10)
 
@@ -152,7 +152,7 @@ class TestSVD:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -169,7 +169,7 @@ class TestSVD:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -185,7 +185,7 @@ class TestSVD:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -209,7 +209,7 @@ class TestSVD:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -227,11 +227,11 @@ class TestPseudoinverse:
     """Tests for pseudoinverse."""
 
     def test_pinv_identity_property(self):
-        """Test that L @ L.pinv() @ L ≈ L."""
+        """Test that L * L.pinv() * L ≈ L."""
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -240,12 +240,12 @@ class TestPseudoinverse:
 
         pinv_op = op.pinv()
 
-        # Test L @ L^+ @ L ≈ L
+        # Test L * L^+ * L ≈ L
         x = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
 
-        Lx = op.apply(x)
-        LpLx = pinv_op.apply(Lx)
-        LLpLx = op.apply(LpLx)
+        Lx = op * (x)
+        LpLx = pinv_op * (Lx)
+        LLpLx = op * (LpLx)
 
         assert_allclose(LLpLx.data, Lx.data, rtol=1e-10)
 
@@ -253,7 +253,7 @@ class TestPseudoinverse:
         """Test that pseudoinverse swaps input/output specs."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -265,24 +265,24 @@ class TestPseudoinverse:
         assert pinv_op.input_spec == op.output_spec
         assert pinv_op.output_spec == op.input_spec
 
-    def test_pinv_rcond_threshold(self):
-        """Test that rcond filters small singular values."""
+    def test_pinv_r_cond_threshold(self):
+        """Test that r_cond filters small singular values."""
         M, N, d = 10, 5, 3
 
         # Create operator with known singular values
-        # Some very small (should be filtered with high rcond)
+        # Some very small (should be filtered with high r_cond)
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
             metric=euclidean(d),
         )
 
-        # Pseudoinverse with different rcond values should differ
-        pinv1 = op.pinv(rcond=None)
-        pinv2 = op.pinv(rcond=0.1)
+        # Pseudoinverse with different r_cond values should differ
+        pinv1 = op.pinv(r_cond=None)
+        pinv2 = op.pinv(r_cond=0.1)
 
         # They should generally be different (unless all singular values > 0.1 * max)
         # Just check that both compute without error
@@ -294,7 +294,7 @@ class TestPseudoinverse:
         M, N, d = 20, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -302,7 +302,7 @@ class TestPseudoinverse:
         )
 
         I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
-        B = op.apply(I_true)
+        B = op * (I_true)
 
         I_recovered = op.solve(B, method="pinv")
 
@@ -316,7 +316,7 @@ class TestSolveEdgeCases:
         """Test that unknown method raises ValueError."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -332,7 +332,7 @@ class TestSolveEdgeCases:
         """Test that wrong target grade raises ValueError."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),

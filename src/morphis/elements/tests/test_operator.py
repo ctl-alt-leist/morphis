@@ -1,22 +1,22 @@
-"""Tests for LinearOperator class."""
+"""Tests for Operator class."""
 
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from morphis.elements import Blade, euclidean
-from morphis.operations.linear import BladeSpec, LinearOperator
+from morphis.algebra import BladeSpec
+from morphis.elements import Blade, Operator, euclidean
 
 
-class TestLinearOperatorConstruction:
-    """Tests for LinearOperator construction and validation."""
+class TestOperatorConstruction:
+    """Tests for Operator construction and validation."""
 
     def test_basic_construction(self):
         """Test basic operator construction."""
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -32,7 +32,7 @@ class TestLinearOperatorConstruction:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, M, N, d)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
@@ -48,7 +48,7 @@ class TestLinearOperatorConstruction:
         G_data = np.random.randn(3, 3, 10)  # Missing input collection dim
 
         with pytest.raises(ValueError, match="Data has 3 dimensions"):
-            LinearOperator(
+            Operator(
                 data=G_data,
                 input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
                 output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -60,7 +60,7 @@ class TestLinearOperatorConstruction:
         G_data = np.random.randn(3, 3, 10, 5)
 
         with pytest.raises(ValueError, match="Input dim 4 doesn't match output dim 3"):
-            LinearOperator(
+            Operator(
                 data=G_data,
                 input_spec=BladeSpec(grade=0, collection_dims=1, dim=4),  # Wrong dim
                 output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -71,7 +71,7 @@ class TestLinearOperatorConstruction:
         """Test that complex data is preserved."""
         G_data = np.random.randn(3, 3, 10, 5) + 1j * np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -81,8 +81,8 @@ class TestLinearOperatorConstruction:
         assert op.data.dtype == np.complex128
 
 
-class TestLinearOperatorApply:
-    """Tests for LinearOperator.apply() method."""
+class TestOperatorApply:
+    """Tests for Operator.apply() method."""
 
     def test_forward_scalar_to_bivector(self):
         """Test forward application: scalar -> bivector."""
@@ -90,7 +90,7 @@ class TestLinearOperatorApply:
         G_data = np.random.randn(d, d, M, N)
         G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2  # Antisymmetrize
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -110,7 +110,7 @@ class TestLinearOperatorApply:
         G_data = np.random.randn(d, d, M, N)
         G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -128,7 +128,7 @@ class TestLinearOperatorApply:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, M, N, d)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
@@ -141,12 +141,12 @@ class TestLinearOperatorApply:
         assert w.grade == 1
         assert w.shape == (M, d)
 
-    def test_matmul_operator(self):
-        """Test L @ x syntax."""
+    def test_mul_operator(self):
+        """Test L * x syntax."""
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -155,7 +155,7 @@ class TestLinearOperatorApply:
 
         I = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
         B1 = op.apply(I)
-        B2 = op @ I
+        B2 = op * I
 
         assert_allclose(B1.data, B2.data)
 
@@ -164,7 +164,7 @@ class TestLinearOperatorApply:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -181,7 +181,7 @@ class TestLinearOperatorApply:
         """Test that wrong input grade raises."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -197,7 +197,7 @@ class TestLinearOperatorApply:
         """Test that wrong input shape raises."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -214,7 +214,7 @@ class TestLinearOperatorApply:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N) + 1j * np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -232,14 +232,14 @@ class TestLinearOperatorApply:
         assert B.data.dtype == np.complex128
 
 
-class TestLinearOperatorAdjoint:
-    """Tests for LinearOperator.adjoint() method."""
+class TestOperatorAdjoint:
+    """Tests for Operator.adjoint() method."""
 
     def test_adjoint_swaps_specs(self):
         """Test that adjoint swaps input/output specs."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -255,7 +255,7 @@ class TestLinearOperatorAdjoint:
         """Test that adjoint of adjoint equals original."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -270,7 +270,7 @@ class TestLinearOperatorAdjoint:
         """Test that adjoint conjugates complex data."""
         G_data = np.random.randn(3, 3, 10, 5) + 1j * np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -287,7 +287,7 @@ class TestLinearOperatorAdjoint:
         """Test .H property is alias for adjoint."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -301,7 +301,7 @@ class TestLinearOperatorAdjoint:
         M, N, d = 10, 5, 3
         G_data = np.random.randn(d, d, M, N)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -322,14 +322,14 @@ class TestLinearOperatorAdjoint:
         assert_allclose(inner1, inner2, rtol=1e-10)
 
 
-class TestLinearOperatorProperties:
-    """Tests for LinearOperator properties."""
+class TestOperatorProperties:
+    """Tests for Operator properties."""
 
     def test_dim_property(self):
         """Test dim property."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -338,37 +338,37 @@ class TestLinearOperatorProperties:
 
         assert op.dim == 3
 
-    def test_input_collection_shape(self):
-        """Test input_collection_shape property."""
+    def test_input_collection(self):
+        """Test input_collection property."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
             metric=euclidean(3),
         )
 
-        assert op.input_collection_shape == (5,)
+        assert op.input_collection == (5,)
 
-    def test_output_collection_shape(self):
-        """Test output_collection_shape property."""
+    def test_output_collection(self):
+        """Test output_collection property."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
             metric=euclidean(3),
         )
 
-        assert op.output_collection_shape == (10,)
+        assert op.output_collection == (10,)
 
     def test_repr(self):
         """Test __repr__ method."""
         G_data = np.random.randn(3, 3, 10, 5)
 
-        op = LinearOperator(
+        op = Operator(
             data=G_data,
             input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
             output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
@@ -376,5 +376,5 @@ class TestLinearOperatorProperties:
         )
 
         repr_str = repr(op)
-        assert "LinearOperator" in repr_str
+        assert "Operator" in repr_str
         assert "shape=" in repr_str

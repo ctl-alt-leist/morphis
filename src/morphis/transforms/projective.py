@@ -272,7 +272,7 @@ def translator(
 
     The translator is a MultiVector with grades {0, 2} where the bivector
     part uses only degenerate (e_0) components. Apply via sandwich product:
-        translated = M @ p @ ~M
+        translated = M * p * ~M
 
     Args:
         displacement: Translation vector of shape (..., d) where d is the
@@ -286,7 +286,7 @@ def translator(
     Example:
         # Translate by (1, 0, 0) in 3D PGA
         M = translator([1, 0, 0])
-        p_translated = M @ p @ ~M
+        p_translated = M * p * ~M
     """
     from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
@@ -356,7 +356,7 @@ def screw_motion(
         # Rotation in xy-plane + translation along z
         B = e1 ^ e2
         M = screw_motion(B, angle=pi/2, translation=[0, 0, 1])
-        p_transformed = M @ p @ ~M
+        p_transformed = M * p * ~M
     """
     from morphis.elements.multivector import MultiVector
     from morphis.transforms.rotations import rotor
@@ -368,13 +368,13 @@ def screw_motion(
     R = rotor(B, angle)
     T = translator(translation, metric=metric)
 
-    # Compose: T @ R (translate after rotate)
+    # Compose: T * R (translate after rotate)
     if center is not None:
         center = array(center, dtype=float)
         T_to = translator(-center, metric=metric)
         T_back = translator(center, metric=metric)
 
-        # T_back @ T @ R @ T_to
+        # T_back * T * R * T_to
         temp1 = geometric(R, T_to)
         temp2 = geometric(T, temp1)
         result = geometric(T_back, temp2)

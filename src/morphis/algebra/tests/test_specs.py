@@ -2,7 +2,7 @@
 
 import pytest
 
-from morphis.operations.linear.specs import BladeSpec, blade_spec
+from morphis.algebra import BladeSpec, blade_spec
 
 
 class TestBladeSpec:

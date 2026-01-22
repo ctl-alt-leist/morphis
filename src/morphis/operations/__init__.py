@@ -19,13 +19,6 @@ from morphis.operations.factorization import (
     spanning_vectors as spanning_vectors,
 )
 
-# Linear operators
-from morphis.operations.linear import (
-    BladeSpec as BladeSpec,
-    LinearOperator as LinearOperator,
-    blade_spec as blade_spec,
-)
-
 # Norms
 from morphis.operations.norms import (
     conjugate as conjugate,

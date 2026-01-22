@@ -1,9 +1,9 @@
 """
 Geometric Algebra - Linear Operators Example
 
-Demonstrates LinearOperator for structured linear maps between blade spaces:
+Demonstrates Operator for structured linear maps between blade spaces:
 - Creating operators with BladeSpec for input/output structure
-- Forward application: P = L @ q
+- Forward application: P = L * q
 - Adjoint: L^H with proper conjugate transpose
 - Least squares inversion with regularization
 - SVD decomposition for analysis
@@ -16,8 +16,8 @@ Index structure: P^{ab}_m = L^{ab}_{mn} q_n
 import numpy as np
 from numpy import exp, pi
 
-from morphis.elements import Blade, euclidean
-from morphis.operations.linear import BladeSpec, LinearOperator
+from morphis.algebra import BladeSpec
+from morphis.elements import Blade, Operator, euclidean
 from morphis.utils.pretty import section, show_array, show_blade, subsection
 
 
@@ -27,7 +27,7 @@ from morphis.utils.pretty import section, show_array, show_blade, subsection
 
 
 def demo_operator_construction() -> None:
-    """Demonstrate creating LinearOperator with BladeSpec."""
+    """Demonstrate creating Operator with BladeSpec."""
     section("1. OPERATOR CONSTRUCTION")
 
     d = 3  # Vector space dimension
@@ -57,7 +57,7 @@ def demo_operator_construction() -> None:
     # Antisymmetrize for valid bivector output
     L_data = (L_data - L_data.transpose(1, 0, 2, 3)) / 2
 
-    L = LinearOperator(
+    L = Operator(
         data=L_data,
         input_spec=input_spec,
         output_spec=output_spec,
@@ -69,8 +69,8 @@ def demo_operator_construction() -> None:
 
     subsection("Operator properties")
     print(f"  L.dim = {L.dim}")
-    print(f"  L.input_collection_shape = {L.input_collection_shape}")
-    print(f"  L.output_collection_shape = {L.output_collection_shape}")
+    print(f"  L.input_collection = {L.input_collection}")
+    print(f"  L.output_collection = {L.output_collection}")
 
 
 # =============================================================================
@@ -79,7 +79,7 @@ def demo_operator_construction() -> None:
 
 
 def demo_forward_application() -> None:
-    """Demonstrate applying operator to compute P = L @ q."""
+    """Demonstrate applying operator to compute P = L * q."""
     section("2. FORWARD APPLICATION")
 
     d, M, N = 3, 4, 5
@@ -87,7 +87,7 @@ def demo_forward_application() -> None:
     L_data = np.random.randn(d, d, M, N)
     L_data = (L_data - L_data.transpose(1, 0, 2, 3)) / 2
 
-    L = LinearOperator(
+    L = Operator(
         data=L_data,
         input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
         output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -99,17 +99,17 @@ def demo_forward_application() -> None:
     show_blade("q (scalar sources)", q)
     print(f"  shape: {q.shape}")
 
-    subsection("Apply operator: P = L @ q")
-    P = L @ q
+    subsection("Apply operator: P = L * q")
+    P = L * q
     show_blade("P (bivector field)", P)
     print(f"  shape: {P.shape}")
     print(f"  grade: {P.grade}")
 
     subsection("Equivalent syntax forms")
     P1 = L.apply(q)
-    P2 = L @ q
+    P2 = L * q
     P3 = L(q)
-    print("  L.apply(q), L @ q, L(q) all produce the same result")
+    print("  L.apply(q), L * q, L(q) all produce the same result")
     print(f"  Max difference: {np.max(np.abs(P1.data - P2.data) + np.abs(P2.data - P3.data)):.2e}")
 
     subsection("Verify antisymmetry of bivector output")
@@ -131,7 +131,7 @@ def demo_adjoint() -> None:
     np.random.seed(42)
     L_data = np.random.randn(d, d, M, N)
 
-    L = LinearOperator(
+    L = Operator(
         data=L_data,
         input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
         output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -157,8 +157,8 @@ def demo_adjoint() -> None:
     q = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
     P = Blade(np.random.randn(M, d, d), grade=2, metric=euclidean(d))
 
-    Lq = L @ q
-    LhP = L.H @ P
+    Lq = L * q
+    LhP = L.H * P
 
     inner1 = np.sum(Lq.data.conj() * P.data)
     inner2 = np.sum(q.data.conj() * LhP.data)
@@ -182,7 +182,7 @@ def demo_least_squares() -> None:
     L_data = np.random.randn(d, d, M, N)
     L_data = (L_data - L_data.transpose(1, 0, 2, 3)) / 2
 
-    L = LinearOperator(
+    L = Operator(
         data=L_data,
         input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
         output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -191,7 +191,7 @@ def demo_least_squares() -> None:
 
     subsection("Generate synthetic data")
     q_true = Blade(np.array([1.0, -0.5, 0.3, 0.8, -0.2]), grade=0, metric=euclidean(d))
-    P = L @ q_true
+    P = L * q_true
     show_blade("q_true (ground truth)", q_true)
     print(f"  P shape: {P.shape} (overdetermined: {M} > {N})")
 
@@ -231,14 +231,14 @@ def demo_svd() -> None:
     np.random.seed(42)
     L_data = np.random.randn(d, d, M, N)
 
-    L = LinearOperator(
+    L = Operator(
         data=L_data,
         input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
         output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
         metric=euclidean(d),
     )
 
-    subsection("Compute SVD: L = U @ diag(S) @ Vt")
+    subsection("Compute SVD: L = U * diag(S) * Vt")
     U, S, Vt = L.svd()
     print(f"  U maps: {U.input_shape} -> {U.output_shape}")
     print(f"  Vt maps: {Vt.input_shape} -> {Vt.output_shape}")
@@ -251,13 +251,13 @@ def demo_svd() -> None:
     subsection("Verify reconstruction")
     q = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
 
-    # Original: P = L @ q
-    P_orig = L @ q
+    # Original: P = L * q
+    P_orig = L * q
 
-    # Via SVD: P = U @ (S * (Vt @ q))
-    vt_q = Vt @ q
+    # Via SVD: P = U * (S * (Vt * q))
+    vt_q = Vt * q
     s_vt_q = Blade(S * vt_q.data, grade=0, metric=euclidean(d))
-    P_svd = U @ s_vt_q
+    P_svd = U * s_vt_q
 
     recon_error = np.max(np.abs(P_orig.data - P_svd.data))
     print(f"  Max |P_orig - P_svd|: {recon_error:.2e}")
@@ -280,7 +280,7 @@ def demo_pseudoinverse() -> None:
     np.random.seed(42)
     L_data = np.random.randn(d, d, M, N)
 
-    L = LinearOperator(
+    L = Operator(
         data=L_data,
         input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
         output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -292,15 +292,15 @@ def demo_pseudoinverse() -> None:
     print(f"  L maps: {L.input_shape} -> {L.output_shape}")
     print(f"  L^+ maps: {L_pinv.input_shape} -> {L_pinv.output_shape}")
 
-    subsection("Pseudoinverse identity: L @ L^+ @ L = L")
+    subsection("Pseudoinverse identity: L * L^+ * L = L")
     q = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
 
-    Lq = L @ q
-    LpLq = L_pinv @ Lq
-    LLpLq = L @ LpLq
+    Lq = L * q
+    LpLq = L_pinv * Lq
+    LLpLq = L * LpLq
 
     identity_error = np.max(np.abs(Lq.data - LLpLq.data))
-    print(f"  Max |Lq - L @ L^+ @ Lq|: {identity_error:.2e}")
+    print(f"  Max |Lq - L * L^+ * Lq|: {identity_error:.2e}")
 
     subsection("Solve via pseudoinverse")
     q_pinv = L.solve(Lq, method="pinv")
@@ -332,7 +332,7 @@ def demo_complex_operators() -> None:
     L_phase = np.random.randn(d, d, M, N) * 0.5
     L_data = L_mag * exp(1j * L_phase)
 
-    L = LinearOperator(
+    L = Operator(
         data=L_data,
         input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
         output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -347,7 +347,7 @@ def demo_complex_operators() -> None:
     show_blade("q_tilde (source phasors)", q_tilde)
 
     subsection("Forward application preserves complex structure")
-    P_tilde = L @ q_tilde
+    P_tilde = L * q_tilde
     print(f"  P_tilde.dtype = {P_tilde.data.dtype}")
     print(f"  P_tilde.shape = {P_tilde.shape}")
 
@@ -377,7 +377,7 @@ def demo_vector_operator() -> None:
     # Shape: (*out_geo, *out_coll, *in_coll, *in_geo) = (d, M, N, d)
     T_data = np.random.randn(d, M, N, d)
 
-    T = LinearOperator(
+    T = Operator(
         data=T_data,
         input_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
         output_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
@@ -389,7 +389,7 @@ def demo_vector_operator() -> None:
 
     subsection("Apply to vector collection")
     v = Blade(np.random.randn(N, d), grade=1, metric=euclidean(d))
-    w = T @ v
+    w = T * v
     print(f"  Input v: shape {v.shape}, grade {v.grade}")
     print(f"  Output w: shape {w.shape}, grade {w.grade}")
 

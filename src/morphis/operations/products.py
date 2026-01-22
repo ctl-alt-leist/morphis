@@ -519,7 +519,7 @@ def inverse(u: Blade | MultiVector) -> Blade | MultiVector:
 
 def geometric_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
     """
-    Geometric product of blade with multivector: u @ M
+    Geometric product of blade with multivector: u * M
 
     Distributes over components.
 
@@ -547,7 +547,7 @@ def geometric_bl_mv(u: Blade, M: MultiVector) -> MultiVector:
 
 def geometric_mv_bl(M: MultiVector, u: Blade) -> MultiVector:
     """
-    Geometric product of multivector with blade: M @ u
+    Geometric product of multivector with blade: M * u
 
     Distributes over components.
 

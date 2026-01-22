@@ -1,5 +1,5 @@
 """
-Linear Operators - LinearOperator Class
+Linear Operators - Operator Class
 
 Represents structured linear maps between spaces of geometric algebra objects.
 Maintains full tensor structure (no flattening) and supports forward application,
@@ -11,17 +11,17 @@ from typing import TYPE_CHECKING, Literal
 from numpy import asarray, einsum
 from numpy.typing import NDArray
 
+from morphis.algebra.patterns import adjoint_signature, forward_signature
+from morphis.algebra.specs import BladeSpec
 from morphis.elements import Blade
 from morphis.elements.metric import Metric
-from morphis.operations.linear.patterns import adjoint_signature, forward_signature
-from morphis.operations.linear.specs import BladeSpec
 
 
 if TYPE_CHECKING:
-    pass
+    from morphis.elements.frame import Frame
 
 
-class LinearOperator:
+class Operator:
     """
     Linear map between geometric algebra spaces.
 
@@ -46,15 +46,16 @@ class LinearOperator:
 
     Examples:
         >>> from morphis.elements import euclidean
+        >>> from morphis.algebra import BladeSpec
         >>> import numpy as np
         >>>
-        >>> # Create transfer operator G^{WX}_{Kn} for B = G @ I
+        >>> # Create transfer operator G^{WX}_{Kn} for B = G * I
         >>> # Maps scalar currents (N,) to bivector fields (M, 3, 3)
         >>> M, N, d = 10, 5, 3
         >>> G_data = np.random.randn(d, d, M, N)
         >>> G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2  # Antisymmetrize
         >>>
-        >>> G = LinearOperator(
+        >>> G = Operator(
         ...     data=G_data,
         ...     input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
         ...     output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
@@ -63,7 +64,7 @@ class LinearOperator:
         >>>
         >>> # Forward application
         >>> I = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
-        >>> B = G @ I  # or G.apply(I) or G(I)
+        >>> B = G * I  # or G.apply(I) or G(I)
     """
 
     __slots__ = ("data", "input_spec", "output_spec", "metric", "_forward_sig", "_adjoint_sig")
@@ -144,14 +145,14 @@ class LinearOperator:
         return self.data.shape
 
     @property
-    def input_collection_shape(self) -> tuple[int, ...]:
+    def input_collection(self) -> tuple[int, ...]:
         """Shape of input collection dimensions."""
         start = self.output_spec.grade + self.output_spec.collection_dims
         end = start + self.input_spec.collection_dims
         return self.data.shape[start:end]
 
     @property
-    def output_collection_shape(self) -> tuple[int, ...]:
+    def output_collection(self) -> tuple[int, ...]:
         """Shape of output collection dimensions."""
         start = self.output_spec.grade
         end = start + self.output_spec.collection_dims
@@ -160,12 +161,12 @@ class LinearOperator:
     @property
     def input_shape(self) -> tuple[int, ...]:
         """Expected shape of input blade data."""
-        return self.input_collection_shape + self.input_spec.geometric_shape
+        return self.input_collection + self.input_spec.geometric_shape
 
     @property
     def output_shape(self) -> tuple[int, ...]:
         """Expected shape of output blade data."""
-        return self.output_collection_shape + self.output_spec.geometric_shape
+        return self.output_collection + self.output_spec.geometric_shape
 
     @property
     def dim(self) -> int:
@@ -212,17 +213,111 @@ class LinearOperator:
         """Call syntax: L(x) equivalent to L.apply(x)."""
         return self.apply(x)
 
-    def __matmul__(self, other):
+    def apply_frame(self, f) -> "Frame":
         """
-        Matrix multiplication syntax.
+        Apply operator to each vector in a frame.
 
-        L @ x: Apply operator if x is a Blade
-        L @ M: Compose operators if M is a LinearOperator (not yet implemented)
+        Uses Frame._as_blade() pattern: treats frame vectors as a collection.
+
+        Requirements:
+        - Operator must map grade-1 to grade-1 (vectors to vectors)
+        - Collection dimensions must be compatible
+
+        Args:
+            f: Frame to transform
+
+        Returns:
+            New Frame with transformed vectors
+
+        Raises:
+            ValueError: If operator doesn't map vectors to vectors
         """
+        from morphis.elements.frame import Frame
+
+        if self.input_spec.grade != 1:
+            raise ValueError(f"Operator input grade {self.input_spec.grade} != 1, cannot apply to Frame")
+        if self.output_spec.grade != 1:
+            raise ValueError(f"Operator output grade {self.output_spec.grade} != 1, cannot apply to Frame")
+
+        # Use _as_blade() to treat frame as batch of vectors
+        blade = f._as_blade()  # collection = (*f.collection, span), grade=1
+        result_blade = self.apply(blade)  # May raise if shape mismatch
+
+        # Convert back to Frame
+        return Frame(data=result_blade.data, metric=self.metric)
+
+    def __mul__(self, other):
+        """
+        Multiplication operator for linear mapping.
+
+        L * scalar → Operator (scalar multiplication)
+        L * Blade → Blade (apply operator)
+        L * Frame → Frame (apply to each vector)
+        L * Operator → Operator (composition)
+        """
+        from morphis.elements.frame import Frame
+        from morphis.elements.multivector import MultiVector
+
+        # Scalar multiplication (numeric)
+        if isinstance(other, (int, float, complex)):
+            return Operator(
+                data=self.data * other,
+                input_spec=self.input_spec,
+                output_spec=self.output_spec,
+                metric=self.metric,
+            )
+
+        # Scalar multiplication (grade-0 Blade with no collection = single scalar)
+        # Distinguished from operator application where the blade has collection dims
+        if isinstance(other, Blade) and other.grade == 0 and other.collection == ():
+            return Operator(
+                data=self.data * other.data,
+                input_spec=self.input_spec,
+                output_spec=self.output_spec,
+                metric=self.metric,
+            )
+
+        # Apply to Blade (including grade-0 with collection dims)
         if isinstance(other, Blade):
             return self.apply(other)
-        elif isinstance(other, LinearOperator):
+
+        # Apply to Frame
+        if isinstance(other, Frame):
+            return self.apply_frame(other)
+
+        # Compose with Operator
+        if isinstance(other, Operator):
             return self.compose(other)
+
+        # MultiVector (outermorphism) not supported
+        if isinstance(other, MultiVector):
+            raise TypeError("Operator * MultiVector (outermorphism) not currently supported")
+
+        return NotImplemented
+
+    def __rmul__(self, other):
+        """
+        Reverse multiplication for scalar multiplication (commutative).
+
+        scalar * L → Operator
+        """
+        # Scalar multiplication (numeric, commutative)
+        if isinstance(other, (int, float, complex)):
+            return Operator(
+                data=other * self.data,
+                input_spec=self.input_spec,
+                output_spec=self.output_spec,
+                metric=self.metric,
+            )
+
+        # Scalar multiplication (grade-0 Blade, commutative)
+        if isinstance(other, Blade) and other.grade == 0:
+            return Operator(
+                data=other.data * self.data,
+                input_spec=self.input_spec,
+                output_spec=self.output_spec,
+                metric=self.metric,
+            )
 
         return NotImplemented
 
@@ -230,7 +325,7 @@ class LinearOperator:
     # Adjoint
     # =========================================================================
 
-    def adjoint(self) -> "LinearOperator":
+    def adjoint(self) -> "Operator":
         """
         Compute the adjoint (conjugate transpose) operator.
 
@@ -240,42 +335,57 @@ class LinearOperator:
         Returns:
             Adjoint operator with swapped input/output specs
         """
-        # Compute transpose permutation
-        # Original: (*out_geo, *out_coll, *in_coll, *in_geo)
-        # Adjoint:  (*in_geo, *in_coll, *out_coll, *out_geo)
-
-        out_geo_axes = list(range(self.output_spec.grade))
-        out_coll_start = self.output_spec.grade
-        out_coll_axes = list(range(out_coll_start, out_coll_start + self.output_spec.collection_dims))
-        in_coll_start = out_coll_start + self.output_spec.collection_dims
-        in_coll_axes = list(range(in_coll_start, in_coll_start + self.input_spec.collection_dims))
-        in_geo_start = in_coll_start + self.input_spec.collection_dims
-        in_geo_axes = list(range(in_geo_start, in_geo_start + self.input_spec.grade))
-
-        # New order for adjoint
-        perm = in_geo_axes + in_coll_axes + out_coll_axes + out_geo_axes
-
         # Transpose and conjugate
-        adjoint_data = self.data.transpose(perm)
+        adjoint_data = self._transposed_data()
         if self.data.dtype.kind == "c":
             adjoint_data = adjoint_data.conj()
 
-        return LinearOperator(
+        return Operator(
             data=adjoint_data,
             input_spec=self.output_spec,
             output_spec=self.input_spec,
             metric=self.metric,
         )
 
-    @property
-    def H(self) -> "LinearOperator":
-        """Conjugate transpose (alias for adjoint())."""
+    def adj(self) -> "Operator":
+        """Short form of adjoint()."""
         return self.adjoint()
 
     @property
-    def T(self) -> "LinearOperator":
-        """Transpose (real part of adjoint, no conjugation)."""
-        # Compute transpose permutation (same as adjoint)
+    def H(self) -> "Operator":
+        """Conjugate transpose (adjoint). Symbol form of adjoint()."""
+        return self.adjoint()
+
+    def transpose(self) -> "Operator":
+        """
+        Compute the transpose operator (no conjugation).
+
+        For real operators, transpose equals adjoint.
+        For complex operators, transpose differs from adjoint.
+
+        Returns:
+            Transposed operator with swapped input/output specs
+        """
+        return Operator(
+            data=self._transposed_data(),
+            input_spec=self.output_spec,
+            output_spec=self.input_spec,
+            metric=self.metric,
+        )
+
+    def trans(self) -> "Operator":
+        """Short form of transpose()."""
+        return self.transpose()
+
+    @property
+    def T(self) -> "Operator":
+        """Transpose. Symbol form of transpose()."""
+        return self.transpose()
+
+    def _transposed_data(self) -> NDArray:
+        """Compute transposed data (shared by adjoint and transpose)."""
+        # Original: (*out_geo, *out_coll, *in_coll, *in_geo)
+        # Transposed: (*in_geo, *in_coll, *out_coll, *out_geo)
         out_geo_axes = list(range(self.output_spec.grade))
         out_coll_start = self.output_spec.grade
         out_coll_axes = list(range(out_coll_start, out_coll_start + self.output_spec.collection_dims))
@@ -285,14 +395,7 @@ class LinearOperator:
         in_geo_axes = list(range(in_geo_start, in_geo_start + self.input_spec.grade))
 
         perm = in_geo_axes + in_coll_axes + out_coll_axes + out_geo_axes
-        transpose_data = self.data.transpose(perm)
-
-        return LinearOperator(
-            data=transpose_data,
-            input_spec=self.output_spec,
-            output_spec=self.input_spec,
-            metric=self.metric,
-        )
+        return self.data.transpose(perm)
 
     # =========================================================================
     # Inverse Operations
@@ -303,7 +406,7 @@ class LinearOperator:
         y: Blade,
         method: Literal["lstsq", "pinv"] = "lstsq",
         alpha: float = 0.0,
-        rcond: float | None = None,
+        r_cond: float | None = None,
     ) -> Blade:
         """
         Solve inverse problem: find x such that L(x) = y (approximately).
@@ -317,7 +420,7 @@ class LinearOperator:
                 - 'lstsq': Regularized least squares (default)
                 - 'pinv': Moore-Penrose pseudoinverse
             alpha: Tikhonov regularization parameter (lstsq only)
-            rcond: Cutoff for small singular values (pinv only)
+            r_cond: Cutoff for small singular values (pinv only)
 
         Returns:
             Solution blade x such that L(x) ≈ y
@@ -332,42 +435,46 @@ class LinearOperator:
         if y.grade != self.output_spec.grade:
             raise ValueError(f"Output grade {y.grade} doesn't match spec grade {self.output_spec.grade}")
 
-        from morphis.operations.linear.solvers import structured_lstsq, structured_pinv_solve
+        from morphis.algebra.solvers import structured_lstsq, structured_pinv_solve
 
         if method == "lstsq":
             return structured_lstsq(self, y, alpha=alpha)
         elif method == "pinv":
-            return structured_pinv_solve(self, y, rcond=rcond)
+            return structured_pinv_solve(self, y, r_cond=r_cond)
         else:
             raise ValueError(f"Unknown method: {method}. Use 'lstsq' or 'pinv'.")
 
-    def pinv(self, rcond: float | None = None) -> "LinearOperator":
+    def pseudoinverse(self, r_cond: float | None = None) -> "Operator":
         """
         Compute Moore-Penrose pseudoinverse operator.
 
         The pseudoinverse L^+ satisfies:
-            L @ L^+ @ L = L
-            L^+ @ L @ L^+ = L^+
+            L * L^+ * L = L
+            L^+ * L * L^+ = L^+
 
         Args:
-            rcond: Cutoff for small singular values. Singular values smaller
-                   than rcond * largest_singular_value are set to zero.
-                   If None, uses machine precision * max(M, N).
+            r_cond: Cutoff for small singular values. Singular values smaller
+                    than r_cond * largest_singular_value are set to zero.
+                    If None, uses machine precision * max(M, N).
 
         Returns:
             Pseudoinverse operator L^+
         """
-        from morphis.operations.linear.solvers import structured_pinv
+        from morphis.algebra.solvers import structured_pinv
 
-        return structured_pinv(self, rcond=rcond)
+        return structured_pinv(self, r_cond=r_cond)
+
+    def pinv(self, r_cond: float | None = None) -> "Operator":
+        """Short form of pseudoinverse()."""
+        return self.pseudoinverse(r_cond=r_cond)
 
     # =========================================================================
     # SVD Decomposition
     # =========================================================================
 
-    def svd(self) -> tuple["LinearOperator", NDArray, "LinearOperator"]:
+    def svd(self) -> tuple["Operator", NDArray, "Operator"]:
         """
-        Singular value decomposition: L = U @ diag(S) @ Vt
+        Singular value decomposition: L = U * diag(S) * Vt
 
         Decomposes the operator into:
             - U: Left singular operator mapping reduced space to output space
@@ -375,15 +482,15 @@ class LinearOperator:
             - Vt: Right singular operator mapping input space to reduced space
 
         The decomposition satisfies:
-            L @ x = U @ (S * (Vt @ x))
+            L * x = U * (S * (Vt * x))
 
         Returns:
             Tuple (U, S, Vt) where:
-            - U is LinearOperator: (r,) -> output_shape
+            - U is Operator: (r,) -> output_shape
             - S is 1D array of singular values
-            - Vt is LinearOperator: input_shape -> (r,)
+            - Vt is Operator: input_shape -> (r,)
         """
-        from morphis.operations.linear.solvers import structured_svd
+        from morphis.algebra.solvers import structured_svd
 
         return structured_svd(self)
 
@@ -391,7 +498,7 @@ class LinearOperator:
     # Operator Algebra
     # =========================================================================
 
-    def compose(self, other: "LinearOperator") -> "LinearOperator":
+    def compose(self, other: "Operator") -> "Operator":
         """
         Compose operators: (L o M)(x) = L(M(x))
 
@@ -410,10 +517,10 @@ class LinearOperator:
                 f"Cannot compose: L.input_spec {self.input_spec} doesn't match M.output_spec {other.output_spec}"
             )
 
-        if self.input_collection_shape != other.output_collection_shape:
+        if self.input_collection != other.output_collection:
             raise ValueError(
-                f"Cannot compose: L.input_collection_shape {self.input_collection_shape} "
-                f"doesn't match M.output_collection_shape {other.output_collection_shape}"
+                f"Cannot compose: L.input_collection {self.input_collection} "
+                f"doesn't match M.output_collection {other.output_collection}"
             )
 
         # For composition, we need to contract L with M
@@ -423,7 +530,7 @@ class LinearOperator:
 
         # This is complex to implement generally with einsum
         # For now, use a matrix-based approach
-        from morphis.operations.linear.solvers import _from_matrix, _to_matrix
+        from morphis.algebra.solvers import _from_matrix, _to_matrix
 
         L_mat = _to_matrix(self)
         M_mat = _to_matrix(other)
@@ -433,8 +540,8 @@ class LinearOperator:
             composed_mat,
             input_spec=other.input_spec,
             output_spec=self.output_spec,
-            input_collection_shape=other.input_collection_shape,
-            output_collection_shape=self.output_collection_shape,
+            input_collection=other.input_collection,
+            output_collection=self.output_collection,
             metric=self.metric,
         )
 
@@ -444,7 +551,7 @@ class LinearOperator:
 
     def __repr__(self) -> str:
         return (
-            f"LinearOperator(\n"
+            f"Operator(\n"
             f"  shape={self.shape},\n"
             f"  input_spec={self.input_spec},\n"
             f"  output_spec={self.output_spec},\n"

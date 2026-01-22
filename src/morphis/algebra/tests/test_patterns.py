@@ -2,16 +2,16 @@
 
 import pytest
 
-from morphis.operations.linear.patterns import (
+from morphis.algebra import (
     INPUT_COLLECTION,
     INPUT_GEOMETRIC,
     OUTPUT_COLLECTION,
     OUTPUT_GEOMETRIC,
+    BladeSpec,
     adjoint_signature,
     forward_signature,
     operator_shape,
 )
-from morphis.operations.linear.specs import BladeSpec
 
 
 class TestForwardSignature:
@@ -151,8 +151,8 @@ class TestOperatorShape:
         shape = operator_shape(
             input_spec,
             output_spec,
-            input_collection_shape=(5,),
-            output_collection_shape=(10,),
+            input_collection=(5,),
+            output_collection=(10,),
         )
 
         # Shape: (*out_geo, *out_coll, *in_coll, *in_geo)
@@ -167,37 +167,37 @@ class TestOperatorShape:
         shape = operator_shape(
             input_spec,
             output_spec,
-            input_collection_shape=(5,),
-            output_collection_shape=(10,),
+            input_collection=(5,),
+            output_collection=(10,),
         )
 
         # Shape: (3, 10, 5, 3)
         assert shape == (3, 10, 5, 3)
 
-    def test_wrong_input_collection_shape_raises(self):
+    def test_wrong_input_collection_raises(self):
         """Test that wrong input collection shape raises."""
         input_spec = BladeSpec(grade=0, collection_dims=1, dim=3)
         output_spec = BladeSpec(grade=2, collection_dims=1, dim=3)
 
-        with pytest.raises(ValueError, match="input_collection_shape has 2 dims"):
+        with pytest.raises(ValueError, match="input_collection has 2 dims"):
             operator_shape(
                 input_spec,
                 output_spec,
-                input_collection_shape=(5, 3),  # Wrong: should be 1 dim
-                output_collection_shape=(10,),
+                input_collection=(5, 3),  # Wrong: should be 1 dim
+                output_collection=(10,),
             )
 
-    def test_wrong_output_collection_shape_raises(self):
+    def test_wrong_output_collection_raises(self):
         """Test that wrong output collection shape raises."""
         input_spec = BladeSpec(grade=0, collection_dims=1, dim=3)
         output_spec = BladeSpec(grade=2, collection_dims=1, dim=3)
 
-        with pytest.raises(ValueError, match="output_collection_shape has 0 dims"):
+        with pytest.raises(ValueError, match="output_collection has 0 dims"):
             operator_shape(
                 input_spec,
                 output_spec,
-                input_collection_shape=(5,),
-                output_collection_shape=(),  # Wrong: should be 1 dim
+                input_collection=(5,),
+                output_collection=(),  # Wrong: should be 1 dim
             )
 
 

@@ -165,17 +165,52 @@ class MultiVector(CompositeElement):
             collection=collection,
         )
 
-    def __mul__(self, scalar) -> MultiVector:
-        """Scalar multiplication."""
-        return MultiVector(
-            data={k: blade * scalar for k, blade in self.data.items()},
-            metric=self.metric,
-            collection=self.collection,
-        )
+    def __mul__(self, other) -> MultiVector:
+        """Multiplication: scalar or geometric product.
 
-    def __rmul__(self, scalar) -> MultiVector:
-        """Scalar multiplication (reversed)."""
-        return self.__mul__(scalar)
+        - Scalar: returns MultiVector with scaled components
+        - Blade/MultiVector: returns geometric product
+        """
+        from morphis.elements.blade import Blade
+        from morphis.elements.operator import Operator
+
+        if isinstance(other, Blade):
+            from morphis.operations.products import geometric_mv_bl
+
+            return geometric_mv_bl(self, other)
+        elif isinstance(other, MultiVector):
+            from morphis.operations.products import geometric
+
+            return geometric(self, other)
+        elif isinstance(other, Operator):
+            raise TypeError("MultiVector * Operator not currently supported")
+        else:
+            # Scalar multiplication
+            return MultiVector(
+                data={k: blade * other for k, blade in self.data.items()},
+                metric=self.metric,
+                collection=self.collection,
+            )
+
+    def __rmul__(self, other) -> MultiVector:
+        """Right multiplication: scalar or geometric product."""
+        from morphis.elements.blade import Blade
+
+        if isinstance(other, Blade):
+            from morphis.operations.products import geometric_bl_mv
+
+            return geometric_bl_mv(other, self)
+        elif isinstance(other, MultiVector):
+            from morphis.operations.products import geometric
+
+            return geometric(other, self)
+        else:
+            # Scalar multiplication (commutative)
+            return MultiVector(
+                data={k: blade * other for k, blade in self.data.items()},
+                metric=self.metric,
+                collection=self.collection,
+            )
 
     def __neg__(self) -> MultiVector:
         """Negation."""
@@ -198,6 +233,7 @@ class MultiVector(CompositeElement):
         Returns MultiVector.
         """
         from morphis.elements.blade import Blade
+        from morphis.elements.frame import Frame
 
         if isinstance(other, Blade):
             from morphis.operations.products import wedge_mv_bl
@@ -207,6 +243,8 @@ class MultiVector(CompositeElement):
             from morphis.operations.products import wedge_mv_mv
 
             return wedge_mv_mv(self, other)
+        elif isinstance(other, Frame):
+            raise TypeError("Wedge product MultiVector ^ Frame not currently supported")
 
         return NotImplemented
 
@@ -262,61 +300,52 @@ class MultiVector(CompositeElement):
 
         return NotImplemented
 
-    def __matmul__(self, other: Blade | MultiVector) -> MultiVector:
+    def reverse(self) -> MultiVector:
         """
-        Geometric product: M @ v
-
-        Computes the full geometric product.
-        For transformations (sandwich products): rotated = M @ b @ ~M
-
-        Returns MultiVector.
-        """
-        from morphis.elements.blade import Blade
-
-        if isinstance(other, (Blade, MultiVector)):
-            from morphis.operations.products import geometric
-
-            return geometric(self, other)
-
-        return NotImplemented
-
-    def __rmatmul__(self, other: Blade | MultiVector) -> MultiVector:
-        """
-        Geometric product (reversed): v @ M (when v doesn't have __matmul__)
-
-        Returns MultiVector.
-        """
-        from morphis.elements.blade import Blade
-
-        if isinstance(other, (Blade, MultiVector)):
-            from morphis.operations.products import geometric
-
-            return geometric(other, self)
-
-        return NotImplemented
-
-    def __invert__(self) -> MultiVector:
-        """
-        Reverse operator: ~M
+        Reverse operator.
 
         Reverses each component blade.
+
+        Returns:
+            Reversed multivector
         """
         from morphis.operations.products import reverse
 
         return reverse(self)
+
+    def rev(self) -> MultiVector:
+        """Short form of reverse()."""
+        return self.reverse()
+
+    def __invert__(self) -> MultiVector:
+        """Reverse operator: ~M. Symbol form of reverse()."""
+        return self.reverse()
+
+    def inverse(self) -> MultiVector:
+        """
+        Multiplicative inverse.
+
+        Returns:
+            Inverse multivector such that M * M.inverse() = 1
+        """
+        from morphis.operations.products import inverse
+
+        return inverse(self)
+
+    def inv(self) -> MultiVector:
+        """Short form of inverse()."""
+        return self.inverse()
 
     def __pow__(self, exponent: int) -> MultiVector:
         """
         Power operation for multivectors.
 
         Currently supports:
-            mv**(-1) - multiplicative inverse
+            mv**(-1) - multiplicative inverse (symbol form of inverse())
             mv**(1)  - identity (returns self)
         """
         if exponent == -1:
-            from morphis.operations.products import inverse
-
-            return inverse(self)
+            return self.inverse()
         elif exponent == 1:
             return self
         else:

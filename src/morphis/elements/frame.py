@@ -168,43 +168,72 @@ class Frame(GradedElement):
             collection=self.collection + (self.span,),
         )
 
-    def __matmul__(self, other: Blade | MultiVector) -> MultiVector:
+    def __mul__(self, other) -> MultiVector | Frame:
         """
-        Geometric product: F @ M
+        Multiplication: F * x
 
-        Treats frame as batch of vectors and applies geometric product.
-        Result is MultiVector with collection (*self.collection, span).
+        - F * scalar → Frame (scalar multiplication)
+        - F * Blade/MultiVector → MultiVector (geometric product)
 
-        For sandwich products: (M @ F @ ~M)[1] gives transformed vectors.
+        For sandwich products: (M * F * ~M)[1] gives transformed vectors.
         """
         from morphis.elements.blade import Blade
         from morphis.elements.multivector import MultiVector
+        from morphis.elements.operator import Operator
 
+        # Scalar multiplication (numeric)
+        if isinstance(other, (int, float, complex)):
+            return Frame(data=self.data * other, metric=self.metric)
+
+        # Scalar multiplication (grade-0 Blade)
+        if isinstance(other, Blade) and other.grade == 0:
+            return Frame(data=self.data * other.data, metric=self.metric)
+
+        # Geometric product with Blade/MultiVector
         if isinstance(other, (Blade, MultiVector)):
             from morphis.operations.products import geometric
 
             return geometric(self._as_blade(), other)
 
+        # Operator on right side not supported
+        if isinstance(other, Operator):
+            raise TypeError("Frame * Operator not currently supported (use L * f)")
+
         return NotImplemented
 
-    def __rmatmul__(self, other: Blade | MultiVector) -> MultiVector:
+    def __rmul__(self, other) -> MultiVector | Frame:
         """
-        Geometric product (reversed): M @ F
+        Reverse multiplication: x * F
 
-        Treats frame as batch of vectors and applies geometric product.
-        Result is MultiVector with collection (*self.collection, span).
-
-        For sandwich products: (M @ F @ ~M)[1] gives transformed vectors.
+        - scalar * F → Frame (scalar multiplication, commutative)
+        - Blade/MultiVector * F → MultiVector (geometric product)
         """
         from morphis.elements.blade import Blade
         from morphis.elements.multivector import MultiVector
 
+        # Scalar multiplication (numeric, commutative)
+        if isinstance(other, (int, float, complex)):
+            return Frame(data=other * self.data, metric=self.metric)
+
+        # Scalar multiplication (grade-0 Blade, commutative)
+        if isinstance(other, Blade) and other.grade == 0:
+            return Frame(data=other.data * self.data, metric=self.metric)
+
+        # Geometric product with Blade/MultiVector
         if isinstance(other, (Blade, MultiVector)):
             from morphis.operations.products import geometric
 
             return geometric(other, self._as_blade())
 
         return NotImplemented
+
+    def __xor__(self, other):
+        """Wedge product: F ^ x (not currently supported)."""
+        raise TypeError(f"Wedge product Frame ^ {type(other).__name__} not currently supported")
+
+    def __rxor__(self, other):
+        """Wedge product (reversed): x ^ F (not currently supported)."""
+        raise TypeError(f"Wedge product {type(other).__name__} ^ Frame not currently supported")
 
     def __invert__(self) -> Frame:
         """
@@ -222,7 +251,7 @@ class Frame(GradedElement):
         """
         Transform this frame by a motor/versor via sandwich product.
 
-        Computes M @ F @ ~M, extracting grade-1 components.
+        Computes M * F * ~M, extracting grade-1 components.
 
         Args:
             M: MultiVector (motor/versor) to transform by
@@ -230,7 +259,7 @@ class Frame(GradedElement):
         Returns:
             New Frame with transformed vectors
         """
-        result = (M @ self @ ~M)[1]
+        result = (M * self * ~M)[1]
         return Frame(data=result.data.copy(), metric=self.metric)
 
     def transform_inplace(self, M: MultiVector) -> None:
@@ -240,7 +269,7 @@ class Frame(GradedElement):
         Args:
             M: MultiVector (motor/versor) to transform by
         """
-        self.data[...] = (M @ self @ ~M)[1].data
+        self.data[...] = (M * self * ~M)[1].data
 
     # =========================================================================
     # Conversion Methods

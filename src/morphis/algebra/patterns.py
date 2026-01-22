@@ -1,5 +1,5 @@
 """
-Linear Operators - Einsum Pattern Generation
+Linear Algebra - Einsum Pattern Generation
 
 Generates einsum signatures for linear operator operations. Uses disjoint index
 pools to avoid collisions between input and output indices.
@@ -16,7 +16,7 @@ Blade storage convention: (*collection, *geometric)
 
 from functools import lru_cache
 
-from morphis.operations.linear.specs import BladeSpec
+from morphis.algebra.specs import BladeSpec
 
 
 # Index pools (disjoint to avoid collisions)
@@ -29,7 +29,7 @@ INPUT_GEOMETRIC = "abcd"
 @lru_cache(maxsize=128)
 def forward_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     """
-    Generate einsum signature for forward operator application: y = L @ x
+    Generate einsum signature for forward operator application: y = L * x
 
     Operator data has shape: (*output_geometric, *output_collection, *input_collection, *input_geometric)
     Input blade has shape: (*input_collection, *input_geometric)
@@ -88,7 +88,7 @@ def forward_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
 @lru_cache(maxsize=128)
 def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     """
-    Generate einsum signature for adjoint operator application: x = L^H @ y
+    Generate einsum signature for adjoint operator application: x = L^H * y
 
     The adjoint contracts over output indices (what were previously the result).
 
@@ -131,8 +131,8 @@ def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
 def operator_shape(
     input_spec: BladeSpec,
     output_spec: BladeSpec,
-    input_collection_shape: tuple[int, ...],
-    output_collection_shape: tuple[int, ...],
+    input_collection: tuple[int, ...],
+    output_collection: tuple[int, ...],
 ) -> tuple[int, ...]:
     """
     Compute the expected shape of operator data given specs and collection shapes.
@@ -140,8 +140,8 @@ def operator_shape(
     Args:
         input_spec: Specification of input blade
         output_spec: Specification of output blade
-        input_collection_shape: Shape of input collection dimensions
-        output_collection_shape: Shape of output collection dimensions
+        input_collection: Shape of input collection dimensions
+        output_collection: Shape of output collection dimensions
 
     Returns:
         Operator data shape: (*output_geometric, *output_collection, *input_collection, *input_geometric)
@@ -151,24 +151,23 @@ def operator_shape(
         >>> shape = operator_shape(
         ...     BladeSpec(grade=0, collection_dims=1, dim=3),
         ...     BladeSpec(grade=2, collection_dims=1, dim=3),
-        ...     input_collection_shape=(5,),
-        ...     output_collection_shape=(10,),
+        ...     input_collection=(5,),
+        ...     output_collection=(10,),
         ... )
         >>> shape
         (3, 3, 10, 5)
     """
-    if len(input_collection_shape) != input_spec.collection_dims:
+    if len(input_collection) != input_spec.collection_dims:
         raise ValueError(
-            f"input_collection_shape has {len(input_collection_shape)} dims, "
-            f"but input_spec expects {input_spec.collection_dims}"
+            f"input_collection has {len(input_collection)} dims, but input_spec expects {input_spec.collection_dims}"
         )
-    if len(output_collection_shape) != output_spec.collection_dims:
+    if len(output_collection) != output_spec.collection_dims:
         raise ValueError(
-            f"output_collection_shape has {len(output_collection_shape)} dims, "
+            f"output_collection has {len(output_collection)} dims, "
             f"but output_spec expects {output_spec.collection_dims}"
         )
 
-    return output_spec.geometric_shape + output_collection_shape + input_collection_shape + input_spec.geometric_shape
+    return output_spec.geometric_shape + output_collection + input_collection + input_spec.geometric_shape
 
 
 def _validate_spec_limits(input_spec: BladeSpec, output_spec: BladeSpec) -> None:

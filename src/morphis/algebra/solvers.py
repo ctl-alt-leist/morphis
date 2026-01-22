@@ -1,9 +1,9 @@
 """
-Linear Operators - Structured Linear Algebra Solvers
+Linear Algebra - Structured Linear Algebra Solvers
 
 Implements SVD, least squares, and pseudoinverse operations while maintaining
 geometric structure where possible. Uses matrix forms internally but reconstructs
-structured LinearOperators for the results.
+structured Operators for the results.
 """
 
 from typing import TYPE_CHECKING
@@ -13,12 +13,12 @@ from numpy import prod
 from numpy.linalg import lstsq, svd
 from numpy.typing import NDArray
 
+from morphis.algebra.specs import BladeSpec
 from morphis.elements import Blade
-from morphis.operations.linear.specs import BladeSpec
 
 
 if TYPE_CHECKING:
-    from morphis.operations.linear.operator import LinearOperator
+    from morphis.elements.operator import Operator
 
 
 # =============================================================================
@@ -26,14 +26,14 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-def _to_matrix(op: "LinearOperator") -> NDArray:
+def _to_matrix(op: "Operator") -> NDArray:
     """
     Flatten operator to matrix form for linear algebra operations.
 
     Reshapes from (*out_geo, *out_coll, *in_coll, *in_geo) to (out_flat, in_flat).
 
     Args:
-        op: LinearOperator to flatten
+        op: Operator to flatten
 
     Returns:
         2D matrix with shape (out_flat, in_flat)
@@ -66,30 +66,28 @@ def _from_matrix(
     matrix: NDArray,
     input_spec: BladeSpec,
     output_spec: BladeSpec,
-    input_collection_shape: tuple[int, ...],
-    output_collection_shape: tuple[int, ...],
+    input_collection: tuple[int, ...],
+    output_collection: tuple[int, ...],
     metric,
-) -> "LinearOperator":
+) -> "Operator":
     """
-    Reconstruct LinearOperator from matrix form.
+    Reconstruct Operator from matrix form.
 
     Args:
         matrix: 2D matrix with shape (out_flat, in_flat)
         input_spec: Specification for input blade
         output_spec: Specification for output blade
-        input_collection_shape: Shape of input collection dims
-        output_collection_shape: Shape of output collection dims
+        input_collection: Shape of input collection dims
+        output_collection: Shape of output collection dims
         metric: Metric for the operator
 
     Returns:
-        LinearOperator with proper tensor structure
+        Operator with proper tensor structure
     """
-    from morphis.operations.linear.operator import LinearOperator
+    from morphis.elements.operator import Operator
 
     # Reshape from (out_flat, in_flat) to (*out_coll, *out_geo, *in_coll, *in_geo)
-    intermediate_shape = (
-        output_collection_shape + output_spec.geometric_shape + input_collection_shape + input_spec.geometric_shape
-    )
+    intermediate_shape = output_collection + output_spec.geometric_shape + input_collection + input_spec.geometric_shape
     tensor = matrix.reshape(intermediate_shape)
 
     # Reorder from (*out_coll, *out_geo, *in_coll, *in_geo)
@@ -106,7 +104,7 @@ def _from_matrix(
     perm = out_geo_axes + out_coll_axes + in_coll_axes + in_geo_axes
     data = tensor.transpose(perm)
 
-    return LinearOperator(
+    return Operator(
         data=data,
         input_spec=input_spec,
         output_spec=output_spec,
@@ -120,7 +118,7 @@ def _from_matrix(
 
 
 def structured_lstsq(
-    op: "LinearOperator",
+    op: "Operator",
     target: Blade,
     alpha: float = 0.0,
 ) -> Blade:
@@ -170,9 +168,9 @@ def structured_lstsq(
 
 
 def structured_pinv_solve(
-    op: "LinearOperator",
+    op: "Operator",
     target: Blade,
-    rcond: float | None = None,
+    r_cond: float | None = None,
 ) -> Blade:
     """
     Solve using Moore-Penrose pseudoinverse.
@@ -180,32 +178,32 @@ def structured_pinv_solve(
     Args:
         op: Linear operator L
         target: Target blade y
-        rcond: Cutoff for small singular values
+        r_cond: Cutoff for small singular values
 
     Returns:
         Solution blade x = L^+ y
     """
     # Compute pseudoinverse operator
-    pinv_op = structured_pinv(op, rcond=rcond)
+    pinv_op = structured_pinv(op, r_cond=r_cond)
 
     # Apply pseudoinverse
     return pinv_op.apply(target)
 
 
 def structured_pinv(
-    op: "LinearOperator",
-    rcond: float | None = None,
-) -> "LinearOperator":
+    op: "Operator",
+    r_cond: float | None = None,
+) -> "Operator":
     """
     Compute Moore-Penrose pseudoinverse operator.
 
     The pseudoinverse L^+ satisfies:
-        L @ L^+ @ L = L
-        L^+ @ L @ L^+ = L^+
+        L * L^+ * L = L
+        L^+ * L * L^+ = L^+
 
     Args:
         op: Linear operator L
-        rcond: Cutoff for small singular values. If None, uses machine precision.
+        r_cond: Cutoff for small singular values. If None, uses machine precision.
 
     Returns:
         Pseudoinverse operator L^+ with swapped input/output specs
@@ -214,18 +212,18 @@ def structured_pinv(
     G_matrix = _to_matrix(op)
 
     # Compute pseudoinverse
-    if rcond is None:
+    if r_cond is None:
         G_pinv = np.linalg.pinv(G_matrix)
     else:
-        G_pinv = np.linalg.pinv(G_matrix, rcond=rcond)
+        G_pinv = np.linalg.pinv(G_matrix, rcond=r_cond)
 
-    # Reconstruct as LinearOperator with swapped specs
+    # Reconstruct as Operator with swapped specs
     return _from_matrix(
         G_pinv,
         input_spec=op.output_spec,
         output_spec=op.input_spec,
-        input_collection_shape=op.output_collection_shape,
-        output_collection_shape=op.input_collection_shape,
+        input_collection=op.output_collection,
+        output_collection=op.input_collection,
         metric=op.metric,
     )
 
@@ -236,12 +234,12 @@ def structured_pinv(
 
 
 def structured_svd(
-    op: "LinearOperator",
-) -> tuple["LinearOperator", NDArray, "LinearOperator"]:
+    op: "Operator",
+) -> tuple["Operator", NDArray, "Operator"]:
     """
-    Structured singular value decomposition: L = U @ diag(S) @ Vt
+    Structured singular value decomposition: L = U * diag(S) * Vt
 
-    Decomposes the operator while wrapping U and Vt as LinearOperators
+    Decomposes the operator while wrapping U and Vt as Operators
     that map to/from the reduced space.
 
     Args:
@@ -249,11 +247,11 @@ def structured_svd(
 
     Returns:
         Tuple (U, S, Vt) where:
-        - U: LinearOperator mapping (r,) -> output_shape
+        - U: Operator mapping (r,) -> output_shape
         - S: 1D array of singular values (sorted descending)
-        - Vt: LinearOperator mapping input_shape -> (r,)
+        - Vt: Operator mapping input_shape -> (r,)
     """
-    from morphis.operations.linear.operator import LinearOperator
+    from morphis.elements.operator import Operator
 
     # Convert to matrix
     G_matrix = _to_matrix(op)
@@ -273,11 +271,11 @@ def structured_svd(
     # Vt maps from input space to reduced space (r,)
     vt_output_spec = BladeSpec(grade=0, collection_dims=1, dim=dim)
 
-    # Wrap U as LinearOperator
+    # Wrap U as Operator
     # U_mat has shape (out_flat, r)
     # Need to reshape to (*out_coll, *out_geo, r)
     # Then reorder to (*out_geo, *out_coll, r)
-    U_intermediate = U_mat.reshape(op.output_collection_shape + op.output_spec.geometric_shape + (r,))
+    U_intermediate = U_mat.reshape(op.output_collection + op.output_spec.geometric_shape + (r,))
 
     out_coll_axes = list(range(op.output_spec.collection_dims))
     out_geo_start = op.output_spec.collection_dims
@@ -288,17 +286,17 @@ def structured_svd(
     U_perm = out_geo_axes + out_coll_axes + r_axis
     U_data = U_intermediate.transpose(U_perm)
 
-    U_op = LinearOperator(
+    U_op = Operator(
         data=U_data,
         input_spec=u_input_spec,
         output_spec=op.output_spec,
         metric=op.metric,
     )
 
-    # Wrap Vt as LinearOperator
+    # Wrap Vt as Operator
     # Vt_mat has shape (r, in_flat)
     # Need to reshape to (r, *in_coll, *in_geo)
-    Vt_intermediate = Vt_mat.reshape((r,) + op.input_collection_shape + op.input_spec.geometric_shape)
+    Vt_intermediate = Vt_mat.reshape((r,) + op.input_collection + op.input_spec.geometric_shape)
 
     # Current order: (r, *in_coll, *in_geo)
     # Target order for operator data: (*out_geo, *out_coll, *in_coll, *in_geo)
@@ -306,7 +304,7 @@ def structured_svd(
     # So target: (r, *in_coll, *in_geo) which is already correct!
     Vt_data = Vt_intermediate
 
-    Vt_op = LinearOperator(
+    Vt_op = Operator(
         data=Vt_data,
         input_spec=op.input_spec,
         output_spec=vt_output_spec,

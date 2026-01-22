@@ -469,3 +469,361 @@ class TestPowerOperatorMultiVector:
 
         with pytest.raises(NotImplementedError):
             _ = M**2
+
+
+# =============================================================================
+# Scalar Multiplication Tests
+# =============================================================================
+
+
+class TestFrameScalarMultiplication:
+    """Test scalar multiplication for Frame."""
+
+    def test_scalar_times_frame(self):
+        """Test s * f returns scaled Frame."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+
+        result = 2.0 * f
+        assert isinstance(result, Frame)
+        assert np.allclose(result.data, [[2, 0, 0], [0, 2, 0]])
+
+    def test_frame_times_scalar(self):
+        """Test f * s returns scaled Frame."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+
+        result = f * 3.0
+        assert isinstance(result, Frame)
+        assert np.allclose(result.data, [[3, 0, 0], [0, 3, 0]])
+
+    def test_scalar_blade_times_frame(self):
+        """Test grade-0 Blade * Frame returns scaled Frame."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+        s = Blade(2.5, grade=0, metric=m)
+
+        result = s * f
+        assert isinstance(result, Frame)
+        assert np.allclose(result.data, [[2.5, 0, 0], [0, 2.5, 0]])
+
+    def test_frame_times_scalar_blade(self):
+        """Test Frame * grade-0 Blade returns scaled Frame."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+        s = Blade(0.5, grade=0, metric=m)
+
+        result = f * s
+        assert isinstance(result, Frame)
+        assert np.allclose(result.data, [[0.5, 0, 0], [0, 0.5, 0]])
+
+    def test_complex_scalar_times_frame(self):
+        """Test complex scalar multiplication."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+
+        result = (1 + 1j) * f
+        assert isinstance(result, Frame)
+        assert np.allclose(result.data, [[(1 + 1j), 0, 0], [0, (1 + 1j), 0]])
+
+
+class TestOperatorScalarMultiplication:
+    """Test scalar multiplication for Operator."""
+
+    def test_scalar_times_operator(self):
+        """Test s * L returns scaled Operator."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Operator
+
+        m = euclidean(3)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        result = 2.0 * op
+        assert isinstance(result, Operator)
+        assert np.allclose(result.data, 2.0 * G_data)
+        assert result.input_spec == op.input_spec
+        assert result.output_spec == op.output_spec
+
+    def test_operator_times_scalar(self):
+        """Test L * s returns scaled Operator."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Operator
+
+        m = euclidean(3)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        result = op * 3.0
+        assert isinstance(result, Operator)
+        assert np.allclose(result.data, 3.0 * G_data)
+
+    def test_scalar_blade_times_operator(self):
+        """Test grade-0 Blade * Operator returns scaled Operator."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Operator
+
+        m = euclidean(3)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+        s = Blade(2.5, grade=0, metric=m)
+
+        result = s * op
+        assert isinstance(result, Operator)
+        assert np.allclose(result.data, 2.5 * G_data)
+
+    def test_operator_times_scalar_blade(self):
+        """Test Operator * grade-0 Blade returns scaled Operator."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Operator
+
+        m = euclidean(3)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+        s = Blade(0.5, grade=0, metric=m)
+
+        result = op * s
+        assert isinstance(result, Operator)
+        assert np.allclose(result.data, 0.5 * G_data)
+
+
+# =============================================================================
+# Operator Apply to Frame Tests
+# =============================================================================
+
+
+class TestOperatorApplyFrame:
+    """Test Operator * Frame application."""
+
+    def test_operator_apply_frame(self):
+        """Test L * f for vector→vector operator."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Frame, Operator
+
+        m = euclidean(3)
+        span = 2
+
+        # Create vector→vector operator with matching span
+        G_data = np.random.randn(3, 10, span, 3)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=1, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=1, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+        result = op * f
+
+        assert isinstance(result, Frame)
+        assert result.shape == (10, 3)
+
+    def test_operator_wrong_input_grade_raises(self):
+        """Test L * f raises if L input grade != 1."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Frame, Operator
+
+        m = euclidean(3)
+        # Scalar→bivector operator (grade 0 input)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+
+        with pytest.raises(ValueError, match="input grade"):
+            _ = op * f
+
+    def test_operator_wrong_output_grade_raises(self):
+        """Test L * f raises if L output grade != 1."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Frame, Operator
+
+        m = euclidean(3)
+        # Vector→bivector operator (grade 2 output)
+        G_data = np.random.randn(3, 3, 10, 2, 3)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=1, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+
+        with pytest.raises(ValueError, match="output grade"):
+            _ = op * f
+
+
+# =============================================================================
+# Not Currently Supported Error Tests
+# =============================================================================
+
+
+class TestNotCurrentlySupported:
+    """Test that unsupported operations raise clear error messages."""
+
+    def test_blade_times_operator_raises(self):
+        """Test b * L raises TypeError with helpful message."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Operator
+
+        m = euclidean(3)
+        v = Blade([1, 0, 0], grade=1, metric=m)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        with pytest.raises(TypeError, match="Blade \\* Operator not currently supported"):
+            _ = v * op
+
+    def test_multivector_times_operator_raises(self):
+        """Test M * L raises TypeError."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Operator
+
+        m = euclidean(3)
+        v = Blade([1, 0, 0], grade=1, metric=m)
+        M = multivector_from_blades(v)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        with pytest.raises(TypeError, match="MultiVector \\* Operator not currently supported"):
+            _ = M * op
+
+    def test_frame_times_operator_raises(self):
+        """Test f * L raises TypeError with helpful message."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Frame, Operator
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        with pytest.raises(TypeError, match="Frame \\* Operator not currently supported"):
+            _ = f * op
+
+    def test_operator_times_multivector_raises(self):
+        """Test L * M raises TypeError (outermorphism not supported)."""
+        from morphis.algebra import BladeSpec
+        from morphis.elements import Operator
+
+        m = euclidean(3)
+        v = Blade([1, 0, 0], grade=1, metric=m)
+        M = multivector_from_blades(v)
+        G_data = np.random.randn(3, 3, 10, 5)
+        op = Operator(
+            data=G_data,
+            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            metric=m,
+        )
+
+        with pytest.raises(TypeError, match="Operator \\* MultiVector.*not currently supported"):
+            _ = op * M
+
+    def test_blade_wedge_frame_raises(self):
+        """Test b ^ f raises TypeError."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        v = Blade([1, 0, 0], grade=1, metric=m)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+
+        with pytest.raises(TypeError, match="Wedge product Blade \\^ Frame not currently supported"):
+            _ = v ^ f
+
+    def test_frame_wedge_blade_raises(self):
+        """Test f ^ b raises TypeError."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+        v = Blade([0, 0, 1], grade=1, metric=m)
+
+        with pytest.raises(TypeError, match="Wedge product Frame \\^ Blade not currently supported"):
+            _ = f ^ v
+
+    def test_frame_wedge_frame_raises(self):
+        """Test f ^ f raises TypeError."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f1 = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+        f2 = Frame([[0, 0, 1]], metric=m)
+
+        with pytest.raises(TypeError, match="Wedge product Frame \\^ Frame not currently supported"):
+            _ = f1 ^ f2
+
+    def test_frame_wedge_multivector_raises(self):
+        """Test f ^ M raises TypeError."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        f = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
+        v = Blade([0, 0, 1], grade=1, metric=m)
+        M = multivector_from_blades(v)
+
+        with pytest.raises(TypeError, match="Wedge product Frame \\^ MultiVector not currently supported"):
+            _ = f ^ M
+
+    def test_multivector_wedge_frame_raises(self):
+        """Test M ^ f raises TypeError."""
+        from morphis.elements import Frame
+
+        m = euclidean(3)
+        v = Blade([1, 0, 0], grade=1, metric=m)
+        M = multivector_from_blades(v)
+        f = Frame([[0, 1, 0], [0, 0, 1]], metric=m)
+
+        with pytest.raises(TypeError, match="Wedge product MultiVector \\^ Frame not currently supported"):
+            _ = M ^ f
