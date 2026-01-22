@@ -169,9 +169,10 @@ class MultiVector(CompositeElement):
         """Multiplication: scalar or geometric product.
 
         - Scalar: returns MultiVector with scaled components
-        - Blade/MultiVector: returns geometric product
+        - Blade/MultiVector/Frame: returns geometric product
         """
         from morphis.elements.blade import Blade
+        from morphis.elements.frame import Frame
         from morphis.elements.operator import Operator
 
         if isinstance(other, Blade):
@@ -182,6 +183,10 @@ class MultiVector(CompositeElement):
             from morphis.operations.products import geometric
 
             return geometric(self, other)
+        elif isinstance(other, Frame):
+            from morphis.operations.products import geometric_mv_bl
+
+            return geometric_mv_bl(self, other._as_blade())
         elif isinstance(other, Operator):
             raise TypeError("MultiVector * Operator not currently supported")
         else:

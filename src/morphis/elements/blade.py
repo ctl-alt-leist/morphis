@@ -192,10 +192,10 @@ class Blade(GradedElement):
                 return NotImplemented
             raise TypeError("Blade * Operator not currently supported (use L * b)")
         elif isinstance(other, Frame):
-            # Grade-0 Blade (scalar) can multiply Frame via Frame.__rmul__
-            if self.grade == 0 and self.collection == ():
-                return NotImplemented
-            raise TypeError("Blade * Frame geometric product not currently supported")
+            # Delegate to Frame.__rmul__ which handles:
+            # - grade-0 scalar: returns scaled Frame
+            # - other grades: returns geometric product (MultiVector)
+            return NotImplemented
         else:
             # Scalar multiplication
             return Blade(
