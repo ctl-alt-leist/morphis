@@ -18,8 +18,8 @@ class TestOperatorConstruction:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -34,8 +34,8 @@ class TestOperatorConstruction:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=1, collection=1, dim=d),
+            output_spec=BladeSpec(grade=1, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -50,8 +50,8 @@ class TestOperatorConstruction:
         with pytest.raises(ValueError, match="Data has 3 dimensions"):
             Operator(
                 data=G_data,
-                input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-                output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+                input_spec=BladeSpec(grade=0, collection=1, dim=3),
+                output_spec=BladeSpec(grade=2, collection=1, dim=3),
                 metric=euclidean(3),
             )
 
@@ -62,8 +62,8 @@ class TestOperatorConstruction:
         with pytest.raises(ValueError, match="Input dim 4 doesn't match output dim 3"):
             Operator(
                 data=G_data,
-                input_spec=BladeSpec(grade=0, collection_dims=1, dim=4),  # Wrong dim
-                output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+                input_spec=BladeSpec(grade=0, collection=1, dim=4),  # Wrong dim
+                output_spec=BladeSpec(grade=2, collection=1, dim=3),
                 metric=euclidean(3),
             )
 
@@ -73,8 +73,8 @@ class TestOperatorConstruction:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -92,8 +92,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -112,8 +112,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -130,8 +130,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=1, collection=1, dim=d),
+            output_spec=BladeSpec(grade=1, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -148,8 +148,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -166,8 +166,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -183,8 +183,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -199,8 +199,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -216,8 +216,8 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -241,8 +241,8 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -257,8 +257,8 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -272,8 +272,8 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -289,8 +289,8 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -303,8 +303,8 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -331,8 +331,8 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -344,8 +344,8 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -357,8 +357,8 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -370,8 +370,8 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 

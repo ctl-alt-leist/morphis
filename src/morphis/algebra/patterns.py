@@ -45,16 +45,16 @@ def forward_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     Examples:
         >>> # Scalar currents (N,) to bivector fields (M, 3, 3)
         >>> sig = forward_signature(
-        ...     BladeSpec(grade=0, collection_dims=1, dim=3),
-        ...     BladeSpec(grade=2, collection_dims=1, dim=3),
+        ...     BladeSpec(grade=0, collection=1, dim=3),
+        ...     BladeSpec(grade=2, collection=1, dim=3),
         ... )
         >>> sig
         'WXKn,n->KWX'
 
         >>> # Vector (N, 3) to bivector (M, 3, 3)
         >>> sig = forward_signature(
-        ...     BladeSpec(grade=1, collection_dims=1, dim=3),
-        ...     BladeSpec(grade=2, collection_dims=1, dim=3),
+        ...     BladeSpec(grade=1, collection=1, dim=3),
+        ...     BladeSpec(grade=2, collection=1, dim=3),
         ... )
         >>> sig
         'WXKna,na->KWX'
@@ -65,10 +65,10 @@ def forward_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     out_geo = OUTPUT_GEOMETRIC[: output_spec.grade]
 
     # Output collection indices
-    out_coll = OUTPUT_COLLECTION[: output_spec.collection_dims]
+    out_coll = OUTPUT_COLLECTION[: output_spec.collection]
 
     # Input collection indices (contracted)
-    in_coll = INPUT_COLLECTION[: input_spec.collection_dims]
+    in_coll = INPUT_COLLECTION[: input_spec.collection]
 
     # Input geometric indices (contracted)
     in_geo = INPUT_GEOMETRIC[: input_spec.grade]
@@ -102,8 +102,8 @@ def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     Examples:
         >>> # Adjoint of scalar->bivector: bivector->scalar
         >>> sig = adjoint_signature(
-        ...     BladeSpec(grade=0, collection_dims=1, dim=3),
-        ...     BladeSpec(grade=2, collection_dims=1, dim=3),
+        ...     BladeSpec(grade=0, collection=1, dim=3),
+        ...     BladeSpec(grade=2, collection=1, dim=3),
         ... )
         >>> sig
         'WXKn,KWX->n'
@@ -112,8 +112,8 @@ def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
 
     # Same index allocation as forward
     out_geo = OUTPUT_GEOMETRIC[: output_spec.grade]
-    out_coll = OUTPUT_COLLECTION[: output_spec.collection_dims]
-    in_coll = INPUT_COLLECTION[: input_spec.collection_dims]
+    out_coll = OUTPUT_COLLECTION[: output_spec.collection]
+    in_coll = INPUT_COLLECTION[: input_spec.collection]
     in_geo = INPUT_GEOMETRIC[: input_spec.grade]
 
     # Operator indices unchanged: out_geo + out_coll + in_coll + in_geo
@@ -149,22 +149,21 @@ def operator_shape(
     Examples:
         >>> # Scalar (N=5) to bivector (M=10) in 3D
         >>> shape = operator_shape(
-        ...     BladeSpec(grade=0, collection_dims=1, dim=3),
-        ...     BladeSpec(grade=2, collection_dims=1, dim=3),
+        ...     BladeSpec(grade=0, collection=1, dim=3),
+        ...     BladeSpec(grade=2, collection=1, dim=3),
         ...     input_collection=(5,),
         ...     output_collection=(10,),
         ... )
         >>> shape
         (3, 3, 10, 5)
     """
-    if len(input_collection) != input_spec.collection_dims:
+    if len(input_collection) != input_spec.collection:
         raise ValueError(
-            f"input_collection has {len(input_collection)} dims, but input_spec expects {input_spec.collection_dims}"
+            f"input_collection has {len(input_collection)} dims, but input_spec expects {input_spec.collection}"
         )
-    if len(output_collection) != output_spec.collection_dims:
+    if len(output_collection) != output_spec.collection:
         raise ValueError(
-            f"output_collection has {len(output_collection)} dims, "
-            f"but output_spec expects {output_spec.collection_dims}"
+            f"output_collection has {len(output_collection)} dims, but output_spec expects {output_spec.collection}"
         )
 
     return output_spec.geometric_shape + output_collection + input_collection + input_spec.geometric_shape
@@ -176,7 +175,7 @@ def _validate_spec_limits(input_spec: BladeSpec, output_spec: BladeSpec) -> None
         raise ValueError(f"Input grade {input_spec.grade} exceeds index pool limit {len(INPUT_GEOMETRIC)}")
     if output_spec.grade > len(OUTPUT_GEOMETRIC):
         raise ValueError(f"Output grade {output_spec.grade} exceeds index pool limit {len(OUTPUT_GEOMETRIC)}")
-    if input_spec.collection_dims > len(INPUT_COLLECTION):
-        raise ValueError(f"Input collection_dims {input_spec.collection_dims} exceeds limit {len(INPUT_COLLECTION)}")
-    if output_spec.collection_dims > len(OUTPUT_COLLECTION):
-        raise ValueError(f"Output collection_dims {output_spec.collection_dims} exceeds limit {len(OUTPUT_COLLECTION)}")
+    if input_spec.collection > len(INPUT_COLLECTION):
+        raise ValueError(f"Input collection {input_spec.collection} exceeds limit {len(INPUT_COLLECTION)}")
+    if output_spec.collection > len(OUTPUT_COLLECTION):
+        raise ValueError(f"Output collection {output_spec.collection} exceeds limit {len(OUTPUT_COLLECTION)}")

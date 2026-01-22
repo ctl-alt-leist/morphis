@@ -57,8 +57,8 @@ class Operator:
         >>>
         >>> G = Operator(
         ...     data=G_data,
-        ...     input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-        ...     output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+        ...     input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        ...     output_spec=BladeSpec(grade=2, collection=1, dim=d),
         ...     metric=euclidean(d),
         ... )
         >>>
@@ -104,17 +104,14 @@ class Operator:
     def _validate(self) -> None:
         """Validate that data shape matches specs."""
         expected_ndim = (
-            self.output_spec.grade
-            + self.output_spec.collection_dims
-            + self.input_spec.collection_dims
-            + self.input_spec.grade
+            self.output_spec.grade + self.output_spec.collection + self.input_spec.collection + self.input_spec.grade
         )
 
         if self.data.ndim != expected_ndim:
             raise ValueError(
                 f"Data has {self.data.ndim} dimensions, but specs require {expected_ndim}: "
-                f"output_grade={self.output_spec.grade} + output_coll={self.output_spec.collection_dims} + "
-                f"input_coll={self.input_spec.collection_dims} + input_grade={self.input_spec.grade}"
+                f"output_grade={self.output_spec.grade} + output_coll={self.output_spec.collection} + "
+                f"input_coll={self.input_spec.collection} + input_grade={self.input_spec.grade}"
             )
 
         # Validate geometric dimensions match dim
@@ -128,7 +125,7 @@ class Operator:
                 raise ValueError(f"Output geometric axis {k} has size {self.data.shape[k]}, expected {dim}")
 
         # Check input geometric axes
-        offset = self.output_spec.grade + self.output_spec.collection_dims + self.input_spec.collection_dims
+        offset = self.output_spec.grade + self.output_spec.collection + self.input_spec.collection
         for k in range(self.input_spec.grade):
             if self.data.shape[offset + k] != dim:
                 raise ValueError(
@@ -147,15 +144,15 @@ class Operator:
     @property
     def input_collection(self) -> tuple[int, ...]:
         """Shape of input collection dimensions."""
-        start = self.output_spec.grade + self.output_spec.collection_dims
-        end = start + self.input_spec.collection_dims
+        start = self.output_spec.grade + self.output_spec.collection
+        end = start + self.input_spec.collection
         return self.data.shape[start:end]
 
     @property
     def output_collection(self) -> tuple[int, ...]:
         """Shape of output collection dimensions."""
         start = self.output_spec.grade
-        end = start + self.output_spec.collection_dims
+        end = start + self.output_spec.collection
         return self.data.shape[start:end]
 
     @property
@@ -388,10 +385,10 @@ class Operator:
         # Transposed: (*in_geo, *in_coll, *out_coll, *out_geo)
         out_geo_axes = list(range(self.output_spec.grade))
         out_coll_start = self.output_spec.grade
-        out_coll_axes = list(range(out_coll_start, out_coll_start + self.output_spec.collection_dims))
-        in_coll_start = out_coll_start + self.output_spec.collection_dims
-        in_coll_axes = list(range(in_coll_start, in_coll_start + self.input_spec.collection_dims))
-        in_geo_start = in_coll_start + self.input_spec.collection_dims
+        out_coll_axes = list(range(out_coll_start, out_coll_start + self.output_spec.collection))
+        in_coll_start = out_coll_start + self.output_spec.collection
+        in_coll_axes = list(range(in_coll_start, in_coll_start + self.input_spec.collection))
+        in_geo_start = in_coll_start + self.input_spec.collection
         in_geo_axes = list(range(in_geo_start, in_geo_start + self.input_spec.grade))
 
         perm = in_geo_axes + in_coll_axes + out_coll_axes + out_geo_axes

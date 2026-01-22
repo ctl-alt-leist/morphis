@@ -49,10 +49,10 @@ def _to_matrix(op: "Operator") -> NDArray:
 
     out_geo_axes = list(range(op.output_spec.grade))
     out_coll_start = op.output_spec.grade
-    out_coll_axes = list(range(out_coll_start, out_coll_start + op.output_spec.collection_dims))
-    in_coll_start = out_coll_start + op.output_spec.collection_dims
-    in_coll_axes = list(range(in_coll_start, in_coll_start + op.input_spec.collection_dims))
-    in_geo_start = in_coll_start + op.input_spec.collection_dims
+    out_coll_axes = list(range(out_coll_start, out_coll_start + op.output_spec.collection))
+    in_coll_start = out_coll_start + op.output_spec.collection
+    in_coll_axes = list(range(in_coll_start, in_coll_start + op.input_spec.collection))
+    in_geo_start = in_coll_start + op.input_spec.collection
     in_geo_axes = list(range(in_geo_start, in_geo_start + op.input_spec.grade))
 
     # Reorder to: (*out_coll, *out_geo, *in_coll, *in_geo)
@@ -92,12 +92,12 @@ def _from_matrix(
 
     # Reorder from (*out_coll, *out_geo, *in_coll, *in_geo)
     # to (*out_geo, *out_coll, *in_coll, *in_geo)
-    out_coll_axes = list(range(output_spec.collection_dims))
-    out_geo_start = output_spec.collection_dims
+    out_coll_axes = list(range(output_spec.collection))
+    out_geo_start = output_spec.collection
     out_geo_axes = list(range(out_geo_start, out_geo_start + output_spec.grade))
     in_coll_start = out_geo_start + output_spec.grade
-    in_coll_axes = list(range(in_coll_start, in_coll_start + input_spec.collection_dims))
-    in_geo_start = in_coll_start + input_spec.collection_dims
+    in_coll_axes = list(range(in_coll_start, in_coll_start + input_spec.collection))
+    in_geo_start = in_coll_start + input_spec.collection
     in_geo_axes = list(range(in_geo_start, in_geo_start + input_spec.grade))
 
     # Target order: (*out_geo, *out_coll, *in_coll, *in_geo)
@@ -266,10 +266,10 @@ def structured_svd(
     dim = op.output_spec.dim
 
     # U maps from reduced space (r,) to output space
-    u_input_spec = BladeSpec(grade=0, collection_dims=1, dim=dim)
+    u_input_spec = BladeSpec(grade=0, collection=1, dim=dim)
 
     # Vt maps from input space to reduced space (r,)
-    vt_output_spec = BladeSpec(grade=0, collection_dims=1, dim=dim)
+    vt_output_spec = BladeSpec(grade=0, collection=1, dim=dim)
 
     # Wrap U as Operator
     # U_mat has shape (out_flat, r)
@@ -277,8 +277,8 @@ def structured_svd(
     # Then reorder to (*out_geo, *out_coll, r)
     U_intermediate = U_mat.reshape(op.output_collection + op.output_spec.geometric_shape + (r,))
 
-    out_coll_axes = list(range(op.output_spec.collection_dims))
-    out_geo_start = op.output_spec.collection_dims
+    out_coll_axes = list(range(op.output_spec.collection))
+    out_geo_start = op.output_spec.collection
     out_geo_axes = list(range(out_geo_start, out_geo_start + op.output_spec.grade))
     r_axis = [out_geo_start + op.output_spec.grade]
 

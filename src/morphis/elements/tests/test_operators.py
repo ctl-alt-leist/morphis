@@ -549,8 +549,8 @@ class TestOperatorScalarMultiplication:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 
@@ -569,8 +569,8 @@ class TestOperatorScalarMultiplication:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 
@@ -587,8 +587,8 @@ class TestOperatorScalarMultiplication:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
         s = Blade(2.5, grade=0, metric=m)
@@ -606,8 +606,8 @@ class TestOperatorScalarMultiplication:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
         s = Blade(0.5, grade=0, metric=m)
@@ -637,8 +637,8 @@ class TestOperatorApplyFrame:
         G_data = np.random.randn(3, 10, span, 3)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=1, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=1, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=1, collection=1, dim=3),
+            output_spec=BladeSpec(grade=1, collection=1, dim=3),
             metric=m,
         )
 
@@ -658,8 +658,8 @@ class TestOperatorApplyFrame:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 
@@ -678,8 +678,8 @@ class TestOperatorApplyFrame:
         G_data = np.random.randn(3, 3, 10, 2, 3)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=1, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=1, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 
@@ -707,8 +707,8 @@ class TestNotCurrentlySupported:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 
@@ -726,8 +726,8 @@ class TestNotCurrentlySupported:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 
@@ -744,8 +744,8 @@ class TestNotCurrentlySupported:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 
@@ -763,8 +763,8 @@ class TestNotCurrentlySupported:
         G_data = np.random.randn(3, 3, 10, 5)
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=m,
         )
 

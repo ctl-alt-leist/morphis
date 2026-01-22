@@ -40,11 +40,11 @@ def demo_operator_construction() -> None:
     print()
     print("  BladeSpec describes the structure:")
     print("    grade: 0=scalar, 1=vector, 2=bivector, ...")
-    print("    collection_dims: number of batch dimensions")
+    print("    collection: number of batch dimensions")
     print("    dim: underlying vector space dimension")
 
-    input_spec = BladeSpec(grade=0, collection_dims=1, dim=d)
-    output_spec = BladeSpec(grade=2, collection_dims=1, dim=d)
+    input_spec = BladeSpec(grade=0, collection=1, dim=d)
+    output_spec = BladeSpec(grade=2, collection=1, dim=d)
     print()
     print(f"  input_spec  = {input_spec}")
     print(f"  output_spec = {output_spec}")
@@ -89,8 +89,8 @@ def demo_forward_application() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+        input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        output_spec=BladeSpec(grade=2, collection=1, dim=d),
         metric=euclidean(d),
     )
 
@@ -133,8 +133,8 @@ def demo_adjoint() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+        input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        output_spec=BladeSpec(grade=2, collection=1, dim=d),
         metric=euclidean(d),
     )
 
@@ -184,8 +184,8 @@ def demo_least_squares() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+        input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        output_spec=BladeSpec(grade=2, collection=1, dim=d),
         metric=euclidean(d),
     )
 
@@ -233,8 +233,8 @@ def demo_svd() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+        input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        output_spec=BladeSpec(grade=2, collection=1, dim=d),
         metric=euclidean(d),
     )
 
@@ -282,8 +282,8 @@ def demo_pseudoinverse() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+        input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        output_spec=BladeSpec(grade=2, collection=1, dim=d),
         metric=euclidean(d),
     )
 
@@ -334,8 +334,8 @@ def demo_complex_operators() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+        input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        output_spec=BladeSpec(grade=2, collection=1, dim=d),
         metric=euclidean(d),
     )
     print(f"  L.data.dtype = {L.data.dtype}")
@@ -379,8 +379,8 @@ def demo_vector_operator() -> None:
 
     T = Operator(
         data=T_data,
-        input_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
-        output_spec=BladeSpec(grade=1, collection_dims=1, dim=d),
+        input_spec=BladeSpec(grade=1, collection=1, dim=d),
+        output_spec=BladeSpec(grade=1, collection=1, dim=d),
         metric=euclidean(d),
     )
     print(f"  T.shape = {T.shape}")

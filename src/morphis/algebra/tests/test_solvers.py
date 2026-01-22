@@ -19,8 +19,8 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -42,8 +42,8 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -74,8 +74,8 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -100,8 +100,8 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -127,8 +127,8 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -154,8 +154,8 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -171,8 +171,8 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -187,8 +187,8 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -196,13 +196,13 @@ class TestSVD:
 
         # U: (r,) -> output_shape
         assert U.input_spec.grade == 0
-        assert U.input_spec.collection_dims == 1
+        assert U.input_spec.collection == 1
         assert U.output_spec == op.output_spec
 
         # Vt: input_shape -> (r,)
         assert Vt.input_spec == op.input_spec
         assert Vt.output_spec.grade == 0
-        assert Vt.output_spec.collection_dims == 1
+        assert Vt.output_spec.collection == 1
 
     def test_svd_rank(self):
         """Test that SVD returns correct rank."""
@@ -211,8 +211,8 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -233,8 +233,8 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -255,8 +255,8 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -275,8 +275,8 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -296,8 +296,8 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=d),
+            input_spec=BladeSpec(grade=0, collection=1, dim=d),
+            output_spec=BladeSpec(grade=2, collection=1, dim=d),
             metric=euclidean(d),
         )
 
@@ -318,8 +318,8 @@ class TestSolveEdgeCases:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
@@ -334,8 +334,8 @@ class TestSolveEdgeCases:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection_dims=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection_dims=1, dim=3),
+            input_spec=BladeSpec(grade=0, collection=1, dim=3),
+            output_spec=BladeSpec(grade=2, collection=1, dim=3),
             metric=euclidean(3),
         )
 
