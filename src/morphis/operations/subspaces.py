@@ -3,44 +3,20 @@ Geometric Algebra - Subspace Operations
 
 Join and meet operations for computing unions and intersections of subspaces.
 
+These are aliases for wedge and antiwedge products, using subspace terminology:
+- join(u, v) = wedge(u, v) = u ∧ v — smallest subspace containing both
+- meet(u, v) = antiwedge(u, v) = u ∨ v — largest subspace contained in both
+
 Blade naming convention: u, v, w (never a, b, c for blades).
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from morphis.operations.duality import right_complement
-from morphis.operations.products import wedge
+from morphis.operations.products import antiwedge, wedge
 
 
-if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
+# Join is the wedge product (union of subspaces)
+join = wedge
 
-
-def join(u: Blade, v: Blade) -> Blade:
-    """
-    Compute the join of two blades: the smallest subspace containing both.
-    Algebraically, join is the wedge product.
-
-    Returns Blade representing the joined subspace.
-    """
-    return wedge(u, v)
-
-
-def meet(u: Blade, v: Blade) -> Blade:
-    """
-    Compute the meet (intersection) of two blades: the largest subspace
-    contained in both. Computed via duality:
-
-        u v v = dual(dual(u) ^ dual(v))
-
-    where dual denotes the right complement.
-
-    Returns Blade representing the intersection.
-    """
-    u_comp = right_complement(u)
-    v_comp = right_complement(v)
-    joined = wedge(u_comp, v_comp)
-
-    return right_complement(joined)
+# Meet is the antiwedge/regressive product (intersection of subspaces)
+meet = antiwedge

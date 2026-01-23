@@ -16,7 +16,7 @@ lint:
 	uv run ruff check --fix --unsafe-fixes $(SRC_PATH)
 
 test:
-	uv run pytest $(SRC_PATH) -v
+	uv run pytest $(SRC_PATH)
 
 # Build and release
 build:

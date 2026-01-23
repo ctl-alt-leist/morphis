@@ -752,8 +752,8 @@ class TestNotCurrentlySupported:
         with pytest.raises(TypeError, match="Frame \\* Operator not currently supported"):
             _ = f * op
 
-    def test_operator_times_multivector_raises(self):
-        """Test L * M raises TypeError (outermorphism not supported)."""
+    def test_operator_times_multivector_non_outermorphism_raises(self):
+        """Test L * M raises TypeError for non-outermorphism operator."""
         from morphis.algebra import BladeSpec
         from morphis.elements import Operator
 
@@ -768,7 +768,8 @@ class TestNotCurrentlySupported:
             metric=m,
         )
 
-        with pytest.raises(TypeError, match="Operator \\* MultiVector.*not currently supported"):
+        # Non-outermorphism operators cannot act on MultiVectors
+        with pytest.raises(TypeError, match="grade-1 → grade-1"):
             _ = op * M
 
     def test_blade_wedge_frame_raises(self):

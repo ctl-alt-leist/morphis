@@ -185,6 +185,41 @@ def wedge_mv_mv(M: MultiVector, N: MultiVector) -> MultiVector:
 
 
 # =============================================================================
+# Antiwedge (Regressive) Product
+# =============================================================================
+
+
+def antiwedge(u: Blade, v: Blade) -> Blade:
+    """
+    Antiwedge (regressive) product: u ∨ v
+
+    The regressive product is dual to the wedge product. It computes the
+    intersection of subspaces, just as wedge computes the union (span).
+
+    Defined via duality:
+
+        u ∨ v = complement(complement(u) ∧ complement(v))
+
+    For grade-j blade u and grade-k blade v in d dimensions:
+    - Result grade: j + k - d
+    - Returns zero blade if j + k < d (subspaces don't intersect generically)
+
+    Also known as: regressive product, vee product, meet.
+
+    All blades must have compatible metrics.
+
+    Returns Blade of grade (j + k - d).
+    """
+    from morphis.operations.duality import right_complement
+
+    u_comp = right_complement(u)
+    v_comp = right_complement(v)
+    joined = wedge(u_comp, v_comp)
+
+    return right_complement(joined)
+
+
+# =============================================================================
 # Geometric Product (Blade x Blade)
 # =============================================================================
 

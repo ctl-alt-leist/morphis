@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numpy import array, broadcast_shapes, cos, newaxis, sin
+from numpy import array, broadcast_shapes, newaxis
 
 from morphis.operations.products import geometric
 
@@ -33,7 +33,10 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
     """
     Create a rotor for pure rotation about the origin.
 
-    M = exp(-B theta/2) = cos(theta/2) - sin(theta/2) B
+    M = exp(-B * angle/2)
+
+    Implemented via exp_blade(), which provides closed-form evaluation
+    for any metric signature (Euclidean, Lorentzian, or degenerate).
 
     The rotor is a MultiVector with grades {0, 2}. Apply via sandwich product:
         rotated = M * b * ~M
@@ -53,37 +56,29 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
         v_rotated = M * v * ~M
     """
     from morphis.elements.blade import Blade
-    from morphis.elements.multivector import MultiVector
+    from morphis.operations.exponential import exp_blade
 
     angle = array(angle)
-    metric = B.metric
 
-    # Determine collection shape
+    # Compute generator: -B * angle/2
+    # Handle array angles by proper broadcasting
     if angle.ndim == 0:
-        collection = B.collection
-        half_angle = angle / 2
+        # Scalar angle
+        generator = B * (-float(angle) / 2)
     else:
-        collection = angle.shape
-        half_angle = angle / 2
-
-    # Scalar part: cos(theta/2)
-    scalar_data = cos(half_angle)
-
-    # Bivector part: -sin(theta/2) B
-    if angle.ndim == 0:
-        bivector_data = -sin(half_angle) * B.data
-    else:
-        sin_expanded = sin(half_angle)
+        # Array of angles: need to expand for broadcasting
+        half_angle = -angle / 2
         for _ in range(B.grade):
-            sin_expanded = sin_expanded[..., newaxis]
-        bivector_data = -sin_expanded * B.data
+            half_angle = half_angle[..., newaxis]
 
-    components = {
-        0: Blade(scalar_data, grade=0, metric=metric, collection=collection),
-        2: Blade(data=bivector_data, grade=2, metric=metric, collection=collection),
-    }
+        generator = Blade(
+            half_angle * B.data,
+            grade=B.grade,
+            metric=B.metric,
+            collection=angle.shape + B.collection,
+        )
 
-    return MultiVector(data=components, metric=metric, collection=collection)
+    return exp_blade(generator)
 
 
 # =============================================================================
