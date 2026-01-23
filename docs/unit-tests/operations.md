@@ -414,3 +414,55 @@ Bivector inverse:
 $$
 \mathbf{B}^{-1} = \frac{\widetilde{\mathbf{B}}}{\mathbf{B}\widetilde{\mathbf{B}}}
 $$
+
+## Outermorphisms
+
+An outermorphism is a linear map $f: \bigwedge V \to \bigwedge W$ that preserves the wedge product:
+
+$$
+f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})
+$$
+
+### Exterior Power
+
+An outermorphism is completely determined by its action on grade-1 (vectors). If $A: V \to W$ is the linear map on vectors, the extension to grade-$k$ is the $k$-th exterior power $\bigwedge^k A$:
+
+$$
+(\bigwedge^k A)(\mathbf{v}_1 \wedge \cdots \wedge \mathbf{v}_k) = A(\mathbf{v}_1) \wedge \cdots \wedge A(\mathbf{v}_k)
+$$
+
+### Component Form
+
+For a $d \times d$ matrix $A^i{}_j$ and grade-$k$ blade $B^{m_1 \ldots m_k}$:
+
+$$
+(\bigwedge^k A)(\mathbf{B})^{i_1 \ldots i_k} = A^{i_1}{}_{m_1} \cdots A^{i_k}{}_{m_k} B^{m_1 \ldots m_k}
+$$
+
+This is $k$ copies of $A$ contracting with $k$ blade indices.
+
+### Scalars Invariant
+
+Scalars (grade-0) are unchanged:
+
+$$
+(\bigwedge^0 A)(s) = s
+$$
+
+### Determinant Property
+
+The action on the pseudoscalar (grade-$d$) equals multiplication by the determinant:
+
+$$
+(\bigwedge^d A)(\mathbb{1}) = \det(A) \cdot \mathbb{1}
+$$
+
+### Composition
+
+For outermorphisms $f$ and $g$ with vector maps $A$ and $B$:
+
+$$
+(f \circ g)|_{\text{grade-}k} = \bigwedge^k(AB)
+$$
+
+Composition of outermorphisms corresponds to matrix multiplication of their vector maps.

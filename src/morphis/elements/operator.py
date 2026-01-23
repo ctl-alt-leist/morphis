@@ -170,6 +170,52 @@ class Operator:
         """Dimension of the underlying vector space."""
         return self.output_spec.dim
 
+    @property
+    def is_outermorphism(self) -> bool:
+        """
+        True if this operator can extend to act on all grades as an outermorphism.
+
+        An outermorphism is a linear map that preserves the wedge product. It is
+        completely determined by its action on grade-1 (vectors). Only operators
+        mapping grade-1 → grade-1 can serve as outermorphisms.
+
+        When True, this operator can be applied to MultiVectors via L * M,
+        where each grade-k component is transformed by the k-th exterior power.
+        """
+        return self.input_spec.grade == 1 and self.output_spec.grade == 1
+
+    @property
+    def vector_map(self) -> NDArray:
+        """
+        Extract the d×d matrix representing this operator's action on vectors.
+
+        For outermorphisms (grade-1 → grade-1 operators without collection dims),
+        this is the fundamental linear map A: V → W that defines the entire
+        outermorphism via exterior powers.
+
+        Returns:
+            d×d array representing the linear map on vectors
+
+        Raises:
+            ValueError: If this operator is not grade-1 → grade-1
+            NotImplementedError: If this operator has collection dimensions
+        """
+        if not self.is_outermorphism:
+            raise ValueError(
+                f"vector_map requires grade-1 → grade-1 operator, "
+                f"got grade-{self.input_spec.grade} → grade-{self.output_spec.grade}"
+            )
+
+        if self.input_spec.collection != 0 or self.output_spec.collection != 0:
+            raise NotImplementedError(
+                "vector_map with collection dimensions not yet implemented. "
+                f"Operator has input_collection={self.input_spec.collection}, "
+                f"output_collection={self.output_spec.collection}."
+            )
+
+        # For grade-1 → grade-1 without collections, shape is (d, d)
+        return self.data
+
     # =========================================================================
     # Forward Application
     # =========================================================================
@@ -274,9 +320,23 @@ class Operator:
                 metric=self.metric,
             )
 
-        # Apply to Blade (including grade-0 with collection dims)
+        # Apply to Blade
         if isinstance(other, Blade):
-            return self.apply(other)
+            # If grades match specs, use direct application
+            if other.grade == self.input_spec.grade:
+                return self.apply(other)
+
+            # If this is an outermorphism, can apply to any grade via exterior power
+            if self.is_outermorphism:
+                from morphis.operations.outermorphism import apply_exterior_power
+
+                return apply_exterior_power(self, other, other.grade)
+
+            # Grade mismatch for non-outermorphism operator
+            raise ValueError(
+                f"Blade grade {other.grade} doesn't match operator input grade {self.input_spec.grade}. "
+                f"Only outermorphisms (grade-1 → grade-1) can apply to arbitrary grades."
+            )
 
         # Apply to Frame
         if isinstance(other, Frame):
@@ -286,9 +346,11 @@ class Operator:
         if isinstance(other, Operator):
             return self.compose(other)
 
-        # MultiVector (outermorphism) not supported
+        # MultiVector: apply as outermorphism (requires grade-1 → grade-1)
         if isinstance(other, MultiVector):
-            raise TypeError("Operator * MultiVector (outermorphism) not currently supported")
+            from morphis.operations.outermorphism import apply_outermorphism
+
+            return apply_outermorphism(self, other)
 
         return NotImplemented
 

@@ -69,13 +69,14 @@ morphis/
 │   └── solvers.py     # SVD, pseudoinverse, least squares
 │
 ├── operations/     # GA operations
-│   ├── products.py    # Wedge, interior, geometric products
-│   ├── norms.py       # Norm, normalize
-│   ├── duality.py     # Complement, Hodge dual
-│   ├── projections.py # Project, reject
-│   ├── subspaces.py   # Join, meet
-│   ├── structure.py   # Einsum signatures, Levi-Civita
-│   └── factorization.py
+│   ├── products.py       # Wedge, interior, geometric products
+│   ├── norms.py          # Norm, normalize
+│   ├── duality.py        # Complement, Hodge dual
+│   ├── projections.py    # Project, reject
+│   ├── subspaces.py      # Join, meet
+│   ├── structure.py      # Einsum signatures, Levi-Civita
+│   ├── factorization.py  # Blade factorization
+│   └── outermorphism.py  # Exterior power, outermorphism application
 │
 ├── transforms/     # Transformations
 │   ├── rotations.py   # Rotor construction and application
@@ -181,7 +182,47 @@ Key properties:
 - `input_shape`: Full shape expected for input blade data
 - `output_shape`: Full shape of output blade data
 
-### 7. Element Operations
+### 7. Outermorphisms
+
+An **outermorphism** is a linear map that preserves the wedge product structure:
+
+$$f(a \wedge b) = f(a) \wedge f(b)$$
+
+Key insight: An outermorphism is completely determined by its action on grade-1 (vectors). The extension to grade-$k$ is the $k$-th exterior power $\bigwedge^k A$.
+
+In Morphis, any `Operator` mapping grade-1 → grade-1 can act as an outermorphism:
+
+```python
+# Create a rotation matrix as an operator
+R = Operator(
+    data=rotation_matrix,  # shape: (d, d)
+    input_spec=BladeSpec(grade=1, collection=0, dim=d),
+    output_spec=BladeSpec(grade=1, collection=0, dim=d),
+    metric=euclidean(d),
+)
+
+# Check if operator can extend to all grades
+R.is_outermorphism  # True
+
+# Apply to vector (direct application)
+v_rotated = R * v
+
+# Apply to bivector (uses 2nd exterior power automatically)
+B_rotated = R * B
+
+# Apply to full multivector (extends to all grades)
+M_rotated = R * M
+```
+
+The exterior power is computed on-demand via einsum: $k$ copies of the $d \times d$ vector map contract with the $k$ indices of the blade. This preserves the wedge product:
+
+$$(\bigwedge^k A)(v_1 \wedge \cdots \wedge v_k) = A(v_1) \wedge \cdots \wedge A(v_k)$$
+
+Key property: The action on the pseudoscalar equals multiplication by the determinant:
+
+$$(\bigwedge^d A)(\mathbb{1}) = \det(A) \cdot \mathbb{1}$$
+
+### 8. Element Operations
 
 The four core elements (Blade, Frame, MultiVector, Operator) have well-defined multiplication semantics:
 
@@ -192,14 +233,15 @@ The four core elements (Blade, Frame, MultiVector, Operator) have well-defined m
 | MultiVector | Blade | MultiVector | Geometric product |
 | MultiVector | MultiVector | MultiVector | Geometric product |
 | scalar | any | same type | Scalar multiplication |
-| Operator | Blade | Blade | Apply operator |
+| Operator | Blade | Blade | Apply operator (or exterior power for outermorphisms) |
 | Operator | Frame | Frame | Apply to each vector |
+| Operator | MultiVector | MultiVector | Outermorphism (grade-1→grade-1 operators only) |
 | Operator | Operator | Operator | Composition |
 
 Some operations are explicitly not supported (raise `TypeError`):
 - `Blade * Operator` — use `Operator * Blade`
 - `Frame * Operator` — use `Operator * Frame`
-- `Operator * MultiVector` — outermorphism not yet implemented
+- `Operator * MultiVector` for non-outermorphism operators — only grade-1→grade-1 can extend
 - `Frame ^ anything` — wedge with Frame not yet implemented
 
 ## The Manifest Generality Challenge

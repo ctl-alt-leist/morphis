@@ -17,7 +17,7 @@ import numpy as np
 from numpy import exp, pi
 
 from morphis.algebra import BladeSpec
-from morphis.elements import Blade, Operator, euclidean
+from morphis.elements import Blade, MultiVector, Operator, euclidean
 from morphis.utils.pretty import section, show_array, show_blade, subsection
 
 
@@ -398,6 +398,137 @@ def demo_vector_operator() -> None:
 
 
 # =============================================================================
+# Section 9: Outermorphisms
+# =============================================================================
+
+
+def demo_outermorphism() -> None:
+    """Demonstrate outermorphisms: operators that extend to all grades."""
+    section("9. OUTERMORPHISMS")
+
+    print("An outermorphism is a linear map f: ⋀V → ⋀W that preserves wedge products:")
+    print("  f(a ∧ b) = f(a) ∧ f(b)")
+    print()
+    print("Key property: An outermorphism is completely determined by its action")
+    print("on grade-1 (vectors). The extension to grade-k is the k-th exterior power.")
+    print()
+
+    d = 3
+    np.random.seed(42)
+
+    subsection("Create a grade-1 → grade-1 operator (rotation-like)")
+    # Create an orthogonal matrix (rotation)
+    theta = pi / 4
+    R_data = np.array([
+        [np.cos(theta), -np.sin(theta), 0],
+        [np.sin(theta), np.cos(theta), 0],
+        [0, 0, 1],
+    ])
+
+    R = Operator(
+        data=R_data,
+        input_spec=BladeSpec(grade=1, collection=0, dim=d),
+        output_spec=BladeSpec(grade=1, collection=0, dim=d),
+        metric=euclidean(d),
+    )
+    print(f"  R.is_outermorphism = {R.is_outermorphism}")
+    print(f"  R.shape = {R.shape}")
+    print()
+    print("  R.vector_map gives the d×d matrix that defines the outermorphism:")
+    show_array("R.vector_map", R.vector_map)
+
+    subsection("Apply to a vector (grade-1)")
+    v = Blade(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean(d))
+    v_rotated = R * v
+    show_blade("v", v)
+    show_blade("R * v", v_rotated)
+
+    subsection("Apply to a bivector (grade-2) via exterior power")
+    from morphis.operations.products import wedge
+
+    e1 = Blade(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean(d))
+    e2 = Blade(np.array([0.0, 1.0, 0.0]), grade=1, metric=euclidean(d))
+    B = wedge(e1, e2)  # xy-plane
+    print("  Bivector B = e1 ∧ e2 represents the xy-plane")
+    print()
+
+    B_rotated = R * B
+    print("  R * B applies the 2nd exterior power ⋀²R")
+    print("  This is equivalent to: (R * e1) ∧ (R * e2)")
+    print()
+    show_blade("B", B)
+    show_blade("R * B", B_rotated)
+
+    # Verify equivalence
+    Re1 = R * e1
+    Re2 = R * e2
+    B_expected = wedge(Re1, Re2)
+    print(f"  Max |R*B - (R*e1)∧(R*e2)|: {np.max(np.abs(B_rotated.data - B_expected.data)):.2e}")
+
+    subsection("Apply to a full multivector")
+    s = Blade(np.array(5.0), grade=0, metric=euclidean(d))
+    M = MultiVector(data={0: s, 1: v, 2: B}, metric=euclidean(d))
+    print(f"  M has grades: {M.grades}")
+    print()
+
+    M_rotated = R * M
+    print("  R * M applies the outermorphism to all grades:")
+    print("    - Grade 0 (scalars): unchanged")
+    print("    - Grade 1 (vectors): R applied directly")
+    print("    - Grade 2 (bivectors): ⋀²R applied")
+    print()
+    print(f"  M_rotated has grades: {M_rotated.grades}")
+    print(f"  Scalar unchanged: {M_rotated[0].data}")
+
+    subsection("Determinant property")
+    print("  The action on the pseudoscalar (grade-d) equals multiplication by det(A):")
+    print("  (⋀ᵈA)(I) = det(A) · I")
+    print()
+
+    from morphis.elements.blade import pseudoscalar
+
+    I = pseudoscalar(euclidean(d))
+
+    # Use a general matrix to see nontrivial determinant
+    A_data = np.array(
+        [
+            [2, 0, 0],
+            [0, 3, 0],
+            [0, 0, 4],
+        ],
+        dtype=float,
+    )
+    A = Operator(
+        data=A_data,
+        input_spec=BladeSpec(grade=1, collection=0, dim=d),
+        output_spec=BladeSpec(grade=1, collection=0, dim=d),
+        metric=euclidean(d),
+    )
+
+    I_transformed = A * I
+    det_A = np.linalg.det(A_data)
+
+    # Find ratio
+    nonzero_idx = np.unravel_index(np.argmax(np.abs(I.data)), I.data.shape)
+    ratio = I_transformed.data[nonzero_idx] / I.data[nonzero_idx]
+
+    print(f"  det(A) = {det_A}")
+    print(f"  (⋀³A)(I) / I = {ratio}")
+    print(f"  Difference: {abs(ratio - det_A):.2e}")
+
+    subsection("Non-outermorphism operators cannot extend")
+    print("  Operators that don't map grade-1 → grade-1 cannot act on multivectors:")
+    L = Operator(
+        data=np.random.randn(d, d, 5, 3),
+        input_spec=BladeSpec(grade=0, collection=1, dim=d),
+        output_spec=BladeSpec(grade=2, collection=1, dim=d),
+        metric=euclidean(d),
+    )
+    print(f"  L maps scalar -> bivector: L.is_outermorphism = {L.is_outermorphism}")
+    print("  L * M would raise TypeError for this operator")
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -418,6 +549,7 @@ def main() -> None:
     demo_pseudoinverse()
     demo_complex_operators()
     demo_vector_operator()
+    demo_outermorphism()
 
     section("DEMONSTRATION COMPLETE")
     print()

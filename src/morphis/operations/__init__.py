@@ -30,6 +30,7 @@ from morphis.operations.norms import (
 )
 from morphis.operations.products import (
     anticommutator as anticommutator,
+    antiwedge as antiwedge,
     commutator as commutator,
     geometric as geometric,
     geometric_bl_mv as geometric_bl_mv,
