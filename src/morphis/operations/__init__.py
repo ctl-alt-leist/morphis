@@ -13,10 +13,28 @@ from morphis.operations.duality import (
     right_complement as right_complement,
 )
 
+# Exponentials and logarithms
+from morphis.operations.exponential import (
+    exp_blade as exp_blade,
+    log_versor as log_versor,
+    slerp as slerp,
+)
+
 # Factorization
 from morphis.operations.factorization import (
     factor as factor,
     spanning_vectors as spanning_vectors,
+)
+
+# Matrix representations
+from morphis.operations.matrix_rep import (
+    blade_to_vector as blade_to_vector,
+    left_mult_matrix as left_mult_matrix,
+    multivector_to_vector as multivector_to_vector,
+    operator_to_matrix as operator_to_matrix,
+    right_mult_matrix as right_mult_matrix,
+    vector_to_blade as vector_to_blade,
+    vector_to_multivector as vector_to_multivector,
 )
 
 # Norms
