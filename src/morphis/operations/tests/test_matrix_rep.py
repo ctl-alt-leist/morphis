@@ -11,10 +11,10 @@ from morphis.elements.multivector import MultiVector
 from morphis.operations import geometric, wedge
 from morphis.operations.matrix_rep import (
     blade_to_vector,
-    left_mult_matrix,
+    left_matrix,
     multivector_to_vector,
     operator_to_matrix,
-    right_mult_matrix,
+    right_matrix,
     vector_to_blade,
     vector_to_multivector,
 )
@@ -131,7 +131,7 @@ class TestMultiVectorVectorConversion:
 
 
 class TestMultiplicationMatrices:
-    """Tests for left_mult_matrix and right_mult_matrix."""
+    """Tests for left_matrix and right_matrix."""
 
     def test_left_mult_matches_geometric(self):
         """L_A @ v equals multivector_to_vector(A * X)."""
@@ -145,7 +145,7 @@ class TestMultiplicationMatrices:
         X = MultiVector(data={1: e2 * 2.0}, metric=m)
 
         # Matrix approach
-        L_A = left_mult_matrix(A)
+        L_A = left_matrix(A)
         v_X = multivector_to_vector(X)
         result_mat = L_A @ v_X
 
@@ -167,7 +167,7 @@ class TestMultiplicationMatrices:
         X = MultiVector(data={1: e2 * 2.0}, metric=m)
 
         # Matrix approach
-        R_A = right_mult_matrix(A)
+        R_A = right_matrix(A)
         v_X = multivector_to_vector(X)
         result_mat = R_A @ v_X
 
@@ -182,8 +182,8 @@ class TestMultiplicationMatrices:
         m = euclidean(2)
         s = Blade(array(3.0), grade=0, metric=m)
 
-        L_s = left_mult_matrix(s)
-        R_s = right_mult_matrix(s)
+        L_s = left_matrix(s)
+        R_s = right_matrix(s)
 
         assert_allclose(L_s, R_s)
 
@@ -192,8 +192,8 @@ class TestMultiplicationMatrices:
         m = euclidean(2)
         one = Blade(array(1.0), grade=0, metric=m)
 
-        L = left_mult_matrix(one)
-        R = right_mult_matrix(one)
+        L = left_matrix(one)
+        R = right_matrix(one)
 
         n = 2**m.dim
         assert_allclose(L, eye(n))
@@ -226,8 +226,8 @@ class TestMultiplicationMatrices:
         m = euclidean(3)
         e1 = basis_vector(0, m)
 
-        L = left_mult_matrix(e1)
-        R = right_mult_matrix(e1)
+        L = left_matrix(e1)
+        R = right_matrix(e1)
 
         n = 2**3
         assert L.shape == (n, n)

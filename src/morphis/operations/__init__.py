@@ -29,10 +29,10 @@ from morphis.operations.factorization import (
 # Matrix representations
 from morphis.operations.matrix_rep import (
     blade_to_vector as blade_to_vector,
-    left_mult_matrix as left_mult_matrix,
+    left_matrix as left_matrix,
     multivector_to_vector as multivector_to_vector,
     operator_to_matrix as operator_to_matrix,
-    right_mult_matrix as right_mult_matrix,
+    right_matrix as right_matrix,
     vector_to_blade as vector_to_blade,
     vector_to_multivector as vector_to_multivector,
 )
@@ -71,6 +71,13 @@ from morphis.operations.projections import (
     interior_right as interior_right,
     project as project,
     reject as reject,
+)
+
+# Spectral analysis
+from morphis.operations.spectral import (
+    bivector_eigendecomposition as bivector_eigendecomposition,
+    bivector_to_skew_matrix as bivector_to_skew_matrix,
+    blade_principal_vectors as blade_principal_vectors,
 )
 
 # Structure constants (for advanced users)

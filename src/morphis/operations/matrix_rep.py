@@ -227,7 +227,7 @@ def vector_to_multivector(v: NDArray, metric: Metric) -> MultiVector:
 # =============================================================================
 
 
-def left_mult_matrix(A: Blade | MultiVector) -> NDArray:
+def left_matrix(A: Blade | MultiVector) -> NDArray:
     """
     Compute the matrix representation of left multiplication by A.
 
@@ -278,7 +278,7 @@ def left_mult_matrix(A: Blade | MultiVector) -> NDArray:
     return L
 
 
-def right_mult_matrix(A: Blade | MultiVector) -> NDArray:
+def right_matrix(A: Blade | MultiVector) -> NDArray:
     """
     Compute the matrix representation of right multiplication by A.
 

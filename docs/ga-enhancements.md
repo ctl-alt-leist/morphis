@@ -14,12 +14,13 @@
 | `vector_to_blade()` | Implemented | `operations/matrix_rep.py` |
 | `multivector_to_vector()` | Implemented | `operations/matrix_rep.py` |
 | `vector_to_multivector()` | Implemented | `operations/matrix_rep.py` |
-| `left_mult_matrix()` | Implemented | `operations/matrix_rep.py` |
-| `right_mult_matrix()` | Implemented | `operations/matrix_rep.py` |
+| `left_matrix()` | Implemented | `operations/matrix_rep.py` |
+| `right_matrix()` | Implemented | `operations/matrix_rep.py` |
 | `operator_to_matrix()` | Implemented | `operations/matrix_rep.py` |
 | **Phase 3: Spectral Tools** | | |
-| Bivector eigendecomposition | Not implemented | - |
-| General blade spectral analysis | Not implemented | - |
+| `bivector_to_skew_matrix()` | Implemented | `operations/spectral.py` |
+| `bivector_eigendecomposition()` | Implemented | `operations/spectral.py` |
+| `blade_principal_vectors()` | Implemented | `operations/spectral.py` |
 | **Phase 4: Advanced Linear Algebra** | | |
 | Geometric regularization | Not implemented | - |
 | Iterative solvers | Not implemented | - |
