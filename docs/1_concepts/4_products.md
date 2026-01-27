@@ -8,9 +8,11 @@ The **wedge product** (exterior product) constructs higher-grade Vectors by comb
 
 ### Definition
 
-For grade-$j$ Vector $\mathbf{A}$ and grade-$k$ Vector $\mathbf{B}$, the wedge product $\mathbf{A} \wedge \mathbf{B}$ is a grade-$(j+k)$ Vector:
+For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$, the wedge product $u \wedge v$ is a grade-$(j+k)$ k-vector:
 
-$$(\mathbf{A} \wedge \mathbf{B})^{m_1 \ldots m_{j+k}} = \frac{1}{j! \, k!} A^{[m_1 \ldots m_j} B^{m_{j+1} \ldots m_{j+k}]}$$
+$$
+(u \wedge v)^{m_1 \ldots m_{j+k}} = \frac{1}{j! \, k!} \, u^{[m_1 \ldots m_j} v^{m_{j+1} \ldots m_{j+k}]}
+$$
 
 where brackets denote antisymmetrization.
 
@@ -18,7 +20,9 @@ where brackets denote antisymmetrization.
 
 **Anticommutativity:**
 
-$$\mathbf{A} \wedge \mathbf{B} = (-1)^{jk} \mathbf{B} \wedge \mathbf{A}$$
+$$
+u \wedge v = (-1)^{jk} \, v \wedge u
+$$
 
 For grade-1 vectors:
 
@@ -67,21 +71,25 @@ The **interior product** (contraction) reduces grade by contracting indices usin
 
 ### Left Contraction
 
-For grade-$j$ Vector $\mathbf{A}$ and grade-$k$ Vector $\mathbf{B}$ with $j \leq k$:
+For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$ with $j \leq k$:
 
-$$(\mathbf{A} \lrcorner \mathbf{B})^{n_1 \ldots n_{k-j}} = A^{m_1 \ldots m_j} B_{m_1 \ldots m_j}^{\ \ \ \ \ \ \ \ n_1 \ldots n_{k-j}}$$
+$$
+(u \lrcorner v)^{n_1 \ldots n_{k-j}} = u^{m_1 \ldots m_j} v_{m_1 \ldots m_j}^{\ \ \ \ \ \ \ \ n_1 \ldots n_{k-j}}
+$$
 
 Result grade: $k - j$
 
-When $j > k$: $\mathbf{A} \lrcorner \mathbf{B} = 0$
+When $j > k$: $u \lrcorner v = 0$
 
 ### Right Contraction
 
-$$(\mathbf{A} \llcorner \mathbf{B})^{m_1 \ldots m_{j-k}} = A_{n_1 \ldots n_k}^{m_1 \ldots m_{j-k}} B^{n_1 \ldots n_k}$$
+$$
+(u \llcorner v)^{m_1 \ldots m_{j-k}} = u_{n_1 \ldots n_k}^{m_1 \ldots m_{j-k}} v^{n_1 \ldots n_k}
+$$
 
 Result grade: $j - k$
 
-When $k > j$: $\mathbf{A} \llcorner \mathbf{B} = 0$
+When $k > j$: $u \llcorner v = 0$
 
 ### Usage in Morphis
 
@@ -106,7 +114,7 @@ interior_right(b, e1)
 
 ### Geometric Interpretation
 
-The interior product $\mathbf{v} \lrcorner \mathbf{B}$ gives the component of $\mathbf{B}$ "perpendicular" to $\mathbf{v}$, with one dimension removed. It's the algebraic counterpart of orthogonal projection.
+The interior product $v \lrcorner b$ gives the component of $b$ "perpendicular" to $v$, with one dimension removed. It's the algebraic counterpart of orthogonal projection.
 
 ## The Dot Product
 
@@ -136,9 +144,11 @@ The symmetric part gives the dot product (scalar), the antisymmetric part gives 
 
 For general multivectors, the geometric product distributes over grades:
 
-$$\mathbf{A} \mathbf{B} = \sum_{r,s} \sum_{t = |r-s|}^{r+s} \langle \mathbf{A}_r \mathbf{B}_s \rangle_t$$
+$$
+MN = \sum_{r,s} \sum_{t = |r-s|}^{r+s} \langle M_r N_s \rangle_t
+$$
 
-where $\mathbf{A}_r = \langle \mathbf{A} \rangle_r$ and the sum over $t$ has step 2 (parity preservation).
+where $M_r = \langle M \rangle_r$ and the sum over $t$ has step 2 (parity preservation).
 
 ### Usage in Morphis
 
@@ -166,31 +176,41 @@ M = geometric(e1, e2)
 
 **Associativity:**
 
-$$(\mathbf{A}\mathbf{B})\mathbf{C} = \mathbf{A}(\mathbf{B}\mathbf{C})$$
+$$
+(MN)P = M(NP)
+$$
 
 **Distributivity:**
 
-$$\mathbf{A}(\mathbf{B} + \mathbf{C}) = \mathbf{A}\mathbf{B} + \mathbf{A}\mathbf{C}$$
+$$
+M(N + P) = MN + MP
+$$
 
 **Not commutative (in general):**
 
-$$\mathbf{A}\mathbf{B} \neq \mathbf{B}\mathbf{A}$$
+$$
+MN \neq NM
+$$
 
 ### Relationship to Other Products
 
-The wedge and interior products can be extracted from the geometric product:
+The wedge and interior products can be extracted from the geometric product. For k-vectors $u$ and $v$ of grades $j$ and $k$:
 
-$$\mathbf{A} \wedge \mathbf{B} = \langle \mathbf{A} \mathbf{B} \rangle_{|A| + |B|}$$
+$$
+u \wedge v = \langle uv \rangle_{j + k}
+$$
 
-$$\mathbf{A} \cdot \mathbf{B} = \langle \mathbf{A} \mathbf{B} \rangle_{||A| - |B||}$$
-
-where $|A|$ denotes the grade of $\mathbf{A}$.
+$$
+u \cdot v = \langle uv \rangle_{|j - k|}
+$$
 
 ## The Antiwedge Product (Meet)
 
-The **antiwedge** (regressive product, meet) finds the intersection of subspaces:
+The **antiwedge** (regressive product, meet) finds the intersection of subspaces. For k-vectors $u$ and $v$:
 
-$$\mathbf{A} \vee \mathbf{B} = \overline{\left(\overline{\mathbf{A}} \wedge \overline{\mathbf{B}}\right)}$$
+$$
+u \vee v = \overline{\left(\overline{u} \wedge \overline{v}\right)}
+$$
 
 where $\overline{\phantom{x}}$ denotes the complement.
 
@@ -198,25 +218,29 @@ where $\overline{\phantom{x}}$ denotes the complement.
 from morphis.operations import antiwedge, meet
 
 # Equivalent operations
-intersection = antiwedge(A, B)
-intersection = meet(A, B)
+intersection = antiwedge(u, v)
+intersection = meet(u, v)
 ```
 
 ## The Commutator and Anticommutator
 
 The **commutator product**:
 
-$$[\mathbf{A}, \mathbf{B}] = \frac{1}{2}(\mathbf{A}\mathbf{B} - \mathbf{B}\mathbf{A})$$
+$$
+[M, N] = \frac{1}{2}(MN - NM)
+$$
 
 The **anticommutator product**:
 
-$$\{\mathbf{A}, \mathbf{B}\} = \frac{1}{2}(\mathbf{A}\mathbf{B} + \mathbf{B}\mathbf{A})$$
+$$
+\{M, N\} = \frac{1}{2}(MN + NM)
+$$
 
 ```python
 from morphis.operations import commutator, anticommutator
 
-C = commutator(A, B)
-AC = anticommutator(A, B)
+C = commutator(M, N)
+AC = anticommutator(M, N)
 ```
 
 The commutator of bivectors generates the Lie algebra structure of rotations.
@@ -225,12 +249,14 @@ The commutator of bivectors generates the Lie algebra structure of rotations.
 
 The **scalar product** extracts only the grade-0 part of the geometric product:
 
-$$\mathbf{A} * \mathbf{B} = \langle \mathbf{A} \mathbf{B} \rangle_0$$
+$$
+M * N = \langle MN \rangle_0
+$$
 
 ```python
 from morphis.operations import scalar_product
 
-s = scalar_product(A, B)  # Grade-0 only
+s = scalar_product(M, N)  # Grade-0 only
 ```
 
 ## Summary Table

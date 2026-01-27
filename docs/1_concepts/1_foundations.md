@@ -116,14 +116,51 @@ b.grade  # 2
 
 ## Storage Convention
 
-Morphis stores $k$-vectors using **full antisymmetric tensor storage**. A grade-$k$ vector in $d$-dimensional space has shape $(*\text{collection}, d, d, \ldots, d)$ with $k$ copies of $d$.
+Morphis stores k-vectors using **full antisymmetric tensor storage**. A grade-$k$ element in $d$-dimensional space has shape $(*\text{collection}, d, d, \ldots, d)$ with $k$ copies of $d$.
 
 This redundant storage enables:
 - Direct einsum operations without index bookkeeping
 - Uniform batch dimension handling via `...`
 - Simple grade-agnostic algorithms
 
-The antisymmetry constraint $B^{\ldots m \ldots n \ldots} = -B^{\ldots n \ldots m \ldots}$ is maintained by all operations.
+The antisymmetry constraint $b^{\ldots m \ldots n \ldots} = -b^{\ldots n \ldots m \ldots}$ is maintained by all operations.
+
+### Antisymmetry on Components
+
+The basis k-vectors $\mathbf{e}_{mn\ldots}$ are conventionally written as antisymmetric:
+
+$$
+\mathbf{e}_{mn} = \mathbf{e}_m \wedge \mathbf{e}_n = -\mathbf{e}_{nm}
+$$
+
+However, in computation we need a concrete representation. Morphis uses an **ordered basis** with antisymmetry carried on the components. We write:
+
+$$
+\mathbf{e}^{<}_{mn} \quad \text{(ordered basis, indices satisfy } m < n \text{)}
+$$
+
+Any k-vector can then be expressed in two equivalent ways:
+
+$$
+b = b^{mn} \mathbf{e}_{mn}
+  = \tilde{b}^{mn} \mathbf{e}^{<}_{mn}
+$$
+
+where the "symmetric" components $b^{mn}$ are used with the unordered (conceptual) basis, and the antisymmetric components $\tilde{b}^{mn}$ incorporate the full alternating structure:
+
+$$
+\tilde{b}^{mn} = b^{mn} \, \varepsilon^{mn}
+$$
+
+The $k$-index antisymmetric symbol $\varepsilon^{m_1 \ldots m_k}$ automatically handles sign changes from index ordering. For a bivector in 2D:
+
+$$
+b = \frac{1}{2}(u^1 v^2 - u^2 v^1) \, \mathbf{e}_{12}
+$$
+
+The factor $\frac{1}{2}$ ensures proper normalization, while the antisymmetric combination arises from the Levi-Civita structure.
+
+This convention allows efficient computation: we sum over ordered index combinations and let the antisymmetric symbol handle the signs, rather than explicitly storing and manipulating signed basis elements.
 
 ## Collection Dimensions
 

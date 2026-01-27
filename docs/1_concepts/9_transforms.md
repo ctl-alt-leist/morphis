@@ -43,13 +43,17 @@ Any orthogonal transformation in $d$ dimensions factors as at most $d$ reflectio
 
 A **rotor** is an even versor satisfying $R \tilde{R} = 1$. It represents rotation:
 
-$$\mathbf{v}' = R \mathbf{v} \tilde{R}$$
+$$
+v' = R v \tilde{R}
+$$
 
 ### Construction from Bivector
 
-$$R = e^{-\mathbf{B}\theta/2} = \cos(\theta/2) - \sin(\theta/2)\hat{\mathbf{B}}$$
+$$
+R = e^{-b\theta/2} = \cos(\theta/2) - \sin(\theta/2) \, \hat{b}
+$$
 
-where $\hat{\mathbf{B}}$ is the unit bivector defining the rotation plane.
+where $\hat{b}$ is the unit bivector defining the rotation plane.
 
 ```python
 from morphis.transforms import rotor
@@ -71,7 +75,9 @@ v_rotated = R * e1 * ~R  # e1 -> e2
 
 The rotation action expands to:
 
-$$\mathbf{x}' = \mathbf{x} + \sin(\theta) \, \mathbf{B} \cdot \mathbf{x} + (1 - \cos(\theta)) \, \mathbf{B} \cdot (\mathbf{B} \cdot \mathbf{x})$$
+$$
+x' = x + \sin(\theta) \, b \cdot x + (1 - \cos(\theta)) \, b \cdot (b \cdot x)
+$$
 
 ### Two Reflections = One Rotation
 
@@ -267,8 +273,8 @@ These are the defining properties of rigid motions (Euclidean isometries).
 
 | Transform | Generator | Versor | Action |
 |-----------|-----------|--------|--------|
-| Reflection | Unit vector $\mathbf{n}$ | Odd | $-\mathbf{n}\mathbf{x}\mathbf{n}$ |
-| Rotation | Bivector $\mathbf{B}$ | Even (rotor) | $R\mathbf{x}\tilde{R}$ |
-| Translation | Degenerate bivector | Even (translator) | $T\mathbf{x}\tilde{T}$ |
-| Rigid motion | Line $L$ | Even (motor) | $M\mathbf{x}\tilde{M}$ |
-| Boost | Timelike bivector | Even | $B\mathbf{x}\tilde{B}$ |
+| Reflection | Unit vector $n$ | Odd | $-nxn$ |
+| Rotation | Bivector $b$ | Even (rotor) | $Rx\tilde{R}$ |
+| Translation | Degenerate bivector | Even (translator) | $Tx\tilde{T}$ |
+| Rigid motion | Line $L$ | Even (motor) | $Mx\tilde{M}$ |
+| Boost | Timelike bivector | Even | $Bx\tilde{B}$ |
