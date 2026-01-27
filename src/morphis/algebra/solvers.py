@@ -13,12 +13,12 @@ from numpy import prod
 from numpy.linalg import lstsq, svd
 from numpy.typing import NDArray
 
-from morphis.algebra.specs import BladeSpec
-from morphis.elements import Blade
+from morphis.algebra.specs import VectorSpec
+from morphis.elements import Vector
 
 
 if TYPE_CHECKING:
-    from morphis.elements.operator import Operator
+    from morphis.operations.operator import Operator
 
 
 # =============================================================================
@@ -64,8 +64,8 @@ def _to_matrix(op: "Operator") -> NDArray:
 
 def _from_matrix(
     matrix: NDArray,
-    input_spec: BladeSpec,
-    output_spec: BladeSpec,
+    input_spec: VectorSpec,
+    output_spec: VectorSpec,
     input_collection: tuple[int, ...],
     output_collection: tuple[int, ...],
     metric,
@@ -84,7 +84,7 @@ def _from_matrix(
     Returns:
         Operator with proper tensor structure
     """
-    from morphis.elements.operator import Operator
+    from morphis.operations.operator import Operator
 
     # Reshape from (out_flat, in_flat) to (*out_coll, *out_geo, *in_coll, *in_geo)
     intermediate_shape = output_collection + output_spec.geometric_shape + input_collection + input_spec.geometric_shape
@@ -119,9 +119,9 @@ def _from_matrix(
 
 def structured_lstsq(
     op: "Operator",
-    target: Blade,
+    target: Vector,
     alpha: float = 0.0,
-) -> Blade:
+) -> Vector:
     """
     Solve least squares problem with optional Tikhonov regularization.
 
@@ -155,7 +155,7 @@ def structured_lstsq(
     # Reshape back to blade structure
     x_data = x_vector.reshape(op.input_shape)
 
-    return Blade(
+    return Vector(
         data=x_data,
         grade=op.input_spec.grade,
         metric=op.metric,
@@ -169,9 +169,9 @@ def structured_lstsq(
 
 def structured_pinv_solve(
     op: "Operator",
-    target: Blade,
+    target: Vector,
     r_cond: float | None = None,
-) -> Blade:
+) -> Vector:
     """
     Solve using Moore-Penrose pseudoinverse.
 
@@ -251,7 +251,7 @@ def structured_svd(
         - S: 1D array of singular values (sorted descending)
         - Vt: Operator mapping input_shape -> (r,)
     """
-    from morphis.elements.operator import Operator
+    from morphis.operations.operator import Operator
 
     # Convert to matrix
     G_matrix = _to_matrix(op)
@@ -266,10 +266,10 @@ def structured_svd(
     dim = op.output_spec.dim
 
     # U maps from reduced space (r,) to output space
-    u_input_spec = BladeSpec(grade=0, collection=1, dim=dim)
+    u_input_spec = VectorSpec(grade=0, collection=1, dim=dim)
 
     # Vt maps from input space to reduced space (r,)
-    vt_output_spec = BladeSpec(grade=0, collection=1, dim=dim)
+    vt_output_spec = VectorSpec(grade=0, collection=1, dim=dim)
 
     # Wrap U as Operator
     # U_mat has shape (out_flat, r)

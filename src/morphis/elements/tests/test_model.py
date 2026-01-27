@@ -5,12 +5,10 @@ from numpy import array, asarray, eye, ones, zeros
 from numpy.testing import assert_array_equal
 
 from morphis.elements import (
-    Blade,
     MultiVector,
-    blade_from_data,
-    euclidean,
-    multivector_from_blades,
-    pga,
+    Vector,
+    euclidean_metric,
+    pga_metric,
 )
 
 
@@ -21,7 +19,7 @@ from morphis.elements import (
 
 class TestMetric:
     def test_pga_metric_3d(self):
-        g = pga(3)
+        g = pga_metric(3)
         assert g.data.shape == (4, 4)
         assert g[0, 0] == 0
         assert g[1, 1] == 1
@@ -32,235 +30,234 @@ class TestMetric:
 
     def test_pga_metric_dimension(self):
         for d in [2, 3, 4, 5]:
-            g = pga(d)
+            g = pga_metric(d)
             assert g.dim == d + 1
 
-    def test_euclidean(self):
-        g = euclidean(3)
+    def test_euclidean_metric(self):
+        g = euclidean_metric(3)
         assert_array_equal(g.data, eye(3))
         assert g.signature_tuple == (1, 1, 1)
 
     def test_metric_indexing(self):
-        g = pga(3)
+        g = pga_metric(3)
         assert g[1, 2] == 0
         assert_array_equal(g[1:3, 1:3], eye(2))
 
     def test_metric_asarray(self):
-        g = pga(3)
+        g = pga_metric(3)
         arr = asarray(g)
         assert arr.shape == (4, 4)
 
 
 # =============================================================================
-# Blade Construction and Validation
+# Vector Construction and Validation
 # =============================================================================
 
 
-class TestBladeConstruction:
+class TestVectorConstruction:
     def test_vector_single(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = array([1.0, 2.0, 3.0, 4.0])
-        b = Blade(data, grade=1, metric=m)
+        b = Vector(data, grade=1, metric=g)
         assert b.grade == 1
         assert b.dim == 4
         assert b.collection == ()
         assert b.shape == (4,)
-        assert b.collection_shape == ()
+        assert b.collection == ()
         assert b.geometric_shape == (4,)
 
     def test_vector_batch(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = zeros((10, 4))
-        b = Blade(data, grade=1, metric=m, collection=(10,))
-        assert b.collection_shape == (10,)
+        b = Vector(data, grade=1, metric=g, collection=(10,))
+        assert b.collection == (10,)
         assert b.geometric_shape == (4,)
 
     def test_bivector_single(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = zeros((4, 4))
-        b = Blade(data, grade=2, metric=m)
+        b = Vector(data, grade=2, metric=g)
         assert b.grade == 2
         assert b.dim == 4
         assert b.collection == ()
 
     def test_bivector_batch(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = zeros((5, 4, 4))
-        b = Blade(data, grade=2, metric=m, collection=(5,))
-        assert b.collection_shape == (5,)
+        b = Vector(data, grade=2, metric=g, collection=(5,))
+        assert b.collection == (5,)
         assert b.geometric_shape == (4, 4)
 
     def test_trivector(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = zeros((4, 4, 4))
-        b = Blade(data, grade=3, metric=m)
+        b = Vector(data, grade=3, metric=g)
         assert b.grade == 3
         assert b.dim == 4
         assert b.collection == ()
 
     def test_validation_wrong_grade(self):
-        m = euclidean(4)
-        with pytest.raises(ValueError, match="collection.*grade.*ndim"):
-            Blade(data=zeros((4, 4)), grade=1, metric=m, collection=())
+        g = euclidean_metric(4)
+        with pytest.raises(ValueError, match="collection.*rank.*ndim"):
+            Vector(data=zeros((4, 4)), grade=1, metric=g, collection=())
 
     def test_validation_wrong_dim(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         with pytest.raises(ValueError, match="Geometric axis"):
-            Blade(data=zeros((4, 3)), grade=2, metric=m, collection=())
+            Vector(data=zeros((4, 3)), grade=2, metric=g, collection=())
 
     def test_validation_negative_grade(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         with pytest.raises(ValueError, match="non-negative"):
-            Blade(data=zeros(4), grade=-1, metric=m, collection=())
+            Vector(data=zeros(4), grade=-1, metric=g, collection=())
 
 
 # =============================================================================
-# Blade Indexing and NumPy Interface
+# Vector Indexing and NumPy Interface
 # =============================================================================
 
 
-class TestBladeInterface:
+class TestVectorInterface:
     def test_getitem(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = array([1.0, 2.0, 3.0, 4.0])
-        b = Blade(data, grade=1, metric=m)
+        b = Vector(data, grade=1, metric=g)
         assert b[0] == 1.0
         assert b[..., 0] == 1.0
 
     def test_setitem(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = zeros((4, 4))
-        b = Blade(data, grade=2, metric=m)
+        b = Vector(data, grade=2, metric=g)
         b[0, 1] = 5.0
         assert b.data[0, 1] == 5.0
 
     def test_asarray(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = array([1.0, 2.0, 3.0, 4.0])
-        b = Blade(data, grade=1, metric=m)
+        b = Vector(data, grade=1, metric=g)
         arr = asarray(b)
         arr[0] = 10.0
         assert b.data[0] == 10.0
 
     def test_shape_property(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = zeros((5, 4, 4))
-        b = Blade(data, grade=2, metric=m, collection=(5,))
+        b = Vector(data, grade=2, metric=g, collection=(5,))
         assert b.shape == (5, 4, 4)
 
 
 # =============================================================================
-# Blade Arithmetic
+# Vector Arithmetic
 # =============================================================================
 
 
-class TestBladeArithmetic:
+class TestVectorArithmetic:
     def test_add_same_grade(self):
-        m = euclidean(4)
-        a = Blade(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=m)
-        b = Blade(array([0.0, 1.0, 0.0, 0.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        a = Vector(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=g)
+        b = Vector(array([0.0, 1.0, 0.0, 0.0]), grade=1, metric=g)
         c = a + b
         assert c.grade == 1
         assert c.dim == 4
         assert_array_equal(c.data, array([1.0, 1.0, 0.0, 0.0]))
 
     def test_add_different_grade_raises(self):
-        m = euclidean(4)
-        a = Blade(zeros(4), grade=1, metric=m)
-        b = Blade(zeros((4, 4)), grade=2, metric=m)
+        g = euclidean_metric(4)
+        a = Vector(zeros(4), grade=1, metric=g)
+        b = Vector(zeros((4, 4)), grade=2, metric=g)
         with pytest.raises(ValueError, match="grade"):
             _ = a + b
 
     def test_add_different_metric_raises(self):
-        m4 = euclidean(4)
-        m3 = euclidean(3)
-        a = Blade(zeros(4), grade=1, metric=m4)
-        b = Blade(zeros(3), grade=1, metric=m3)
+        m4 = euclidean_metric(4)
+        m3 = euclidean_metric(3)
+        a = Vector(zeros(4), grade=1, metric=m4)
+        b = Vector(zeros(3), grade=1, metric=m3)
         with pytest.raises(ValueError, match="[Mm]etric"):
             _ = a + b
 
     def test_subtract(self):
-        m = euclidean(4)
-        a = Blade(array([2.0, 3.0, 4.0, 5.0]), grade=1, metric=m)
-        b = Blade(array([1.0, 1.0, 1.0, 1.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        a = Vector(array([2.0, 3.0, 4.0, 5.0]), grade=1, metric=g)
+        b = Vector(array([1.0, 1.0, 1.0, 1.0]), grade=1, metric=g)
         c = a - b
         assert_array_equal(c.data, array([1.0, 2.0, 3.0, 4.0]))
 
     def test_scalar_multiply(self):
-        m = euclidean(4)
-        a = Blade(array([1.0, 2.0, 3.0, 4.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        a = Vector(array([1.0, 2.0, 3.0, 4.0]), grade=1, metric=g)
         b = 3.0 * a
         assert_array_equal(b.data, array([3.0, 6.0, 9.0, 12.0]))
         c = a * 3.0
         assert_array_equal(c.data, b.data)
 
     def test_scalar_divide(self):
-        m = euclidean(4)
-        a = Blade(array([2.0, 4.0, 6.0, 8.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        a = Vector(array([2.0, 4.0, 6.0, 8.0]), grade=1, metric=g)
         b = a / 2.0
         assert_array_equal(b.data, array([1.0, 2.0, 3.0, 4.0]))
 
     def test_negate(self):
-        m = euclidean(4)
-        a = Blade(array([1.0, -2.0, 3.0, -4.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        a = Vector(array([1.0, -2.0, 3.0, -4.0]), grade=1, metric=g)
         b = -a
         assert_array_equal(b.data, array([-1.0, 2.0, -3.0, 4.0]))
 
     def test_add_broadcasting(self):
-        m = euclidean(4)
-        a = Blade(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=m)
-        b = Blade(zeros((3, 4)), grade=1, metric=m, collection=(3,))
+        g = euclidean_metric(4)
+        a = Vector(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=g)
+        b = Vector(zeros((3, 4)), grade=1, metric=g, collection=(3,))
         c = a + b
         assert c.collection == (3,)
-        assert c.collection_shape == (3,)
+        assert c.collection == (3,)
 
 
 # =============================================================================
-# Blade Constructors
+# Vector Constructors
 # =============================================================================
 
 
-class TestBladeConstructors:
+class TestVectorConstructors:
     def test_scalar_blade(self):
-        m = euclidean(4)
-        b = Blade(5.0, grade=0, metric=m)
+        g = euclidean_metric(4)
+        b = Vector(5.0, grade=0, metric=g)
         assert b.grade == 0
         assert b.data == 5.0
 
     def test_scalar_blade_batch(self):
-        m = euclidean(4)
-        b = Blade(array([1, 2, 3]), grade=0, metric=m, collection=(3,))
-        assert b.collection_shape == (3,)
+        g = euclidean_metric(4)
+        b = Vector(array([1, 2, 3]), grade=0, metric=g, collection=(3,))
+        assert b.collection == (3,)
 
     def test_vector_blade(self):
-        m = euclidean(4)
-        b = Blade(array([1, 2, 3, 4]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        b = Vector(array([1, 2, 3, 4]), grade=1, metric=g)
         assert b.grade == 1
         assert b.dim == 4
 
     def test_bivector_blade(self):
-        m = euclidean(4)
-        b = Blade(zeros((4, 4)), grade=2, metric=m)
+        g = euclidean_metric(4)
+        b = Vector(zeros((4, 4)), grade=2, metric=g)
         assert b.grade == 2
 
     def test_trivector_blade(self):
-        m = euclidean(4)
-        b = Blade(zeros((4, 4, 4)), grade=3, metric=m)
+        g = euclidean_metric(4)
+        b = Vector(zeros((4, 4, 4)), grade=3, metric=g)
         assert b.grade == 3
 
-    def test_blade_from_data(self):
-        m = euclidean(4)
+    def test_vector_from_data(self):
+        g = euclidean_metric(4)
         data = zeros((4, 4))
-        b = blade_from_data(data, grade=2, metric=m)
-        assert b.grade == 2
-        assert b.dim == 4
+        v = Vector(data, grade=2, metric=g)
+        assert v.grade == 2
+        assert v.dim == 4
 
-    def test_blade_from_data_grade_zero(self):
-        m = euclidean(4)
-        # Grade 0 is now allowed via blade_from_data
-        b = blade_from_data(array(5.0), grade=0, metric=m)
-        assert b.grade == 0
-        assert b.data == 5.0
+    def test_vector_from_data_grade_zero(self):
+        g = euclidean_metric(4)
+        v = Vector(array(5.0), grade=0, metric=g)
+        assert v.grade == 0
+        assert v.data == 5.0
 
 
 # =============================================================================
@@ -270,81 +267,161 @@ class TestBladeConstructors:
 
 class TestMultiVector:
     def test_creation(self):
-        m = euclidean(4)
-        b_0 = Blade(1.0, grade=0, metric=m)
-        b_2 = Blade(zeros((4, 4)), grade=2, metric=m)
-        mv = MultiVector(data={0: b_0, 2: b_2}, metric=m, collection=())
-        assert mv.grades == [0, 2]
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        b_2 = Vector(zeros((4, 4)), grade=2, metric=g)
+        M = MultiVector(data={0: b_0, 2: b_2}, metric=g, collection=())
+        assert M.grades == [0, 2]
 
     def test_grade_select(self):
-        m = euclidean(4)
-        b_0 = Blade(1.0, grade=0, metric=m)
-        b_2 = Blade(zeros((4, 4)), grade=2, metric=m)
-        mv = MultiVector(data={0: b_0, 2: b_2}, metric=m, collection=())
-        assert mv.grade_select(2) is b_2
-        assert mv.grade_select(1) is None
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        b_2 = Vector(zeros((4, 4)), grade=2, metric=g)
+        M = MultiVector(data={0: b_0, 2: b_2}, metric=g, collection=())
+        assert M.grade_select(2) is b_2
+        assert M.grade_select(1) is None
 
     def test_getitem(self):
-        m = euclidean(4)
-        b_0 = Blade(1.0, grade=0, metric=m)
-        mv = MultiVector(data={0: b_0}, metric=m, collection=())
-        assert mv[0] is b_0
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        M = MultiVector(data={0: b_0}, metric=g, collection=())
+        assert M[0] is b_0
 
     def test_add(self):
-        m = euclidean(4)
-        b_0a = Blade(1.0, grade=0, metric=m)
-        b_0b = Blade(2.0, grade=0, metric=m)
-        b_1 = Blade(ones(4), grade=1, metric=m)
-        mv_1 = MultiVector(data={0: b_0a}, metric=m, collection=())
-        mv_2 = MultiVector(data={0: b_0b, 1: b_1}, metric=m, collection=())
-        mv_3 = mv_1 + mv_2
-        assert mv_3.grades == [0, 1]
-        assert mv_3[0].data == 3.0
+        g = euclidean_metric(4)
+        b_0a = Vector(1.0, grade=0, metric=g)
+        b_0b = Vector(2.0, grade=0, metric=g)
+        b_1 = Vector(ones(4), grade=1, metric=g)
+        M1 = MultiVector(data={0: b_0a}, metric=g, collection=())
+        M2 = MultiVector(data={0: b_0b, 1: b_1}, metric=g, collection=())
+        M3 = M1 + M2
+        assert M3.grades == [0, 1]
+        assert M3[0].data == 3.0
 
     def test_subtract(self):
-        m = euclidean(4)
-        b_0a = Blade(5.0, grade=0, metric=m)
-        b_0b = Blade(2.0, grade=0, metric=m)
-        mv_1 = MultiVector(data={0: b_0a}, metric=m, collection=())
-        mv_2 = MultiVector(data={0: b_0b}, metric=m, collection=())
-        mv_3 = mv_1 - mv_2
-        assert mv_3[0].data == 3.0
+        g = euclidean_metric(4)
+        b_0a = Vector(5.0, grade=0, metric=g)
+        b_0b = Vector(2.0, grade=0, metric=g)
+        M1 = MultiVector(data={0: b_0a}, metric=g, collection=())
+        M2 = MultiVector(data={0: b_0b}, metric=g, collection=())
+        M3 = M1 - M2
+        assert M3[0].data == 3.0
 
     def test_scalar_multiply(self):
-        m = euclidean(4)
-        b_0 = Blade(2.0, grade=0, metric=m)
-        mv = MultiVector(data={0: b_0}, metric=m, collection=())
-        mv_2 = 2.0 * mv
-        assert mv_2[0].data == 4.0
+        g = euclidean_metric(4)
+        b_0 = Vector(2.0, grade=0, metric=g)
+        M = MultiVector(data={0: b_0}, metric=g, collection=())
+        M2 = 2.0 * M
+        assert M2[0].data == 4.0
 
     def test_negate(self):
-        m = euclidean(4)
-        b_0 = Blade(3.0, grade=0, metric=m)
-        mv = MultiVector(data={0: b_0}, metric=m, collection=())
-        mv_2 = -mv
-        assert mv_2[0].data == -3.0
+        g = euclidean_metric(4)
+        b_0 = Vector(3.0, grade=0, metric=g)
+        M = MultiVector(data={0: b_0}, metric=g, collection=())
+        M2 = -M
+        assert M2[0].data == -3.0
 
     def test_from_blades(self):
-        m = euclidean(4)
-        b_0 = Blade(1.0, grade=0, metric=m)
-        b_1 = Blade(ones(4), grade=1, metric=m)
-        b_2 = Blade(zeros((4, 4)), grade=2, metric=m)
-        mv = multivector_from_blades(b_0, b_1, b_2)
-        assert mv.grades == [0, 1, 2]
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        b_1 = Vector(ones(4), grade=1, metric=g)
+        b_2 = Vector(zeros((4, 4)), grade=2, metric=g)
+        M = MultiVector(b_0, b_1, b_2)
+        assert M.grades == [0, 1, 2]
 
     def test_from_blades_duplicate_grades_summed(self):
-        m = euclidean(4)
-        b_1a = Blade(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=m)
-        b_1b = Blade(array([0.0, 1.0, 0.0, 0.0]), grade=1, metric=m)
-        mv = multivector_from_blades(b_1a, b_1b)
-        assert mv.grades == [1]
-        assert_array_equal(mv[1].data, array([1.0, 1.0, 0.0, 0.0]))
+        g = euclidean_metric(4)
+        b_1a = Vector(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=g)
+        b_1b = Vector(array([0.0, 1.0, 0.0, 0.0]), grade=1, metric=g)
+        M = MultiVector(b_1a, b_1b)
+        assert M.grades == [1]
+        assert_array_equal(M[1].data, array([1.0, 1.0, 0.0, 0.0]))
 
     def test_validation_grade_mismatch(self):
-        m = euclidean(4)
-        b_1 = Blade(zeros(4), grade=1, metric=m)
+        g = euclidean_metric(4)
+        b_1 = Vector(zeros(4), grade=1, metric=g)
         with pytest.raises(ValueError, match="grade"):
-            MultiVector(data={2: b_1}, metric=m, collection=())
+            MultiVector(data={2: b_1}, metric=g, collection=())
+
+    def test_is_even_true(self):
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        b_2 = Vector(zeros((4, 4)), grade=2, metric=g)
+        mv = MultiVector(data={0: b_0, 2: b_2}, metric=g, collection=())
+        assert mv.is_even is True
+
+    def test_is_even_false(self):
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        b_1 = Vector(ones(4), grade=1, metric=g)
+        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, collection=())
+        assert mv.is_even is False
+
+    def test_is_odd_true(self):
+        g = euclidean_metric(4)
+        b_1 = Vector(ones(4), grade=1, metric=g)
+        b_3 = Vector(zeros((4, 4, 4)), grade=3, metric=g)
+        mv = MultiVector(data={1: b_1, 3: b_3}, metric=g, collection=())
+        assert mv.is_odd is True
+
+    def test_is_odd_false(self):
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        b_1 = Vector(ones(4), grade=1, metric=g)
+        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, collection=())
+        assert mv.is_odd is False
+
+    def test_is_rotor_true(self):
+        """A proper rotor satisfies R * ~R = 1."""
+        from math import pi
+
+        from morphis.elements import basis_vectors
+        from morphis.operations import wedge
+        from morphis.operations.exponential import exp_vector
+
+        g = euclidean_metric(3)
+        e1, e2, _ = basis_vectors(g)
+        B = wedge(e1, e2)  # Unit bivector
+        R = exp_vector(B * (pi / 4))  # 45-degree rotor
+
+        assert R.is_rotor is True
+
+    def test_is_rotor_false_not_even(self):
+        """A multivector with odd grades is not a rotor."""
+        g = euclidean_metric(4)
+        b_1 = Vector(ones(4), grade=1, metric=g)
+        mv = MultiVector(data={1: b_1}, metric=g, collection=())
+        assert mv.is_rotor is False
+
+    def test_is_rotor_false_not_unit(self):
+        """An even multivector that is not unit norm is not a rotor."""
+        g = euclidean_metric(4)
+        b_0 = Vector(2.0, grade=0, metric=g)  # Not unit
+        mv = MultiVector(data={0: b_0}, metric=g, collection=())
+        assert mv.is_rotor is False
+
+    def test_is_motor_true(self):
+        """A proper motor has grades {0, 2} and M * ~M = 1."""
+        from math import pi
+
+        from morphis.elements import basis_vectors
+        from morphis.operations import wedge
+        from morphis.operations.exponential import exp_vector
+
+        g = euclidean_metric(3)
+        e1, e2, _ = basis_vectors(g)
+        B = wedge(e1, e2)
+        M = exp_vector(B * (pi / 6))  # Simple rotor is also a motor
+
+        assert M.is_motor is True
+
+    def test_is_motor_false_wrong_grades(self):
+        """A multivector with grades other than {0, 2} is not a motor."""
+        g = euclidean_metric(4)
+        b_0 = Vector(1.0, grade=0, metric=g)
+        b_1 = Vector(ones(4), grade=1, metric=g)
+        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, collection=())
+        assert mv.is_motor is False
 
 
 # =============================================================================
@@ -354,27 +431,28 @@ class TestMultiVector:
 
 class TestEdgeCases:
     def test_blade_0d_collection(self):
-        m = euclidean(4)
-        b = Blade(array([1.0, 2.0, 3.0, 4.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        b = Vector(array([1.0, 2.0, 3.0, 4.0]), grade=1, metric=g)
         assert b.collection == ()
-        assert b.collection_shape == ()
+        assert b.collection == ()
 
     def test_blade_2d_collection(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = zeros((10, 20, 4, 4))
-        b = Blade(data, grade=2, metric=m, collection=(10, 20))
-        assert b.collection_shape == (10, 20)
+        b = Vector(data, grade=2, metric=g, collection=(10, 20))
+        assert b.collection == (10, 20)
 
     def test_blade_float_dtype(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = array([1.0, 2.0, 3.0, 4.0])
-        b = Blade(data, grade=1, metric=m)
+        b = Vector(data, grade=1, metric=g)
         c = b * 2
         assert c.data[0] == 2.0
 
-    def test_empty_multivector_from_blades_raises(self):
-        with pytest.raises(ValueError, match="At least one blade"):
-            multivector_from_blades()
+    def test_empty_multivector_raises(self):
+        # Empty MultiVector with no data raises
+        with pytest.raises(TypeError, match="positional arguments must be Vectors"):
+            MultiVector(None)
 
 
 # =============================================================================
@@ -384,13 +462,13 @@ class TestEdgeCases:
 
 class TestIntegration:
     def test_blade_roundtrip(self):
-        m = euclidean(4)
+        g = euclidean_metric(4)
         data = array([1.0, 2.0, 3.0, 4.0])
-        b_1 = Blade(data, grade=1, metric=m)
-        b_2 = Blade(asarray(b_1), grade=1, metric=m)
+        b_1 = Vector(data, grade=1, metric=g)
+        b_2 = Vector(asarray(b_1), grade=1, metric=g)
         assert_array_equal(b_1.data, b_2.data)
 
     def test_metric_blade_compatibility(self):
-        g = pga(3)
-        b = Blade(zeros(4), grade=1, metric=g)
+        g = pga_metric(3)
+        b = Vector(zeros(4), grade=1, metric=g)
         assert g.dim == b.dim

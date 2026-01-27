@@ -1,11 +1,11 @@
 """
-Geometric Algebra - Blade Factorization
+Geometric Algebra - Vector Factorization
 
-Factor k-blades into spanning vectors using recursive interior product
+Factor k-vectors into spanning grade-1 vectors using recursive interior product
 decomposition. Works in arbitrary dimensions with any metric structure,
 including degenerate metrics (PGA).
 
-Returns a single grade-1 Blade with shape (k, dim) and collection=(k,), where
+Returns a single grade-1 Vector with shape (k, dim) and collection=(k,), where
 each row is one spanning vector.
 """
 
@@ -15,12 +15,13 @@ from typing import TYPE_CHECKING
 
 from numpy import abs as np_abs, concatenate, zeros
 
+from morphis.config import TOLERANCE
 from morphis.operations.norms import norm, norm_squared, normalize
 from morphis.operations.projections import interior_left, project
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
 
 # =============================================================================
@@ -28,31 +29,31 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-def factor(b: Blade, tol: float = 1e-12) -> Blade:
+def factor(b: Vector, tol: float | None = None) -> Vector:
     """
-    Factor a k-blade into k spanning vectors.
+    Factor a k-vector into k spanning grade-1 vectors.
 
     Uses recursive interior product decomposition to extract vectors from the
-    blade's subspace, then orthonormalizes and scales them to preserve the
-    blade's norm:
+    vector's subspace, then orthonormalizes and scales them to preserve the
+    vector's norm:
 
         |v1 ^ v2 ^ ... ^ vk| = |b|
 
     The algorithm:
     1. Extract spanning vectors via v1 << b, then factor the result recursively
     2. Orthonormalize using Gram-Schmidt
-    3. Scale all vectors by |b|^(1/k) to preserve blade norm
+    3. Scale all vectors by |b|^(1/k) to preserve vector norm
 
     Handles degenerate metrics (PGA) transparently by skipping null basis
     vectors during extraction.
 
     Args:
-        b: k-blade to factor (grade > 0)
+        b: k-vector to factor (grade > 0)
         tol: Numerical tolerance for zero detection
 
     Returns:
-        Grade-1 Blade with shape (k, dim) and collection=(k,), where each row is one
-        spanning vector. For zero blades, returns k zero vectors.
+        Grade-1 Vector with shape (k, dim) and collection=(k,), where each row is one
+        spanning vector. For zero vectors, returns k zero vectors.
 
     Raises:
         ValueError: If b is grade 0 (scalars have no spanning vectors)
@@ -64,28 +65,31 @@ def factor(b: Blade, tol: float = 1e-12) -> Blade:
 
         # Verify: wedge(*vectors) approx bivector (up to scale)
     """
+    if tol is None:
+        tol = TOLERANCE
+
     if b.grade == 0:
         raise ValueError("Cannot factor scalar (grade 0) - no spanning vectors exist")
 
     # Extract raw spanning vectors (any orientation, any normalization)
     raw_vectors = _extract_spanning_vectors(b, tol)
 
-    # Check for zero blade
+    # Check for zero vector
     if norm_squared(raw_vectors).max() < tol:
         return raw_vectors
 
     # Orthonormalize using Gram-Schmidt
     ortho_vectors = _gram_schmidt(raw_vectors, tol)
 
-    # Scale to preserve blade norm: |v1 ^ ... ^ vk| = |b|
+    # Scale to preserve vector norm: |v1 ^ ... ^ vk| = |b|
     b_norm = norm(b)
     scale = b_norm ** (1.0 / b.grade)
     scaled_data = ortho_vectors.data * scale
 
     # Return shape (k, dim) with collection=(k,) (one collection dimension)
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
-    return Blade(
+    return Vector(
         data=scaled_data,
         grade=1,
         metric=b.metric,
@@ -98,20 +102,20 @@ def factor(b: Blade, tol: float = 1e-12) -> Blade:
 # =============================================================================
 
 
-def _extract_spanning_vectors(b: Blade, tol: float) -> Blade:
+def _extract_spanning_vectors(b: Vector, tol: float) -> Vector:
     """
     Recursively extract spanning vectors via interior product decomposition.
 
-    For k-blade b, finds any vector v in its span, computes v << b to get a
-    (k-1)-blade, then recursively factors that. No normalization is performed.
+    For k-vector b, finds any grade-1 vector v in its span, computes v << b to get a
+    (k-1)-vector, then recursively factors that. No normalization is performed.
 
-    Returns grade-1 Blade with collection=(k,) containing unnormalized spanning vectors.
+    Returns grade-1 Vector with collection=(k,) containing unnormalized spanning vectors.
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     if b.grade == 1:
         # Base case: vector is already factored
-        return Blade(
+        return Vector(
             data=b.data.reshape(1, -1),
             grade=1,
             metric=b.metric,
@@ -123,7 +127,7 @@ def _extract_spanning_vectors(b: Blade, tol: float) -> Blade:
     is_degenerate = np_abs(g.data[0, 0]) < tol
     start_index = 1 if is_degenerate else 0
 
-    # Find a basis vector that contracts non-trivially with the blade
+    # Find a basis vector that contracts non-trivially with the vector
     v_test = None
     contracted = None
 
@@ -131,7 +135,7 @@ def _extract_spanning_vectors(b: Blade, tol: float) -> Blade:
         # Create basis vector e_i
         e_i_data = zeros(b.dim)
         e_i_data[i] = 1.0
-        e_i = Blade(data=e_i_data, grade=1, metric=b.metric, collection=())
+        e_i = Vector(data=e_i_data, grade=1, metric=b.metric, collection=())
 
         # Try contracting: e_i << b
         result = interior_left(e_i, b)
@@ -143,17 +147,17 @@ def _extract_spanning_vectors(b: Blade, tol: float) -> Blade:
             break
 
     if v_test is None:
-        # Zero blade - all contractions vanished
+        # Zero vector - all contractions vanished
         # Return k zero vectors with shape (k, dim), collection=(k,)
         zero_data = zeros((b.grade, b.dim))
-        return Blade(
+        return Vector(
             data=zero_data,
             grade=1,
             metric=b.metric,
             collection=(b.grade,),  # One collection dimension containing k vectors
         )
 
-    # Recursively factor the (k-1)-blade
+    # Recursively factor the (k-1)-vector
     remaining_vectors = _extract_spanning_vectors(contracted, tol)
 
     # Concatenate v_test with remaining vectors
@@ -165,7 +169,7 @@ def _extract_spanning_vectors(b: Blade, tol: float) -> Blade:
 
     # collection=(k,) means one collection dimension; shape (k, dim) has ndim=2
     k = combined_data.shape[0]
-    return Blade(
+    return Vector(
         data=combined_data,
         grade=1,
         metric=b.metric,
@@ -178,7 +182,7 @@ def _extract_spanning_vectors(b: Blade, tol: float) -> Blade:
 # =============================================================================
 
 
-def _gram_schmidt(vectors: Blade, tol: float) -> Blade:
+def _gram_schmidt(vectors: Vector, tol: float) -> Vector:
     """
     Orthonormalize vectors using Gram-Schmidt process.
 
@@ -186,13 +190,13 @@ def _gram_schmidt(vectors: Blade, tol: float) -> Blade:
     orthonormal vectors spanning the same subspace.
 
     Args:
-        vectors: Grade-1 Blade with shape (k, dim), collection=(k,)
+        vectors: Grade-1 Vector with shape (k, dim), collection=(k,)
         tol: Tolerance for zero detection
 
     Returns:
-        Grade-1 Blade with shape (k, dim), collection=(k,) containing orthonormal vectors
+        Grade-1 Vector with shape (k, dim), collection=(k,) containing orthonormal vectors
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     k = vectors.data.shape[0]  # Number of vectors from first dimension
     dim = vectors.dim
@@ -201,7 +205,7 @@ def _gram_schmidt(vectors: Blade, tol: float) -> Blade:
 
     for i in range(k):
         # Extract i-th vector
-        v = Blade(
+        v = Vector(
             data=vectors.data[i].copy(),
             grade=1,
             metric=metric,
@@ -210,7 +214,7 @@ def _gram_schmidt(vectors: Blade, tol: float) -> Blade:
 
         # Subtract projections onto all previous orthonormal vectors
         for j in range(i):
-            u = Blade(
+            u = Vector(
                 data=result_data[j],
                 grade=1,
                 metric=metric,
@@ -229,7 +233,7 @@ def _gram_schmidt(vectors: Blade, tol: float) -> Blade:
             # Leave as zero vector
             pass
 
-    return Blade(
+    return Vector(
         data=result_data,
         grade=1,
         metric=metric,
@@ -242,23 +246,23 @@ def _gram_schmidt(vectors: Blade, tol: float) -> Blade:
 # =============================================================================
 
 
-def spanning_vectors(b: Blade, tol: float = 1e-12) -> tuple[Blade, ...]:
+def spanning_vectors(b: Vector, tol: float | None = None) -> tuple[Vector, ...]:
     """
-    Factor a blade into its constituent vectors.
+    Factor a vector into its constituent grade-1 vectors.
 
-    For a k-blade b = v1 ^ v2 ^ ... ^ vk, returns (v1, v2, ..., vk).
+    For a k-vector b = v1 ^ v2 ^ ... ^ vk, returns (v1, v2, ..., vk).
 
     This is a convenience wrapper around factor() that returns a tuple of
-    individual Blade objects instead of a single Blade with shape (k, dim).
+    individual Vector objects instead of a single Vector with shape (k, dim).
 
     Args:
-        b: A blade of any grade
+        b: A vector of any grade
         tol: Numerical tolerance for zero detection
 
     Returns:
-        Tuple of k grade-1 Blades that wedge to produce the original blade
+        Tuple of k grade-1 Vectors that wedge to produce the original vector
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     if b.grade == 0:
         return ()
@@ -268,13 +272,13 @@ def spanning_vectors(b: Blade, tol: float = 1e-12) -> tuple[Blade, ...]:
         return (b.copy(),)
 
     # Factor using the recursive algorithm
-    vectors_blade = factor(b, tol)
+    vectors_result = factor(b, tol)
 
-    # Convert from shape (k, dim) to tuple of k individual blades
+    # Convert from shape (k, dim) to tuple of k individual vectors
     result = []
     for i in range(b.grade):
-        v = Blade(
-            data=vectors_blade.data[i].copy(),
+        v = Vector(
+            data=vectors_result.data[i].copy(),
             grade=1,
             metric=b.metric,
             collection=(),

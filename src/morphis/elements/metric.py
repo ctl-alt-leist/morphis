@@ -10,9 +10,9 @@ Every GA object requires a Metric. Operations between objects with different
 metrics raise ValueError.
 
 Factory functions provide cached metrics for common configurations:
-- euclidean(dim): Standard Euclidean VGA
-- pga(euclidean_dim): Projective GA for d-dimensional Euclidean space
-- lorentzian(dim): Spacetime algebra
+- euclidean_metric(dim): Standard Euclidean VGA
+- pga_metric(dim): Projective GA for d-dimensional Euclidean space
+- lorentzian_metric(dim): Spacetime algebra
 """
 
 from __future__ import annotations
@@ -85,7 +85,7 @@ class Metric(BaseModel):
         structure: The geometric interpretation (GAStructure)
 
     Examples:
-        >>> m = euclidean(3)  # 3D Euclidean VGA
+        >>> m = euclidean_metric(3)  # 3D Euclidean VGA
         >>> m.dim
         3
         >>> m.signature
@@ -93,7 +93,7 @@ class Metric(BaseModel):
         >>> m.structure
         GAStructure.FLAT
 
-        >>> m = pga(3)  # 3D PGA (4D underlying space)
+        >>> m = pga_metric(3)  # 3D PGA (4D underlying space)
         >>> m.dim
         4
         >>> m.euclidean_dim
@@ -272,14 +272,14 @@ def metric(
 
     # Dispatch to appropriate factory
     if sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.FLAT:
-        return euclidean(dim)
+        return euclidean_metric(dim)
     elif sig_enum == GASignature.LORENTZIAN and struct_enum == GAStructure.FLAT:
-        return lorentzian(dim)
+        return lorentzian_metric(dim)
     elif sig_enum == GASignature.DEGENERATE and struct_enum == GAStructure.PROJECTIVE:
-        return pga(dim)
+        return pga_metric(dim)
     elif sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.PROJECTIVE:
         # Euclidean PGA is the same as degenerate projective
-        return pga(dim)
+        return pga_metric(dim)
     elif sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.CONFORMAL:
         return _cga_metric(dim)
     else:
@@ -290,7 +290,7 @@ def metric(
         )
 
 
-def euclidean(dim: int) -> Metric:
+def euclidean_metric(dim: int) -> Metric:
     """
     Get cached Euclidean metric for d-dimensional space.
 
@@ -309,7 +309,7 @@ def euclidean(dim: int) -> Metric:
         Cached Metric instance
 
     Examples:
-        >>> m = euclidean(3)
+        >>> m = euclidean_metric(3)
         >>> m.signature
         GASignature.EUCLIDEAN
         >>> m.dim
@@ -324,7 +324,7 @@ def euclidean(dim: int) -> Metric:
     return _EUCLIDEAN_METRIC_CACHE[dim]
 
 
-def pga(euclidean_dim: int) -> Metric:
+def pga_metric(dim: int) -> Metric:
     """
     Get cached PGA metric for d-dimensional Euclidean space.
 
@@ -337,16 +337,16 @@ def pga(euclidean_dim: int) -> Metric:
     the ideal point at infinity.
 
     Note: Consider using the unified :func:`metric` function instead:
-    ``metric(euclidean_dim, "euclidean", "projective")``
+    ``metric(dim, "euclidean", "projective")``
 
     Args:
-        euclidean_dim: The Euclidean dimension (resulting space is d+1)
+        dim: The Euclidean dimension (resulting space is dim+1)
 
     Returns:
         Cached Metric instance
 
     Examples:
-        >>> m = pga(3)  # 3D PGA
+        >>> m = pga_metric(3)  # 3D PGA
         >>> m.dim
         4
         >>> m.euclidean_dim
@@ -354,19 +354,19 @@ def pga(euclidean_dim: int) -> Metric:
         >>> m.signature_tuple
         (0, 1, 1, 1)
     """
-    if euclidean_dim not in _PGA_METRIC_CACHE:
-        dim = euclidean_dim + 1
-        g = eye(dim)
+    if dim not in _PGA_METRIC_CACHE:
+        total_dim = dim + 1
+        g = eye(total_dim)
         g[0, 0] = 0.0
-        _PGA_METRIC_CACHE[euclidean_dim] = Metric(
+        _PGA_METRIC_CACHE[dim] = Metric(
             data=g,
             signature=GASignature.DEGENERATE,
             structure=GAStructure.PROJECTIVE,
         )
-    return _PGA_METRIC_CACHE[euclidean_dim]
+    return _PGA_METRIC_CACHE[dim]
 
 
-def lorentzian(dim: int) -> Metric:
+def lorentzian_metric(dim: int) -> Metric:
     """
     Get cached Lorentzian (spacetime) metric.
 
@@ -384,7 +384,7 @@ def lorentzian(dim: int) -> Metric:
         Cached Metric instance
 
     Examples:
-        >>> m = lorentzian(4)  # Minkowski spacetime
+        >>> m = lorentzian_metric(4)  # Minkowski spacetime
         >>> m.signature_tuple
         (1, -1, -1, -1)
     """
@@ -419,15 +419,15 @@ class _MetricNamespace:
         """Create metric for the given dimension."""
         if self._signature == GASignature.EUCLIDEAN:
             if self._structure == GAStructure.FLAT:
-                return euclidean(dim)
+                return euclidean_metric(dim)
             elif self._structure == GAStructure.CONFORMAL:
                 return _cga_metric(dim)
         elif self._signature == GASignature.DEGENERATE:
             if self._structure == GAStructure.PROJECTIVE:
-                return pga(dim)
+                return pga_metric(dim)
         elif self._signature == GASignature.LORENTZIAN:
             if self._structure == GAStructure.FLAT:
-                return lorentzian(dim)
+                return lorentzian_metric(dim)
 
         # Fallback for unsupported combinations
         raise ValueError(f"Unsupported metric combination: {self._signature.name}.{self._structure.name}")

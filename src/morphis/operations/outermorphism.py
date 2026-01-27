@@ -29,9 +29,9 @@ from morphis.algebra.patterns import INPUT_GEOMETRIC, OUTPUT_GEOMETRIC
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
-    from morphis.elements.operator import Operator
+    from morphis.elements.vector import Vector
+    from morphis.operations.operator import Operator
 
 
 # =============================================================================
@@ -86,7 +86,7 @@ def exterior_power_signature(k: int) -> str:
         in_idx = INPUT_GEOMETRIC[i]
         op_parts.append(f"{out_idx}{in_idx}")
 
-    # Blade subscript: "...abc" (collection dims via ellipsis, then k geometric)
+    # Vector subscript: "...abc" (collection dims via ellipsis, then k geometric)
     blade_indices = INPUT_GEOMETRIC[:k]
     blade_sub = f"...{blade_indices}"
 
@@ -102,9 +102,9 @@ def exterior_power_signature(k: int) -> str:
 # =============================================================================
 
 
-def apply_exterior_power(A: "Operator", blade: "Blade", k: int) -> "Blade":
+def apply_exterior_power(A: "Operator", blade: "Vector", k: int) -> "Vector":
     """
-    Apply k-th exterior power of a vector map to a grade-k blade.
+    Apply k-th exterior power of a vector map to a grade-k vec.
 
     For a linear map A: V → W represented as a d×d matrix, and a grade-k blade
     B with components B^{m₁...mₖ}, computes:
@@ -125,7 +125,7 @@ def apply_exterior_power(A: "Operator", blade: "Blade", k: int) -> "Blade":
         ValueError: If A is not a grade-1 → grade-1 operator
         ValueError: If blade grade doesn't match k
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     if A.input_spec.grade != 1 or A.output_spec.grade != 1:
         raise ValueError(
@@ -134,7 +134,7 @@ def apply_exterior_power(A: "Operator", blade: "Blade", k: int) -> "Blade":
         )
 
     if blade.grade != k:
-        raise ValueError(f"Blade grade {blade.grade} doesn't match k={k}")
+        raise ValueError(f"Vector grade {blade.grade} doesn't match k={k}")
 
     if k == 0:
         # Scalars are invariant under outermorphisms
@@ -151,7 +151,7 @@ def apply_exterior_power(A: "Operator", blade: "Blade", k: int) -> "Blade":
     sig = exterior_power_signature(k)
     result_data = einsum(sig, *([vector_map] * k), blade.data)
 
-    return Blade(
+    return Vector(
         data=result_data,
         grade=k,
         metric=A.metric,
@@ -205,7 +205,7 @@ def apply_outermorphism(A: "Operator", M: "MultiVector") -> "MultiVector":
             f"output_collection={A.output_spec.collection}."
         )
 
-    result: dict[int, Blade] = {}
+    result: dict[int, Vector] = {}
 
     for k, blade in M.data.items():
         result[k] = apply_exterior_power(A, blade, k)

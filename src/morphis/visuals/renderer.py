@@ -10,26 +10,28 @@ It has no knowledge of:
 - Effects or scheduling
 """
 
-from dataclasses import dataclass
+from typing import Any
 
 import pyvista as pv
 from numpy import array
 from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict
 
-from morphis.visuals.drawing.blades import create_blade_mesh, create_frame_mesh, draw_coordinate_basis
+from morphis.visuals.drawing.vectors import create_blade_mesh, create_frame_mesh, draw_coordinate_basis
 from morphis.visuals.theme import Color, Theme, get_theme
 
 
-@dataclass
-class TrackedObject:
+class TrackedObject(BaseModel):
     """Internal state for a rendered object."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     obj_id: int
     grade: int
     color: Color
-    edges_actor: pv.Actor
-    faces_actor: pv.Actor | None
-    origin_actor: pv.Actor | None
+    edges_actor: Any  # pv.Actor - using Any for PyVista compatibility
+    faces_actor: Any | None  # pv.Actor | None
+    origin_actor: Any | None  # pv.Actor | None
     opacity: float = 1.0
     projection_axes: tuple[int, int, int] | None = None  # For nD -> 3D projection
     filled: bool = False  # For frames: whether to show edges and faces
@@ -141,7 +143,7 @@ class Renderer:
                 origin, vectors, projection_axes=projection_axes, filled=filled
             )
         else:
-            # Blade: sequential construction
+            # Vector: sequential construction
             edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(
                 grade, origin, vectors, projection_axes=projection_axes
             )
@@ -217,7 +219,7 @@ class Renderer:
                 origin, vectors, projection_axes=tracked.projection_axes, filled=tracked.filled
             )
         else:
-            # Blade: sequential construction
+            # Vector: sequential construction
             edges_mesh, faces_mesh, origin_mesh = create_blade_mesh(
                 tracked.grade, origin, vectors, projection_axes=tracked.projection_axes
             )

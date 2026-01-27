@@ -20,8 +20,8 @@ from morphis.operations.products import geometric
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
 
 
 # =============================================================================
@@ -29,13 +29,13 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
+def rotor(B: Vector, angle: float | NDArray) -> MultiVector:
     """
     Create a rotor for pure rotation about the origin.
 
     M = exp(-B * angle/2)
 
-    Implemented via exp_blade(), which provides closed-form evaluation
+    Implemented via exp_vector(), which provides closed-form evaluation
     for any metric signature (Euclidean, Lorentzian, or degenerate).
 
     The rotor is a MultiVector with grades {0, 2}. Apply via sandwich product:
@@ -55,8 +55,8 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
         M = rotor(B, pi/2)
         v_rotated = M * v * ~M
     """
-    from morphis.elements.blade import Blade
-    from morphis.operations.exponential import exp_blade
+    from morphis.elements.vector import Vector
+    from morphis.operations.exponential import exp_vector
 
     angle = array(angle)
 
@@ -71,14 +71,14 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
         for _ in range(B.grade):
             half_angle = half_angle[..., newaxis]
 
-        generator = Blade(
+        generator = Vector(
             half_angle * B.data,
             grade=B.grade,
             metric=B.metric,
             collection=angle.shape + B.collection,
         )
 
-    return exp_blade(generator)
+    return exp_vector(generator)
 
 
 # =============================================================================
@@ -87,8 +87,8 @@ def rotor(B: Blade, angle: float | NDArray) -> MultiVector:
 
 
 def rotation_about_point(
-    p: Blade,
-    B: Blade,
+    p: Vector,
+    B: Vector,
     angle: float | NDArray,
 ) -> MultiVector:
     """
@@ -113,18 +113,20 @@ def rotation_about_point(
     """
     from morphis.elements.metric import Metric
     from morphis.elements.multivector import MultiVector
-    from morphis.transforms.projective import euclidean as to_euclidean, translator
+    from morphis.transforms.projective import direction, euclidean as to_euclidean, translator
 
     # Validate metrics
     metric = Metric.merge(p.metric, B.metric)
 
-    # Extract center coordinates
+    # Extract center coordinates and create direction vectors
     c = to_euclidean(p)  # Shape: (..., d)
+    neg_c = direction(-c, metric=metric, collection=p.collection)
+    pos_c = direction(c, metric=metric, collection=p.collection)
 
     # Create three components
-    T1 = translator(-c, metric=metric)  # Translate to origin
+    T1 = translator(neg_c)  # Translate to origin
     R = rotor(B, angle)  # Rotate
-    T2 = translator(c, metric=metric)  # Translate back
+    T2 = translator(pos_c)  # Translate back
 
     # Compose via geometric product: T2 * R * T1
     temp = geometric(R, T1)
@@ -134,7 +136,7 @@ def rotation_about_point(
     motor_components = {k: v for k, v in result.data.items() if k in {0, 2}}
 
     return MultiVector(
-        components=motor_components,
+        data=motor_components,
         metric=metric,
         collection=broadcast_shapes(p.collection, B.collection),
     )

@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from morphis.algebra import BladeSpec
-from morphis.elements import Blade, Operator, euclidean
+from morphis.algebra import VectorSpec
+from morphis.elements import Vector, euclidean_metric
+from morphis.operations import Operator
 
 
 class TestLeastSquares:
@@ -19,13 +20,13 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Generate data
-        I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I_true = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B = op * (I_true)
 
         # Solve
@@ -42,13 +43,13 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Generate data
-        I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I_true = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B = op * (I_true)
 
         # Solve (will give minimum norm solution)
@@ -74,17 +75,17 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I_true = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B = op * (I_true)
 
         # Add small noise
-        noise = Blade(0.01 * np.random.randn(*B.shape), grade=2, metric=euclidean(d))
-        B_noisy = Blade(B.data + noise.data, grade=2, metric=euclidean(d))
+        noise = Vector(0.01 * np.random.randn(*B.shape), grade=2, metric=euclidean_metric(d))
+        B_noisy = Vector(B.data + noise.data, grade=2, metric=euclidean_metric(d))
 
         # Solve with regularization
         I_reg = op.solve(B_noisy, method="lstsq", alpha=1e-3)
@@ -100,15 +101,15 @@ class TestLeastSquares:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        I_true = Blade(
+        I_true = Vector(
             np.random.randn(N) + 1j * np.random.randn(N),
             grade=0,
-            metric=euclidean(d),
+            metric=euclidean_metric(d),
         )
         B = op * (I_true)
 
@@ -127,22 +128,22 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         U, S, Vt = op.svd()
 
         # Reconstruct: for each input, compute U * (S * (Vt * x))
-        x = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        x = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
 
         # Original
         y_orig = op * (x)
 
         # Via SVD
         vt_x = Vt * (x)  # shape (r,)
-        s_vt_x = Blade(S * vt_x.data, grade=0, metric=euclidean(d))
+        s_vt_x = Vector(S * vt_x.data, grade=0, metric=euclidean_metric(d))
         y_svd = U * (s_vt_x)
 
         assert_allclose(y_svd.data, y_orig.data, rtol=1e-10)
@@ -154,9 +155,9 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         _, S, _ = op.svd()
@@ -171,9 +172,9 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         _, S, _ = op.svd()
@@ -187,9 +188,9 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         U, _, Vt = op.svd()
@@ -211,9 +212,9 @@ class TestSVD:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         _, S, _ = op.svd()
@@ -233,15 +234,15 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         pinv_op = op.pinv()
 
         # Test L * L^+ * L ≈ L
-        x = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        x = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
 
         Lx = op * (x)
         LpLx = pinv_op * (Lx)
@@ -255,9 +256,9 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         pinv_op = op.pinv()
@@ -275,9 +276,9 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Pseudoinverse with different r_cond values should differ
@@ -296,12 +297,12 @@ class TestPseudoinverse:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        I_true = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I_true = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B = op * (I_true)
 
         I_recovered = op.solve(B, method="pinv")
@@ -318,12 +319,12 @@ class TestSolveEdgeCases:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
-        B = Blade(np.random.randn(10, 3, 3), grade=2, metric=euclidean(3))
+        B = Vector(np.random.randn(10, 3, 3), grade=2, metric=euclidean_metric(3))
 
         with pytest.raises(ValueError, match="Unknown method"):
             op.solve(B, method="invalid")
@@ -334,13 +335,13 @@ class TestSolveEdgeCases:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         # Wrong grade (1 instead of 2)
-        B = Blade(np.random.randn(10, 3), grade=1, metric=euclidean(3))
+        B = Vector(np.random.randn(10, 3), grade=1, metric=euclidean_metric(3))
 
         with pytest.raises(ValueError, match="Output grade 1 doesn't match"):
             op.solve(B)

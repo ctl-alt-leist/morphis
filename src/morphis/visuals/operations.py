@@ -5,13 +5,14 @@ Rendering functions for visualizing meet, join, and other GA operations.
 Shows inputs and results together to illustrate geometric relationships.
 """
 
-from dataclasses import dataclass
 from typing import Literal
 
-from morphis.elements.blade import Blade
+from pydantic import BaseModel, ConfigDict
+
+from morphis.elements.vector import Vector
 from morphis.operations.subspaces import meet
 from morphis.visuals.canvas import Canvas
-from morphis.visuals.drawing.blades import BladeStyle, visualize_blade
+from morphis.visuals.drawing.vectors import VectorStyle, visualize_blade
 from morphis.visuals.projection import ProjectionConfig
 from morphis.visuals.theme import Color
 
@@ -21,9 +22,10 @@ from morphis.visuals.theme import Color
 # =============================================================================
 
 
-@dataclass
-class OperationStyle:
+class OperationStyle(BaseModel):
     """Style parameters for operation visualization."""
+
+    model_config = ConfigDict(frozen=True)
 
     # Input blade styling
     input_opacity: float = 0.4
@@ -44,8 +46,8 @@ class OperationStyle:
 
 
 def render_join(
-    u: Blade,
-    v: Blade,
+    u: Vector,
+    v: Vector,
     canvas: Canvas | None = None,
     projection: ProjectionConfig | None = None,
     style: OperationStyle | None = None,
@@ -83,7 +85,7 @@ def render_join(
     result_color = style.result_color or canvas.theme.accent
 
     # Render input u
-    u_style = BladeStyle(
+    u_style = VectorStyle(
         color=color_1,
         opacity=style.input_opacity,
         scale=style.scale,
@@ -91,7 +93,7 @@ def render_join(
     visualize_blade(u, canvas, projection=projection, style=u_style)
 
     # Render input v
-    v_style = BladeStyle(
+    v_style = VectorStyle(
         color=color_2,
         opacity=style.input_opacity,
         scale=style.scale,
@@ -99,7 +101,7 @@ def render_join(
     visualize_blade(v, canvas, projection=projection, style=v_style)
 
     # Render result
-    result_style = BladeStyle(
+    result_style = VectorStyle(
         color=result_color,
         opacity=style.result_opacity,
         scale=style.scale,
@@ -115,8 +117,8 @@ def render_join(
 
 
 def render_meet(
-    u: Blade,
-    v: Blade,
+    u: Vector,
+    v: Vector,
     canvas: Canvas | None = None,
     projection: ProjectionConfig | None = None,
     style: OperationStyle | None = None,
@@ -154,7 +156,7 @@ def render_meet(
     result_color = style.result_color or canvas.theme.accent
 
     # Render input u
-    u_style = BladeStyle(
+    u_style = VectorStyle(
         color=color_1,
         opacity=style.input_opacity,
         scale=style.scale,
@@ -162,7 +164,7 @@ def render_meet(
     visualize_blade(u, canvas, projection=projection, style=u_style)
 
     # Render input v
-    v_style = BladeStyle(
+    v_style = VectorStyle(
         color=color_2,
         opacity=style.input_opacity,
         scale=style.scale,
@@ -170,7 +172,7 @@ def render_meet(
     visualize_blade(v, canvas, projection=projection, style=v_style)
 
     # Render result
-    result_style = BladeStyle(
+    result_style = VectorStyle(
         color=result_color,
         opacity=style.result_opacity,
         scale=style.scale,
@@ -186,8 +188,8 @@ def render_meet(
 
 
 def render_meet_join(
-    u: Blade,
-    v: Blade,
+    u: Vector,
+    v: Vector,
     canvas: Canvas | None = None,
     show: Literal["meet", "join", "both"] = "both",
     projection: ProjectionConfig | None = None,
@@ -218,14 +220,14 @@ def render_meet_join(
     join_color = canvas.theme.e3  # Blue family for join
 
     # Render inputs
-    u_style = BladeStyle(
+    u_style = VectorStyle(
         color=color_1,
         opacity=style.input_opacity,
         scale=style.scale,
     )
     visualize_blade(u, canvas, projection=projection, style=u_style)
 
-    v_style = BladeStyle(
+    v_style = VectorStyle(
         color=color_2,
         opacity=style.input_opacity,
         scale=style.scale,
@@ -235,7 +237,7 @@ def render_meet_join(
     # Render meet
     if show in ("meet", "both"):
         meet_result = meet(u, v)
-        meet_style = BladeStyle(
+        meet_style = VectorStyle(
             color=meet_color,
             opacity=style.result_opacity,
             scale=style.scale * 0.9,
@@ -245,7 +247,7 @@ def render_meet_join(
     # Render join
     if show in ("join", "both"):
         join_result = u ^ v
-        join_style = BladeStyle(
+        join_style = VectorStyle(
             color=join_color,
             opacity=style.result_opacity * 0.7,
             scale=style.scale * 1.1,
@@ -261,7 +263,7 @@ def render_meet_join(
 
 
 def render_with_dual(
-    blade: Blade,
+    blade: Vector,
     canvas: Canvas | None = None,
     dual_type: Literal["right", "left", "hodge"] = "right",
     projection: ProjectionConfig | None = None,
@@ -302,7 +304,7 @@ def render_with_dual(
     dual_color = style.input_color_2 or canvas.theme.palette[3]
 
     # Render original
-    blade_style = BladeStyle(
+    blade_style = VectorStyle(
         color=blade_color,
         opacity=style.result_opacity,
         scale=style.scale,
@@ -310,7 +312,7 @@ def render_with_dual(
     visualize_blade(blade, canvas, projection=projection, style=blade_style)
 
     # Render dual
-    dual_style = BladeStyle(
+    dual_style = VectorStyle(
         color=dual_color,
         opacity=style.input_opacity,
         scale=style.scale * 0.8,

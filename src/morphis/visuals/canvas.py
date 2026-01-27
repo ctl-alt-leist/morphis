@@ -10,10 +10,9 @@ cycling through colors as objects are added. Colors can also be specified
 explicitly for full control.
 """
 
-from dataclasses import dataclass
-
 from numpy import array, cross, ndarray
 from numpy.linalg import norm as np_norm
+from pydantic import BaseModel, ConfigDict
 
 from morphis.visuals.theme import DEFAULT_THEME, Color, Palette, Theme, get_theme
 
@@ -23,9 +22,10 @@ from morphis.visuals.theme import DEFAULT_THEME, Color, Palette, Theme, get_them
 # =============================================================================
 
 
-@dataclass
-class ArrowStyle:
+class ArrowStyle(BaseModel):
     """Configuration for arrow rendering proportions."""
+
+    model_config = ConfigDict(frozen=True)
 
     shaft_ratio: float = 0.85
     shaft_radius: float = 0.012
@@ -33,9 +33,10 @@ class ArrowStyle:
     resolution: int = 24
 
 
-@dataclass
-class CurveStyle:
+class CurveStyle(BaseModel):
     """Configuration for curve rendering."""
+
+    model_config = ConfigDict(frozen=True)
 
     radius: float = 0.008
     resolution: int = 24

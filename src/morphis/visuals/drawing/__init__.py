@@ -4,8 +4,8 @@ Drawing submodule for blade visualization.
 Contains mesh creation and rendering utilities for geometric algebra objects.
 """
 
-from morphis.visuals.drawing.blades import (
-    BladeStyle as BladeStyle,
+from morphis.visuals.drawing.vectors import (
+    VectorStyle as VectorStyle,
     create_blade_mesh as create_blade_mesh,
     create_frame_mesh as create_frame_mesh,
     draw_blade as draw_blade,

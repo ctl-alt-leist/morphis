@@ -1,22 +1,21 @@
 """
-Projection Utilities for High-Dimensional Blades
+Projection Utilities for High-Dimensional Vectors
 
 Tools for projecting d-dimensional blades to 3D (or 2D) for visualization.
 Supports configurable axis selection and different projection methods.
 """
 
-from dataclasses import dataclass
 from typing import Literal
 
 from numpy import abs as np_abs, argsort, zeros
 from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict
 
-from morphis.elements.blade import Blade
-from morphis.elements.metric import euclidean
+from morphis.elements.metric import euclidean_metric
+from morphis.elements.vector import Vector
 
 
-@dataclass
-class ProjectionConfig:
+class ProjectionConfig(BaseModel):
     """
     Configuration for projecting high-dimensional blades to 3D.
 
@@ -27,6 +26,8 @@ class ProjectionConfig:
             - 'principal': Choose axes with largest components
         target_dim: Target dimension (default 3)
     """
+
+    model_config = ConfigDict(frozen=True)
 
     axes: tuple[int, ...] | None = None
     method: Literal["slice", "principal"] = "slice"
@@ -71,7 +72,7 @@ def _extract_principal_axes(data: NDArray, grade: int, target_dim: int) -> tuple
         return tuple(range(target_dim))
 
 
-def project_vector(blade: Blade, config: ProjectionConfig) -> Blade:
+def project_vector(blade: Vector, config: ProjectionConfig) -> Vector:
     """
     Project a vector blade to lower dimension.
 
@@ -80,7 +81,7 @@ def project_vector(blade: Blade, config: ProjectionConfig) -> Blade:
         config: Projection configuration
 
     Returns:
-        Blade with dim=target_dim, projected vector components
+        Vector with dim=target_dim, projected vector components
     """
     if blade.grade != 1:
         raise ValueError(f"project_vector requires grade-1, got {blade.grade}")
@@ -96,15 +97,15 @@ def project_vector(blade: Blade, config: ProjectionConfig) -> Blade:
 
     projected_data = blade.data[..., list(axes)]
 
-    return Blade(
+    return Vector(
         data=projected_data,
         grade=1,
-        metric=euclidean(target_dim),
+        metric=euclidean_metric(target_dim),
         collection=blade.collection,
     )
 
 
-def project_bivector(blade: Blade, config: ProjectionConfig) -> Blade:
+def project_bivector(blade: Vector, config: ProjectionConfig) -> Vector:
     """
     Project a bivector blade to lower dimension.
 
@@ -115,7 +116,7 @@ def project_bivector(blade: Blade, config: ProjectionConfig) -> Blade:
         config: Projection configuration
 
     Returns:
-        Blade with dim=target_dim, projected bivector components
+        Vector with dim=target_dim, projected bivector components
     """
     if blade.grade != 2:
         raise ValueError(f"project_bivector requires grade-2, got {blade.grade}")
@@ -139,15 +140,15 @@ def project_bivector(blade: Blade, config: ProjectionConfig) -> Blade:
         for new_n, old_n in enumerate(axes_list):
             projected_data[..., new_m, new_n] = blade.data[..., old_m, old_n]
 
-    return Blade(
+    return Vector(
         data=projected_data,
         grade=2,
-        metric=euclidean(target_dim),
+        metric=euclidean_metric(target_dim),
         collection=blade.collection,
     )
 
 
-def project_trivector(blade: Blade, config: ProjectionConfig) -> Blade:
+def project_trivector(blade: Vector, config: ProjectionConfig) -> Vector:
     """
     Project a trivector blade to 3D.
 
@@ -156,7 +157,7 @@ def project_trivector(blade: Blade, config: ProjectionConfig) -> Blade:
         config: Projection configuration
 
     Returns:
-        Blade with dim=3, projected trivector components
+        Vector with dim=3, projected trivector components
     """
     if blade.grade != 3:
         raise ValueError(f"project_trivector requires grade-3, got {blade.grade}")
@@ -180,15 +181,15 @@ def project_trivector(blade: Blade, config: ProjectionConfig) -> Blade:
             for new_c, old_c in enumerate(axes_list):
                 projected_data[..., new_a, new_b, new_c] = blade.data[..., old_a, old_b, old_c]
 
-    return Blade(
+    return Vector(
         data=projected_data,
         grade=3,
-        metric=euclidean(target_dim),
+        metric=euclidean_metric(target_dim),
         collection=blade.collection,
     )
 
 
-def project_quadvector(blade: Blade, config: ProjectionConfig) -> Blade:
+def project_quadvector(blade: Vector, config: ProjectionConfig) -> Vector:
     """
     Project a quadvector (4-blade) to lower dimension.
 
@@ -197,7 +198,7 @@ def project_quadvector(blade: Blade, config: ProjectionConfig) -> Blade:
         config: Projection configuration
 
     Returns:
-        Blade with dim=target_dim, projected quadvector components
+        Vector with dim=target_dim, projected quadvector components
     """
     if blade.grade != 4:
         raise ValueError(f"project_quadvector requires grade-4, got {blade.grade}")
@@ -222,22 +223,22 @@ def project_quadvector(blade: Blade, config: ProjectionConfig) -> Blade:
                 for new_d, old_d in enumerate(axes_list):
                     projected_data[..., new_a, new_b, new_c, new_d] = blade.data[..., old_a, old_b, old_c, old_d]
 
-    return Blade(
+    return Vector(
         data=projected_data,
         grade=4,
-        metric=euclidean(target_dim),
+        metric=euclidean_metric(target_dim),
         collection=blade.collection,
     )
 
 
-def project_blade(blade: Blade, config: ProjectionConfig | None = None) -> Blade:
+def project_blade(blade: Vector, config: ProjectionConfig | None = None) -> Vector:
     """
     Project a blade to lower dimension for visualization.
 
     Automatically selects appropriate projection based on grade.
 
     Args:
-        blade: Blade of any grade
+        blade: Vector of any grade
         config: Projection configuration (uses defaults if None)
 
     Returns:
@@ -253,10 +254,10 @@ def project_blade(blade: Blade, config: ProjectionConfig | None = None) -> Blade
 
     if blade.grade == 0:
         # Scalars don't depend on dimension for visualization
-        return Blade(
+        return Vector(
             data=blade.data.copy(),
             grade=0,
-            metric=euclidean(target_dim),
+            metric=euclidean_metric(target_dim),
             collection=blade.collection,
         )
     elif blade.grade == 1:
@@ -276,7 +277,7 @@ def project_blade(blade: Blade, config: ProjectionConfig | None = None) -> Blade
         )
 
 
-def get_projection_axes(blade: Blade, config: ProjectionConfig | None = None) -> tuple[int, ...]:
+def get_projection_axes(blade: Vector, config: ProjectionConfig | None = None) -> tuple[int, ...]:
     """
     Get the axes that would be used for projection.
 

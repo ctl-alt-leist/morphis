@@ -9,18 +9,20 @@ Effects are declarative: you schedule them ahead of time, and the animation
 system applies them automatically when capturing frames.
 """
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from abc import abstractmethod
+
+from pydantic import BaseModel, ConfigDict
 
 
-@dataclass
-class Effect(ABC):
+class Effect(BaseModel):
     """
     Base class for scheduled visual effects.
 
     An effect applies to a specific object over a time range [t_start, t_end].
     The evaluate() method returns the effect's value at any time t.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     object_id: int
     t_start: float
@@ -53,7 +55,6 @@ class Effect(ABC):
         pass
 
 
-@dataclass
 class FadeIn(Effect):
     """
     Fade an object from invisible to visible.
@@ -66,7 +67,6 @@ class FadeIn(Effect):
         return self.progress(t)
 
 
-@dataclass
 class FadeOut(Effect):
     """
     Fade an object from visible to invisible.
@@ -79,7 +79,6 @@ class FadeOut(Effect):
         return 1.0 - self.progress(t)
 
 
-@dataclass
 class Hold(Effect):
     """
     Hold an object at constant opacity.

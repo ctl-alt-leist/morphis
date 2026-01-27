@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from morphis.algebra import BladeSpec
-from morphis.elements import Blade, MultiVector, Operator, euclidean
+from morphis.algebra import VectorSpec
+from morphis.elements import MultiVector, Vector, euclidean_metric
+from morphis.operations import Operator
 from morphis.operations.outermorphism import (
     apply_exterior_power,
     apply_outermorphism,
@@ -67,12 +68,12 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        v = Blade(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean(d))
+        v = Vector(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean_metric(d))
 
         # Direct application
         w1 = A.apply(v)
@@ -91,14 +92,14 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Create bivector from wedge of two vectors
-        u = Blade(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean(d))
-        v = Blade(np.array([0.0, 1.0, 0.0]), grade=1, metric=euclidean(d))
+        u = Vector(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
+        v = Vector(np.array([0.0, 1.0, 0.0]), grade=1, metric=euclidean_metric(d))
         B = wedge(u, v)
 
         # Apply exterior power
@@ -120,15 +121,15 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Create trivector from wedge of three vectors
-        u = Blade(np.array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=euclidean(d))
-        v = Blade(np.array([0.0, 1.0, 0.0, 0.0]), grade=1, metric=euclidean(d))
-        w = Blade(np.array([0.0, 0.0, 1.0, 0.0]), grade=1, metric=euclidean(d))
+        u = Vector(np.array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
+        v = Vector(np.array([0.0, 1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
+        w = Vector(np.array([0.0, 0.0, 1.0, 0.0]), grade=1, metric=euclidean_metric(d))
         T = wedge(wedge(u, v), w)
 
         # Apply exterior power
@@ -151,12 +152,12 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        s = Blade(np.array(5.0), grade=0, metric=euclidean(d))
+        s = Vector(np.array(5.0), grade=0, metric=euclidean_metric(d))
         s_transformed = apply_exterior_power(A, s, 0)
 
         assert_allclose(s_transformed.data, 5.0)
@@ -171,15 +172,15 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Create pseudoscalar e1 ^ e2 ^ e3
-        from morphis.elements.blade import pseudoscalar
+        from morphis.elements.vector import pseudoscalar
 
-        I = pseudoscalar(euclidean(d))
+        I = pseudoscalar(euclidean_metric(d))
 
         # Apply d-th exterior power
         I_transformed = apply_exterior_power(A, I, d)
@@ -201,16 +202,16 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Batch of bivectors
         batch_size = 5
         B_data = np.random.randn(batch_size, d, d)
         B_data = (B_data - B_data.transpose(0, 2, 1)) / 2  # Antisymmetrize
-        B = Blade(B_data, grade=2, metric=euclidean(d))
+        B = Vector(B_data, grade=2, metric=euclidean_metric(d))
 
         B_transformed = apply_exterior_power(A, B, 2)
 
@@ -221,12 +222,12 @@ class TestApplyExteriorPower:
         d = 3
         A = Operator(
             data=np.eye(d),
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        v = Blade(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean(d))
+        v = Vector(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean_metric(d))
 
         with pytest.raises(ValueError, match="doesn't match k"):
             apply_exterior_power(A, v, 2)
@@ -236,14 +237,14 @@ class TestApplyExteriorPower:
         d = 3
         L = Operator(
             data=np.random.randn(d, d, 5, 3),
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         B_data = np.random.randn(d, d)
         B_data = (B_data - B_data.T) / 2
-        B = Blade(B_data, grade=2, metric=euclidean(d))
+        B = Vector(B_data, grade=2, metric=euclidean_metric(d))
 
         with pytest.raises(ValueError, match="grade-1 → grade-1"):
             apply_exterior_power(L, B, 2)
@@ -261,19 +262,19 @@ class TestApplyOutermorphism:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Create multivector with grades 0, 1, 2
-        s = Blade(np.array(2.0), grade=0, metric=euclidean(d))
-        v = Blade(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean(d))
+        s = Vector(np.array(2.0), grade=0, metric=euclidean_metric(d))
+        v = Vector(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean_metric(d))
         B_data = np.random.randn(d, d)
         B_data = (B_data - B_data.T) / 2
-        B = Blade(B_data, grade=2, metric=euclidean(d))
+        B = Vector(B_data, grade=2, metric=euclidean_metric(d))
 
-        M = MultiVector(data={0: s, 1: v, 2: B}, metric=euclidean(d))
+        M = MultiVector(data={0: s, 1: v, 2: B}, metric=euclidean_metric(d))
 
         # Apply outermorphism
         M_transformed = apply_outermorphism(A, M)
@@ -299,22 +300,22 @@ class TestApplyOutermorphism:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        u = Blade(np.array([1.0, 2.0, 0.0]), grade=1, metric=euclidean(d))
-        v = Blade(np.array([0.0, 1.0, 3.0]), grade=1, metric=euclidean(d))
+        u = Vector(np.array([1.0, 2.0, 0.0]), grade=1, metric=euclidean_metric(d))
+        v = Vector(np.array([0.0, 1.0, 3.0]), grade=1, metric=euclidean_metric(d))
 
         # f(u ∧ v)
         B = wedge(u, v)
-        M = MultiVector(data={2: B}, metric=euclidean(d))
+        M = MultiVector(data={2: B}, metric=euclidean_metric(d))
         f_B = apply_outermorphism(A, M)[2]
 
         # f(u) ∧ f(v)
-        M_u = MultiVector(data={1: u}, metric=euclidean(d))
-        M_v = MultiVector(data={1: v}, metric=euclidean(d))
+        M_u = MultiVector(data={1: u}, metric=euclidean_metric(d))
+        M_v = MultiVector(data={1: v}, metric=euclidean_metric(d))
         f_u = apply_outermorphism(A, M_u)[1]
         f_v = apply_outermorphism(A, M_v)[1]
         f_u_wedge_f_v = wedge(f_u, f_v)
@@ -326,13 +327,13 @@ class TestApplyOutermorphism:
         d = 3
         L = Operator(
             data=np.random.randn(d, d, 5, 3),
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        s = Blade(np.array(1.0), grade=0, metric=euclidean(d))
-        M = MultiVector(data={0: s}, metric=euclidean(d))
+        s = Vector(np.array(1.0), grade=0, metric=euclidean_metric(d))
+        M = MultiVector(data={0: s}, metric=euclidean_metric(d))
 
         with pytest.raises(TypeError, match="grade-1 → grade-1"):
             apply_outermorphism(L, M)
@@ -346,9 +347,9 @@ class TestOperatorOutermorphismIntegration:
         d = 3
         A = Operator(
             data=np.eye(d),
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
         assert A.is_outermorphism is True
 
@@ -357,9 +358,9 @@ class TestOperatorOutermorphismIntegration:
         d = 3
         L = Operator(
             data=np.random.randn(d, d, 5, 3),
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
         assert L.is_outermorphism is False
 
@@ -370,9 +371,9 @@ class TestOperatorOutermorphismIntegration:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         assert_allclose(A.vector_map, A_data)
@@ -382,9 +383,9 @@ class TestOperatorOutermorphismIntegration:
         d = 3
         L = Operator(
             data=np.random.randn(d, d, 5, 3),
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         with pytest.raises(ValueError, match="grade-1 → grade-1"):
@@ -399,14 +400,14 @@ class TestOperatorOutermorphismIntegration:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        s = Blade(np.array(2.0), grade=0, metric=euclidean(d))
-        v = Blade(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean(d))
-        M = MultiVector(data={0: s, 1: v}, metric=euclidean(d))
+        s = Vector(np.array(2.0), grade=0, metric=euclidean_metric(d))
+        v = Vector(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean_metric(d))
+        M = MultiVector(data={0: s, 1: v}, metric=euclidean_metric(d))
 
         # Test L * M syntax
         M_transformed = A * M
@@ -424,15 +425,15 @@ class TestOperatorOutermorphismIntegration:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Bivector
         B_data = np.random.randn(d, d)
         B_data = (B_data - B_data.T) / 2
-        B = Blade(B_data, grade=2, metric=euclidean(d))
+        B = Vector(B_data, grade=2, metric=euclidean_metric(d))
 
         # L * B should work via exterior power
         B_transformed = A * B
@@ -445,13 +446,13 @@ class TestOperatorOutermorphismIntegration:
         d = 3
         L = Operator(
             data=np.random.randn(d, d, 5, 3),
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        s = Blade(np.array(1.0), grade=0, metric=euclidean(d))
-        M = MultiVector(data={0: s}, metric=euclidean(d))
+        s = Vector(np.array(1.0), grade=0, metric=euclidean_metric(d))
+        M = MultiVector(data={0: s}, metric=euclidean_metric(d))
 
         with pytest.raises(TypeError, match="grade-1 → grade-1"):
             _ = L * M
@@ -470,25 +471,25 @@ class TestOutermorphismComposition:
 
         A = Operator(
             data=A_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         B_op = Operator(
             data=B_data,
-            input_spec=BladeSpec(grade=1, collection=0, dim=d),
-            output_spec=BladeSpec(grade=1, collection=0, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=0, dim=d),
+            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Create multivector
-        s = Blade(np.array(2.0), grade=0, metric=euclidean(d))
-        v = Blade(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean(d))
+        s = Vector(np.array(2.0), grade=0, metric=euclidean_metric(d))
+        v = Vector(np.array([1.0, 2.0, 3.0]), grade=1, metric=euclidean_metric(d))
         Biv_data = np.random.randn(d, d)
         Biv_data = (Biv_data - Biv_data.T) / 2
-        Biv = Blade(Biv_data, grade=2, metric=euclidean(d))
-        M = MultiVector(data={0: s, 1: v, 2: Biv}, metric=euclidean(d))
+        Biv = Vector(Biv_data, grade=2, metric=euclidean_metric(d))
+        M = MultiVector(data={0: s, 1: v, 2: Biv}, metric=euclidean_metric(d))
 
         # A ∘ B as single outermorphism
         AB = A.compose(B_op)

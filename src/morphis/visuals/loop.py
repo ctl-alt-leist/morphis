@@ -20,41 +20,44 @@ Uses the Observer class internally for core tracking functionality.
 
 import sys
 import time as time_module
-from dataclasses import dataclass
+from typing import Any
 
 from numpy import array, copy as np_copy, zeros
 from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict
 
-from morphis.elements.blade import Blade
 from morphis.elements.frame import Frame
+from morphis.elements.vector import Vector
 from morphis.utils.observer import Observer
 from morphis.visuals.effects import Effect, FadeIn, FadeOut, compute_opacity
 from morphis.visuals.renderer import Renderer
 from morphis.visuals.theme import Color, Theme
 
 
-@dataclass
-class Snapshot:
+class Snapshot(BaseModel):
     """State of all tracked objects at a specific time."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     t: float
     # obj_id -> (origin, vectors, opacity, projection_axes)
-    states: dict[int, tuple[NDArray, NDArray, float, tuple[int, int, int] | None]]
+    states: dict[int, tuple[Any, Any, float, tuple[int, int, int] | None]]
     basis_labels: tuple[str, str, str] | None = None  # Optional basis labels for this frame
 
 
-@dataclass
-class AnimationTrack:
+class AnimationTrack(BaseModel):
     """Animation-specific tracking info for a blade or frame."""
 
-    target: Blade | Frame  # The tracked object
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    target: Any  # Vector | Frame - using Any for compatibility
     obj_id: int
     color: Color
     grade: int  # For blades; -1 for frames
     is_frame: bool = False  # True if target is a Frame
     filled: bool = False  # For frames: whether to show edges and faces
-    vectors: NDArray | None = None  # Override for spanning vectors
-    origin: NDArray | None = None  # Override for origin
+    vectors: Any | None = None  # NDArray | None - Override for spanning vectors
+    origin: Any | None = None  # NDArray | None - Override for origin
 
 
 class Animation:
@@ -115,12 +118,12 @@ class Animation:
     # Tracking
     # =========================================================================
 
-    def watch(self, *targets: Blade | Frame, color: Color | None = None, filled: bool = False) -> int | list[int]:
+    def watch(self, *targets: Vector | Frame, color: Color | None = None, filled: bool = False) -> int | list[int]:
         """
         Register one or more blades or frames to observe.
 
         Args:
-            *targets: Blades or Frames to watch
+            *targets: Vectors or Frames to watch
             color: Optional color override (applies to all)
             filled: For frames, whether to show edges and faces of spanned shape
 
@@ -150,7 +153,7 @@ class Animation:
                     filled=filled,
                 )
             else:
-                # Blade: watch in Observer for core functionality
+                # Vector: watch in Observer for core functionality
                 self._observer.watch(target)
                 self._tracks[obj_id] = AnimationTrack(
                     target=target,
@@ -167,7 +170,7 @@ class Animation:
     # Alias for backward compatibility
     track = watch
 
-    def unwatch(self, *targets: Blade | Frame):
+    def unwatch(self, *targets: Vector | Frame):
         """Stop watching one or more blades or frames."""
         for target in targets:
             obj_id = id(target)
@@ -181,7 +184,7 @@ class Animation:
     # Alias for backward compatibility
     untrack = unwatch
 
-    def set_vectors(self, blade: Blade, vectors: NDArray, origin: NDArray | None = None):
+    def set_vectors(self, blade: Vector, vectors: NDArray, origin: NDArray | None = None):
         """
         Set the spanning vectors for a blade directly.
 
@@ -247,7 +250,7 @@ class Animation:
         """Number of tracked objects."""
         return len(self._tracks)
 
-    def __contains__(self, blade: Blade) -> bool:
+    def __contains__(self, blade: Vector) -> bool:
         """Check if a blade is being tracked."""
         return id(blade) in self._tracks
 
@@ -259,7 +262,7 @@ class Animation:
     # Effects
     # =========================================================================
 
-    def fade_in(self, target: Blade | Frame, t: float, duration: float):
+    def fade_in(self, target: Vector | Frame, t: float, duration: float):
         """
         Schedule a fade-in effect.
 
@@ -277,7 +280,7 @@ class Animation:
             )
         )
 
-    def fade_out(self, target: Blade | Frame, t: float, duration: float):
+    def fade_out(self, target: Vector | Frame, t: float, duration: float):
         """
         Schedule a fade-out effect.
 
@@ -296,7 +299,7 @@ class Animation:
         )
 
     # =========================================================================
-    # Blade/Frame -> Geometry Conversion
+    # Vector/Frame -> Geometry Conversion
     # =========================================================================
 
     def _tracked_to_geometry(self, tracked: AnimationTrack) -> tuple[NDArray, NDArray, tuple[int, int, int] | None]:
@@ -334,7 +337,7 @@ class Animation:
             vectors = frame.data.copy()
             return origin, vectors, projection_axes
 
-        # Blade: use Observer's spanning_vectors_as_array for factorization
+        # Vector: use Observer's spanning_vectors_as_array for factorization
         blade = tracked.target
         dim = blade.dim
 
@@ -344,7 +347,7 @@ class Animation:
         else:
             origin = zeros(dim)
 
-        # Get spanning vectors via Observer (which uses Blade.spanning_vectors())
+        # Get spanning vectors via Observer (which uses Vector.spanning_vectors())
         vectors = self._observer.spanning_vectors_as_array(blade)
 
         if vectors is None:
@@ -582,7 +585,7 @@ class Animation:
         current_labels = None
 
         if self._renderer._show_basis:
-            from morphis.visuals.drawing.blades import draw_coordinate_basis
+            from morphis.visuals.drawing.vectors import draw_coordinate_basis
 
             # Use first snapshot's labels if available
             initial_labels = self._snapshots[0].basis_labels if self._snapshots else None
@@ -691,7 +694,7 @@ class Animation:
 
     def _add_object_to_plotter(self, plotter, tracked, origin, vectors, opacity, projection_axes=None):
         """Add an object to an off-screen plotter, return actors."""
-        from morphis.visuals.drawing.blades import (
+        from morphis.visuals.drawing.vectors import (
             _create_arrow_mesh,
             _create_origin_marker,
             create_bivector_mesh,
@@ -701,11 +704,11 @@ class Animation:
         )
 
         # Helper to project vectors if needed
-        def project_to_3d(vec, axes):
-            if axes is None or len(vec) <= 3:
-                v = vec[:3] if len(vec) >= 3 else array([*vec, *[0.0] * (3 - len(vec))])
+        def project_to_3d(blade, axes):
+            if axes is None or len(blade) <= 3:
+                v = blade[:3] if len(blade) >= 3 else array([*blade, *[0.0] * (3 - len(blade))])
                 return v
-            return array([vec[axes[0]], vec[axes[1]], vec[axes[2]]])
+            return array([blade[axes[0]], blade[axes[1]], blade[axes[2]]])
 
         if tracked.grade == -1:
             # Frame: k arrows from origin (optionally with edges/faces)
@@ -769,7 +772,7 @@ class Animation:
         self, plotter, edges_actor, faces_actor, grade, origin, vectors, opacity, projection_axes=None, filled=False
     ):
         """Update actor geometry and opacity."""
-        from morphis.visuals.drawing.blades import (
+        from morphis.visuals.drawing.vectors import (
             _create_arrow_mesh,
             create_bivector_mesh,
             create_frame_mesh,
@@ -778,11 +781,11 @@ class Animation:
         )
 
         # Helper to project vectors if needed
-        def project_to_3d(vec, axes):
-            if axes is None or len(vec) <= 3:
-                v = vec[:3] if len(vec) >= 3 else array([*vec, *[0.0] * (3 - len(vec))])
+        def project_to_3d(blade, axes):
+            if axes is None or len(blade) <= 3:
+                v = blade[:3] if len(blade) >= 3 else array([*blade, *[0.0] * (3 - len(blade))])
                 return v
-            return array([vec[axes[0]], vec[axes[1]], vec[axes[2]]])
+            return array([blade[axes[0]], blade[axes[1]], blade[axes[2]]])
 
         if grade == -1:
             # Frame: k arrows from origin (optionally with edges/faces)

@@ -7,7 +7,7 @@ These are aliases for wedge and antiwedge products, using subspace terminology:
 - join(u, v) = wedge(u, v) = u ∧ v — smallest subspace containing both
 - meet(u, v) = antiwedge(u, v) = u ∨ v — largest subspace contained in both
 
-Blade naming convention: u, v, w (never a, b, c for blades).
+Vector naming convention: u, v, w (never a, b, c for blades).
 """
 
 from __future__ import annotations

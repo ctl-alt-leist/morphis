@@ -2,7 +2,7 @@
 Geometric Algebra - Exponentials and Logarithms
 
 The exponential map connects Lie algebras to Lie groups in geometric algebra.
-For a blade B where B² is scalar, the exponential has a closed form:
+For a vector B where B² is scalar, the exponential has a closed form:
 
     exp(B) = cos(√-λ) + B * sin(√-λ)/√-λ     if B² = λ < 0 (Euclidean)
     exp(B) = cosh(√λ) + B * sinh(√λ)/√λ      if B² = λ > 0 (hyperbolic)
@@ -18,25 +18,26 @@ from typing import TYPE_CHECKING
 from numpy import arctan2, cos, cosh, newaxis, ones, sin, sinh, sqrt, where, zeros
 from numpy.typing import NDArray
 
+from morphis.config import TOLERANCE
 from morphis.operations.norms import norm
 from morphis.operations.products import geometric, grade_project
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
 
 
 # =============================================================================
-# Blade Exponential
+# Vector Exponential
 # =============================================================================
 
 
-def exp_blade(B: Blade) -> MultiVector:
+def exp_vector(B: Vector) -> MultiVector:
     """
-    Compute the exponential of a blade: exp(B)
+    Compute the exponential of a vector: exp(B)
 
-    For a blade B where B² is scalar (always true for simple blades), the
+    For a vector B where B² is scalar (always true for simple vectors), the
     exponential has a closed form based on the sign of B²:
 
     - B² < 0 (Euclidean bivector): exp(B) = cos(|B|) + B * sin(|B|)/|B|
@@ -44,29 +45,29 @@ def exp_blade(B: Blade) -> MultiVector:
     - B² = 0 (nilpotent): exp(B) = 1 + B
 
     Args:
-        B: A blade (typically bivector for rotations)
+        B: A vector (typically bivector for rotations)
 
     Returns:
         MultiVector representing exp(B), typically with grades {0, B.grade}
 
     Examples:
-        >>> from morphis.elements import Blade, euclidean, basis_vectors
+        >>> from morphis.elements import Vector, euclidean_metric, basis_vectors
         >>> from math import pi
-        >>> m = euclidean(3)
+        >>> m = euclidean_metric(3)
         >>> e1, e2, e3 = basis_vectors(m)
         >>> B = (e1 ^ e2) * (pi / 4)  # 45-degree rotation plane
-        >>> R = exp_blade(B)  # Rotor for 90-degree rotation
+        >>> R = exp_vector(B)  # Rotor for 90-degree rotation
     """
-    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
 
     # Handle scalar (grade-0) case: exp(s) = exp(s) * 1
     if B.grade == 0:
         from numpy import exp as np_exp
 
         scalar_data = np_exp(B.data)
-        scalar_blade = Blade(scalar_data, grade=0, metric=B.metric, collection=B.collection)
-        return MultiVector(data={0: scalar_blade}, metric=B.metric, collection=B.collection)
+        scalar_vector = Vector(scalar_data, grade=0, metric=B.metric, collection=B.collection)
+        return MultiVector(data={0: scalar_vector}, metric=B.metric, collection=B.collection)
 
     # Compute B² and extract scalar part
     B_squared = geometric(B, B)
@@ -78,11 +79,6 @@ def exp_blade(B: Blade) -> MultiVector:
     for _ in range(B.grade):
         lambda_expanded = lambda_expanded[..., newaxis]
 
-    # Compute magnitude squared: |B|² = -λ for Euclidean, +λ for hyperbolic
-    # We use the actual λ value to determine which formula to use
-    abs_lambda = abs(lambda_val)
-    sqrt(where(abs_lambda > 1e-12, abs_lambda, 1.0))
-
     # Compute coefficients based on sign of λ
     # λ < 0: trigonometric (Euclidean bivectors)
     # λ > 0: hyperbolic (Minkowski boosts)
@@ -90,27 +86,26 @@ def exp_blade(B: Blade) -> MultiVector:
 
     # Trigonometric case: λ < 0, so √(-λ) is real
     # cos(√(-λ)) + B * sin(√(-λ))/√(-λ)
-    sqrt_neg_lambda = sqrt(where(lambda_val < -1e-12, -lambda_val, 1.0))
+    sqrt_neg_lambda = sqrt(where(lambda_val < -TOLERANCE, -lambda_val, 1.0))
     trig_scalar = cos(sqrt_neg_lambda)
     trig_blade_coeff = where(
-        abs(sqrt_neg_lambda) > 1e-12,
+        abs(sqrt_neg_lambda) > TOLERANCE,
         sin(sqrt_neg_lambda) / sqrt_neg_lambda,
         ones(lambda_val.shape),  # sinc(0) = 1
     )
 
     # Hyperbolic case: λ > 0
-    sqrt_pos_lambda = sqrt(where(lambda_val > 1e-12, lambda_val, 1.0))
+    sqrt_pos_lambda = sqrt(where(lambda_val > TOLERANCE, lambda_val, 1.0))
     hyp_scalar = cosh(sqrt_pos_lambda)
     hyp_blade_coeff = where(
-        abs(sqrt_pos_lambda) > 1e-12,
+        abs(sqrt_pos_lambda) > TOLERANCE,
         sinh(sqrt_pos_lambda) / sqrt_pos_lambda,
         ones(lambda_val.shape),  # sinhc(0) = 1
     )
 
     # Select based on sign of λ
-    is_negative = lambda_val < -1e-12
-    is_positive = lambda_val > 1e-12
-    ~is_negative & ~is_positive
+    is_negative = lambda_val < -TOLERANCE
+    is_positive = lambda_val > TOLERANCE
 
     # Final coefficients
     scalar_coeff = where(is_negative, trig_scalar, where(is_positive, hyp_scalar, ones(lambda_val.shape)))
@@ -123,8 +118,8 @@ def exp_blade(B: Blade) -> MultiVector:
         blade_coeff_expanded = blade_coeff_expanded[..., newaxis]
 
     # Build result components
-    scalar_blade = Blade(scalar_coeff, grade=0, metric=B.metric, collection=B.collection)
-    scaled_B = Blade(
+    scalar_vector = Vector(scalar_coeff, grade=0, metric=B.metric, collection=B.collection)
+    scaled_B = Vector(
         blade_coeff_expanded * B.data,
         grade=B.grade,
         metric=B.metric,
@@ -132,7 +127,7 @@ def exp_blade(B: Blade) -> MultiVector:
     )
 
     return MultiVector(
-        data={0: scalar_blade, B.grade: scaled_B},
+        data={0: scalar_vector, B.grade: scaled_B},
         metric=B.metric,
         collection=B.collection,
     )
@@ -143,7 +138,7 @@ def exp_blade(B: Blade) -> MultiVector:
 # =============================================================================
 
 
-def log_versor(M: MultiVector) -> Blade:
+def log_versor(M: MultiVector) -> Vector:
     """
     Extract the bivector generator from a rotor/versor: log(M)
 
@@ -157,7 +152,7 @@ def log_versor(M: MultiVector) -> Blade:
         M: MultiVector representing a rotor (typically grades {0, 2})
 
     Returns:
-        Blade (bivector) that generates M via exp_blade
+        Vector (bivector) that generates M via exp_vector
 
     Raises:
         ValueError: If M doesn't have the expected rotor structure
@@ -172,7 +167,7 @@ def log_versor(M: MultiVector) -> Blade:
         >>> B_recovered = log_versor(R)
         >>> # B_recovered ≈ -B * angle / 2
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     # Extract scalar and bivector parts
     scalar_part = M.grade_select(0)
@@ -185,7 +180,7 @@ def log_versor(M: MultiVector) -> Blade:
         # Pure scalar: log(a) = 0 bivector (identity rotor)
         d = M.dim
         shape = M.collection + (d, d)
-        return Blade(zeros(shape), grade=2, metric=M.metric, collection=M.collection)
+        return Vector(zeros(shape), grade=2, metric=M.metric, collection=M.collection)
 
     a = scalar_part.data  # Shape: (*collection,)
     B_norm = norm(bivector_part)  # Shape: (*collection,)
@@ -196,8 +191,8 @@ def log_versor(M: MultiVector) -> Blade:
 
     # Scale bivector: result = theta * B / |B|
     # Handle |B| ≈ 0 case (near identity)
-    safe_norm = where(B_norm > 1e-12, B_norm, 1.0)
-    scale = where(B_norm > 1e-12, theta / safe_norm, zeros(B_norm.shape))
+    safe_norm = where(B_norm > TOLERANCE, B_norm, 1.0)
+    scale = where(B_norm > TOLERANCE, theta / safe_norm, zeros(B_norm.shape))
 
     # Expand for broadcasting
     scale_expanded = scale
@@ -206,7 +201,7 @@ def log_versor(M: MultiVector) -> Blade:
 
     result_data = scale_expanded * bivector_part.data
 
-    return Blade(result_data, grade=2, metric=M.metric, collection=M.collection)
+    return Vector(result_data, grade=2, metric=M.metric, collection=M.collection)
 
 
 # =============================================================================
@@ -241,7 +236,7 @@ def slerp(R0: MultiVector, R1: MultiVector, t: float | NDArray) -> MultiVector:
     """
     from numpy import asarray
 
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     t = asarray(t)
 
@@ -264,7 +259,7 @@ def slerp(R0: MultiVector, R1: MultiVector, t: float | NDArray) -> MultiVector:
         for _ in range(B.grade):
             t_expanded = t_expanded[..., newaxis]
 
-        B_scaled = Blade(
+        B_scaled = Vector(
             t_expanded * B.data,
             grade=B.grade,
             metric=B.metric,
@@ -272,7 +267,7 @@ def slerp(R0: MultiVector, R1: MultiVector, t: float | NDArray) -> MultiVector:
         )
 
     # Compute exp(t * B)
-    exp_tB = exp_blade(B_scaled)
+    exp_tB = exp_vector(B_scaled)
 
     # Compose: R(t) = R0 * exp(t * B)
     return R0 * exp_tB

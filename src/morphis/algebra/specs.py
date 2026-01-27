@@ -1,51 +1,53 @@
 """
-Linear Algebra - Blade Specifications
+Linear Algebra - Vector Specifications
 
-Defines BladeSpec for describing the structure of blades in linear operator contexts.
-A BladeSpec captures the grade, collection dimensions, and vector space dimension.
+Defines VectorSpec for describing the structure of k-vectors in linear operator contexts.
+A VectorSpec captures the grade, collection dimensions, and vector space dimension.
 """
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
-@dataclass(frozen=True)
-class BladeSpec:
+class VectorSpec(BaseModel):
     """
-    Specification for a blade's structure in a linear operator context.
+    Specification for a k-vector's structure in a linear operator context.
 
-    Describes how to interpret the axes of a blade tensor:
+    Describes how to interpret the axes of a k-vector tensor:
     - grade: Number of geometric axes (0=scalar, 1=vector, 2=bivector, etc.)
     - collection: Number of leading collection/batch dimensions
     - dim: Dimension of the underlying vector space
 
-    Blade storage convention: (*collection, *geometric) where geometric = (dim,) * grade
+    Storage convention: (*collection, *geometric) where geometric = (dim,) * grade
 
     Attributes:
-        grade: Grade of the blade (0=scalar, 1=vector, 2=bivector, etc.)
+        grade: Grade of the k-vector (0=scalar, 1=vector, 2=bivector, etc.)
         collection: Number of collection dimensions (batch/sensor/time axes)
         dim: Dimension of the underlying vector space
 
     Examples:
         >>> # Scalar with collection dim (e.g., N currents)
-        >>> spec = BladeSpec(grade=0, collection=1, dim=3)
+        >>> spec = VectorSpec(grade=0, collection=1, dim=3)
         >>> spec.geometric_shape
         ()
         >>> spec.total_axes
         1
 
         >>> # Bivector with collection dim (e.g., M magnetic field measurements)
-        >>> spec = BladeSpec(grade=2, collection=1, dim=3)
+        >>> spec = VectorSpec(grade=2, collection=1, dim=3)
         >>> spec.geometric_shape
         (3, 3)
         >>> spec.total_axes
         3
     """
 
+    model_config = ConfigDict(frozen=True)
+
     grade: int
     collection: int
     dim: int
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def _validate_spec(self):
         """Validate spec parameters."""
         if self.grade < 0:
             raise ValueError(f"grade must be non-negative, got {self.grade}")
@@ -55,6 +57,7 @@ class BladeSpec:
             raise ValueError(f"dim must be positive, got {self.dim}")
         if self.grade > self.dim:
             raise ValueError(f"grade {self.grade} cannot exceed dim {self.dim}")
+        return self
 
     @property
     def geometric_shape(self) -> tuple[int, ...]:
@@ -70,9 +73,9 @@ class BladeSpec:
         """Total number of axes: collection + grade."""
         return self.collection + self.grade
 
-    def blade_shape(self, collection_shape: tuple[int, ...]) -> tuple[int, ...]:
+    def vector_shape(self, collection_shape: tuple[int, ...]) -> tuple[int, ...]:
         """
-        Compute full blade shape given collection shape.
+        Compute full vector shape given collection shape.
 
         Args:
             collection_shape: Shape of collection dimensions
@@ -89,26 +92,26 @@ class BladeSpec:
         return collection_shape + self.geometric_shape
 
 
-def blade_spec(grade: int, dim: int, collection: int = 1) -> BladeSpec:
+def vector_spec(grade: int, dim: int, collection: int = 1) -> VectorSpec:
     """
-    Create a BladeSpec with convenient defaults.
+    Create a VectorSpec with convenient defaults.
 
     Args:
-        grade: Grade of blade (0=scalar, 1=vector, 2=bivector, etc.)
+        grade: Grade of k-vector (0=scalar, 1=vector, 2=bivector, etc.)
         dim: Dimension of vector space
         collection: Number of collection dimensions (default 1)
 
     Returns:
-        BladeSpec instance
+        VectorSpec instance
 
     Examples:
         >>> # Scalar currents with one collection dimension
-        >>> spec = blade_spec(grade=0, dim=3)
+        >>> spec = vector_spec(grade=0, dim=3)
 
         >>> # Bivector fields with one collection dimension
-        >>> spec = blade_spec(grade=2, dim=3)
+        >>> spec = vector_spec(grade=2, dim=3)
 
         >>> # Vector without collection dimensions
-        >>> spec = blade_spec(grade=1, dim=3, collection=0)
+        >>> spec = vector_spec(grade=1, dim=3, collection=0)
     """
-    return BladeSpec(grade=grade, collection=collection, dim=dim)
+    return VectorSpec(grade=grade, collection=collection, dim=dim)

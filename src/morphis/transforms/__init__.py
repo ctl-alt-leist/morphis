@@ -32,7 +32,7 @@ from morphis.transforms.projective import (
     point as point,
     point_on_line as point_on_line,
     point_on_plane as point_on_plane,
-    screw_motion as screw_motion,
+    screw as screw,
     translator as translator,
     weight as weight,
 )

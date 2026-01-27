@@ -1,18 +1,18 @@
 """
-3D Frame Rotation Animation
+4D Rotation Animation
 
-Demonstrates visualization of a 3D frame (three basis vectors) rotating
-around a diagonal axis. The frame is displayed as three arrows from
-the origin, one for each spanning vector.
+Visualizes a 4D frame rotating with projection to 3D:
+- Selectable projection axes (e123, e234, etc.)
+- Rotation in arbitrary bivector planes
 
-Run: uv run python -m morphis.examples.animate_3d
+Run: uv run python -m morphis.examples.rotations_4d
 """
 
 import argparse
 
 from numpy import diff, pi
 
-from morphis.elements import basis_vectors, euclidean, frame_from_vectors
+from morphis.elements import Frame, basis_vectors, euclidean_metric
 from morphis.operations import normalize
 from morphis.transforms import rotor
 from morphis.utils.easing import ease_in_out_cubic
@@ -21,9 +21,9 @@ from morphis.visuals import RED, Animation
 
 # Configuration
 FRAME_RATE = 60
-DURATION_FADE_IN = 0.5
-DURATION_ROTATE = 4.0
-TOTAL_ROTATION = 4 * pi
+DURATION_FADE_IN = 1.0
+DURATION_ROTATE = 2.0
+TOTAL_ROTATION = 2 * pi
 
 
 def compute_delta_angles(duration: float, total_angle: float) -> list[float]:
@@ -35,19 +35,20 @@ def compute_delta_angles(duration: float, total_angle: float) -> list[float]:
 
 def create_animation():
     """
-    Create the 3D frame rotation animation.
+    Create the 4D frame rotation animation.
 
     Returns configured Animation ready for play() or save().
     """
-    # Build basis vectors
-    g = euclidean(3)
-    e1, e2, e3 = basis_vectors(g)
+    # Create 4D basis
+    g = euclidean_metric(4)
+    e1, e2, e3, e4 = basis_vectors(g)
 
-    # Rotation bivector: diagonal plane
-    b = normalize((e1 ^ e2) + (e2 ^ e3) + (e3 ^ e1))
+    # Rotation bivectors
+    b1 = normalize((e1 ^ e3) + (e2 ^ e3))
+    b2 = normalize((e1 ^ e4) + (e2 ^ e4) + (e3 ^ e4))
 
     # The ONE frame we animate
-    F = frame_from_vectors(e1, e2, e3)
+    F = Frame(e1, e2, e3, e4)
 
     # Pre-compute delta angles for eased rotation
     d_angles = compute_delta_angles(DURATION_ROTATE, TOTAL_ROTATION)
@@ -60,12 +61,13 @@ def create_animation():
         auto_camera=True,
     )
     anim.watch(F, color=RED, filled=True)
+    anim.set_projection((0, 1, 2))
     anim.fade_in(F, t=0.0, duration=DURATION_FADE_IN)
 
-    print("3D Frame Rotation Animation")
+    print("4D Frame Rotation Animation")
     print("=" * 40)
     print(f"Fade in: {DURATION_FADE_IN}s")
-    print(f"Rotate 4π: {DURATION_ROTATE}s")
+    print(f"4 rotation phases: {DURATION_ROTATE}s each")
     print()
 
     anim.start()
@@ -77,18 +79,30 @@ def create_animation():
         anim.capture(t)
         t += dt
 
-    # Rotation
-    for d_angle in d_angles:
-        M = rotor(b, d_angle)
-        F.data[...] = F.transform(M).data
-        anim.capture(t)
-        t += dt
+    # First two rotations in e123 projection
+    for b in [b1, b2]:
+        for d_angle in d_angles:
+            M = rotor(b, d_angle)
+            F.data[...] = F.transform(M).data
+            anim.capture(t)
+            t += dt
+
+    # Switch to e234 projection
+    anim.set_projection((1, 2, 3))
+
+    # Last two rotations in e234 projection
+    for b in [b1, b2]:
+        for d_angle in d_angles:
+            M = rotor(b, d_angle)
+            F.data[...] = F.transform(M).data
+            anim.capture(t)
+            t += dt
 
     return anim
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="3D frame rotation animation")
+    parser = argparse.ArgumentParser(description="4D frame rotation animation")
     parser.add_argument("--save", type=str, help="Also save to file (e.g., out.gif)")
     args = parser.parse_args()
 

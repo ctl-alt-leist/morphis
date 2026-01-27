@@ -6,7 +6,7 @@ from numpy import allclose, array
 from numpy.random import randn
 from numpy.testing import assert_array_almost_equal
 
-from morphis.elements import Blade, basis_vector, euclidean
+from morphis.elements import Vector, basis_vector, euclidean_metric
 from morphis.operations import (
     geometric,
     grade_project,
@@ -23,12 +23,12 @@ from morphis.operations import (
 # =============================================================================
 
 
-def make_basis_vector(idx: int, metric) -> Blade:
+def make_basis_vector(idx: int, metric) -> Vector:
     """Create basis vector e_idx using the given metric."""
     return basis_vector(idx, metric)
 
 
-def make_basis_bivector(i: int, j: int, metric) -> Blade:
+def make_basis_bivector(i: int, j: int, metric) -> Vector:
     """Create basis bivector e_{ij} using the given metric."""
     e_i = basis_vector(i, metric)
     e_j = basis_vector(j, metric)
@@ -43,11 +43,11 @@ def make_basis_bivector(i: int, j: int, metric) -> Blade:
 class TestGeometricBasicProperties:
     def test_associativity_2d(self):
         """Test (uv)w = u(vw) for vectors in 2D via basis vectors."""
-        m = euclidean(2)
+        g = euclidean_metric(2)
 
         # For associativity, check: (e_1 e_2) e_1 = e_1 (e_2 e_1)
-        e_1 = make_basis_vector(0, m)
-        e_2 = make_basis_vector(1, m)
+        e_1 = make_basis_vector(0, g)
+        e_2 = make_basis_vector(1, g)
 
         # e_1 e_2 = e_12 (bivector)
         e_1_e_2 = geometric(e_1, e_2)
@@ -63,10 +63,10 @@ class TestGeometricBasicProperties:
 
     def test_associativity_3d_basis(self):
         """Test associativity with 3D basis vectors."""
-        m = euclidean(3)
-        e_1 = make_basis_vector(0, m)
-        e_2 = make_basis_vector(1, m)
-        e_3 = make_basis_vector(2, m)
+        g = euclidean_metric(3)
+        e_1 = make_basis_vector(0, g)
+        e_2 = make_basis_vector(1, g)
+        e_3 = make_basis_vector(2, g)
 
         # (e_1 e_2) e_3 vs e_1 (e_2 e_3)
         e_1_e_2 = geometric(e_1, e_2)
@@ -86,10 +86,10 @@ class TestGeometricBasicProperties:
 
     def test_distributivity(self):
         """Test u(v + w) = uv + uw."""
-        m = euclidean(3)
-        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
-        v = Blade(array([0.0, 1.0, 0.0]), grade=1, metric=m)
-        w = Blade(array([0.0, 0.0, 1.0]), grade=1, metric=m)
+        g = euclidean_metric(3)
+        u = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=g)
+        v = Vector(array([0.0, 1.0, 0.0]), grade=1, metric=g)
+        w = Vector(array([0.0, 0.0, 1.0]), grade=1, metric=g)
 
         # v + w
         vw_sum = v + w
@@ -112,8 +112,8 @@ class TestGeometricBasicProperties:
 
     def test_vector_contraction_unit(self):
         """Test v^2 = |v|^2 for unit vectors."""
-        m = euclidean(4)
-        e_1 = make_basis_vector(0, m)
+        g = euclidean_metric(4)
+        e_1 = make_basis_vector(0, g)
 
         v_sq = geometric(e_1, e_1)
 
@@ -127,8 +127,8 @@ class TestGeometricBasicProperties:
 
     def test_vector_contraction_arbitrary(self):
         """Test v^2 = |v|^2 for arbitrary vectors."""
-        m = euclidean(4)
-        v = Blade(array([3.0, 4.0, 0.0, 0.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        v = Vector(array([3.0, 4.0, 0.0, 0.0]), grade=1, metric=g)
 
         v_sq = geometric(v, v)
 
@@ -139,9 +139,9 @@ class TestGeometricBasicProperties:
 
     def test_orthogonal_anticommute(self):
         """Test uv = -vu for orthogonal vectors."""
-        m = euclidean(3)
-        e_1 = make_basis_vector(0, m)
-        e_2 = make_basis_vector(1, m)
+        g = euclidean_metric(3)
+        e_1 = make_basis_vector(0, g)
+        e_2 = make_basis_vector(1, g)
 
         e_1_e_2 = geometric(e_1, e_2)
         e_2_e_1 = geometric(e_2, e_1)
@@ -159,9 +159,9 @@ class TestGeometricBasicProperties:
 
     def test_parallel_commute(self):
         """Test uv = vu = u.v for parallel vectors."""
-        m = euclidean(3)
-        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
-        v = Blade(array([2.0, 0.0, 0.0]), grade=1, metric=m)  # v = 2u
+        g = euclidean_metric(3)
+        u = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=g)
+        v = Vector(array([2.0, 0.0, 0.0]), grade=1, metric=g)  # v = 2u
 
         uv = geometric(u, v)
         vu = geometric(v, u)
@@ -182,9 +182,9 @@ class TestGeometricBasicProperties:
 class TestGeometricGradeDecomposition:
     def test_vector_vector_2d_orthogonal(self):
         """Test grade decomposition of orthogonal vector product in 2D."""
-        m = euclidean(2)
-        u = Blade(array([1.0, 0.0]), grade=1, metric=m)
-        v = Blade(array([0.0, 1.0]), grade=1, metric=m)
+        g = euclidean_metric(2)
+        u = Vector(array([1.0, 0.0]), grade=1, metric=g)
+        v = Vector(array([0.0, 1.0]), grade=1, metric=g)
 
         uv = geometric(u, v)
 
@@ -197,9 +197,9 @@ class TestGeometricGradeDecomposition:
 
     def test_vector_vector_3d_perpendicular(self):
         """Test vector product for perpendicular vectors in 3D."""
-        m = euclidean(3)
-        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
-        v = Blade(array([0.0, 1.0, 0.0]), grade=1, metric=m)
+        g = euclidean_metric(3)
+        u = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=g)
+        v = Vector(array([0.0, 1.0, 0.0]), grade=1, metric=g)
 
         uv = geometric(u, v)
 
@@ -213,10 +213,10 @@ class TestGeometricGradeDecomposition:
 
     def test_vector_vector_3d_angle(self):
         """Test vector product at arbitrary angle."""
-        m = euclidean(3)
+        g = euclidean_metric(3)
         theta = pi / 4  # 45 degrees
-        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
-        v = Blade(array([cos(theta), sin(theta), 0.0]), grade=1, metric=m)
+        u = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=g)
+        v = Vector(array([cos(theta), sin(theta), 0.0]), grade=1, metric=g)
 
         uv = geometric(u, v)
 
@@ -230,9 +230,9 @@ class TestGeometricGradeDecomposition:
 
     def test_vector_bivector_coplanar(self):
         """Test vector in bivector plane."""
-        m = euclidean(3)
-        e_1 = make_basis_vector(0, m)
-        e_12 = make_basis_bivector(0, 1, m)
+        g = euclidean_metric(3)
+        e_1 = make_basis_vector(0, g)
+        e_12 = make_basis_bivector(0, 1, g)
 
         result = geometric(e_1, e_12)
 
@@ -247,9 +247,9 @@ class TestGeometricGradeDecomposition:
 
     def test_vector_bivector_perpendicular(self):
         """Test vector perpendicular to bivector plane."""
-        m = euclidean(3)
-        e_3 = make_basis_vector(2, m)  # z-axis
-        e_12 = make_basis_bivector(0, 1, m)  # xy-plane
+        g = euclidean_metric(3)
+        e_3 = make_basis_vector(2, g)  # z-axis
+        e_12 = make_basis_bivector(0, 1, g)  # xy-plane
 
         result = geometric(e_3, e_12)
 
@@ -264,9 +264,9 @@ class TestGeometricGradeDecomposition:
 
     def test_bivector_bivector_3d_orthogonal(self):
         """Test orthogonal bivector product in 3D."""
-        m = euclidean(3)
-        e_12 = make_basis_bivector(0, 1, m)
-        e_23 = make_basis_bivector(1, 2, m)
+        g = euclidean_metric(3)
+        e_12 = make_basis_bivector(0, 1, g)
+        e_23 = make_basis_bivector(1, 2, g)
 
         result = geometric(e_12, e_23)
 
@@ -282,38 +282,38 @@ class TestGeometricGradeDecomposition:
 class TestReversion:
     def test_sign_pattern(self):
         """Test reverse sign pattern: (-1)^{k(k-1)/2}."""
-        m = euclidean(3)
+        g = euclidean_metric(3)
 
         # Grade 0: +1
-        s = Blade(2.0, grade=0, metric=m)
+        s = Vector(2.0, grade=0, metric=g)
         assert_array_almost_equal(reverse(s).data, s.data)
 
         # Grade 1: +1
-        v = Blade(array([1.0, 2.0, 3.0]), grade=1, metric=m)
+        v = Vector(array([1.0, 2.0, 3.0]), grade=1, metric=g)
         assert_array_almost_equal(reverse(v).data, v.data)
 
         # Grade 2: -1
-        b = Blade(randn(3, 3), grade=2, metric=m)
+        b = Vector(randn(3, 3), grade=2, metric=g)
         assert_array_almost_equal(reverse(b).data, -b.data)
 
         # Grade 3: -1
-        t = Blade(randn(3, 3, 3), grade=3, metric=m)
+        t = Vector(randn(3, 3, 3), grade=3, metric=g)
         assert_array_almost_equal(reverse(t).data, -t.data)
 
     def test_involution(self):
         """Test reverse(reverse(u)) = u."""
-        m = euclidean(4)
-        v = Blade(randn(4), grade=1, metric=m)
+        g = euclidean_metric(4)
+        v = Vector(randn(4), grade=1, metric=g)
         assert_array_almost_equal(reverse(reverse(v)).data, v.data)
 
-        b = Blade(randn(4, 4), grade=2, metric=m)
+        b = Vector(randn(4, 4), grade=2, metric=g)
         assert_array_almost_equal(reverse(reverse(b)).data, b.data)
 
     def test_reverse_of_product(self):
         """Test reverse(AB) = reverse(B) reverse(A)."""
-        m = euclidean(3)
-        u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
-        v = Blade(array([0.0, 1.0, 0.0]), grade=1, metric=m)
+        g = euclidean_metric(3)
+        u = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=g)
+        v = Vector(array([0.0, 1.0, 0.0]), grade=1, metric=g)
 
         uv = geometric(u, v)
         uv_rev = reverse(uv)
@@ -339,8 +339,8 @@ class TestReversion:
 class TestInverse:
     def test_vector_inverse(self):
         """Test v^{-1} v = 1 for vectors."""
-        m = euclidean(4)
-        v = Blade(array([3.0, 4.0, 0.0, 0.0]), grade=1, metric=m)
+        g = euclidean_metric(4)
+        v = Vector(array([3.0, 4.0, 0.0, 0.0]), grade=1, metric=g)
 
         v_inv = inverse(v)
         product = geometric(v_inv, v)
@@ -351,8 +351,8 @@ class TestInverse:
 
     def test_vector_inverse_formula(self):
         """Test v^{-1} = v / |v|^2."""
-        m = euclidean(2)
-        v = Blade(array([3.0, 4.0]), grade=1, metric=m)  # |v|^2 = 25
+        g = euclidean_metric(2)
+        v = Vector(array([3.0, 4.0]), grade=1, metric=g)  # |v|^2 = 25
 
         v_inv = inverse(v)
 
@@ -362,8 +362,8 @@ class TestInverse:
 
     def test_bivector_inverse(self):
         """Test B^{-1} B = 1 for unit bivector."""
-        m = euclidean(3)
-        e_12 = make_basis_bivector(0, 1, m)
+        g = euclidean_metric(3)
+        e_12 = make_basis_bivector(0, 1, g)
 
         e_12_inv = inverse(e_12)
         product = geometric(e_12_inv, e_12)
@@ -380,9 +380,9 @@ class TestInverse:
 class TestGeometricEdgeCases:
     def test_batch_geometric_product(self):
         """Test geometric product with batch vectors."""
-        m = euclidean(3)
-        batch_v = Blade(randn(5, 3), grade=1, metric=m, collection=(5,))
-        single_u = Blade(array([1.0, 0.0, 0.0]), grade=1, metric=m)
+        g = euclidean_metric(3)
+        batch_v = Vector(randn(5, 3), grade=1, metric=g, collection=(5,))
+        single_u = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=g)
 
         result = geometric(single_u, batch_v)
 
@@ -391,9 +391,9 @@ class TestGeometricEdgeCases:
 
     def test_scalar_product_extraction(self):
         """Test scalar_product function."""
-        m = euclidean(3)
-        u = Blade(array([1.0, 2.0, 3.0]), grade=1, metric=m)
-        v = Blade(array([4.0, 5.0, 6.0]), grade=1, metric=m)
+        g = euclidean_metric(3)
+        u = Vector(array([1.0, 2.0, 3.0]), grade=1, metric=g)
+        v = Vector(array([4.0, 5.0, 6.0]), grade=1, metric=g)
 
         s = scalar_product(u, v)
 

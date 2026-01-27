@@ -6,10 +6,11 @@ that defines its complete geometric context.
 
 Hierarchy:
     Element (metric, collection)
+    ├── Tensor (+ data: NDArray, contravariant: int, covariant: int)
+    │   └── Vector (antisymmetric, covariant=0)
     ├── GradedElement (+ data: NDArray, grade: int)
-    │   ├── Blade
     │   └── Frame (+ span: int)
-    └── CompositeElement (+ data: dict[int, GradedElement])
+    └── CompositeElement (+ data: dict[int, Vector])
         └── MultiVector
 """
 
@@ -25,7 +26,7 @@ from morphis.elements.metric import Metric
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
 
 class Element(BaseModel):
@@ -66,7 +67,10 @@ class GradedElement(Element):
     GradedElements store their geometric content in a NumPy array with shape
     (*collection, *geometric_shape) where geometric_shape depends on grade.
 
-    Subclasses: Blade, Frame
+    Subclasses: Frame
+
+    Note: Vector inherits from Tensor (not GradedElement) to properly model
+    the tensor structure of antisymmetric k-vectors.
 
     Attributes:
         data: The underlying array of element data
@@ -113,9 +117,9 @@ class GradedElement(Element):
                 # Use last axis size as dimension
                 dim = self.data.shape[-1]
 
-            from morphis.elements.metric import euclidean
+            from morphis.elements.metric import euclidean_metric
 
-            object.__setattr__(self, "metric", euclidean(dim))
+            object.__setattr__(self, "metric", euclidean_metric(dim))
 
         return self
 
@@ -127,11 +131,6 @@ class GradedElement(Element):
     def shape(self) -> tuple[int, ...]:
         """Full shape of the underlying array."""
         return self.data.shape
-
-    @property
-    def collection_shape(self) -> tuple[int, ...]:
-        """Shape of the leading collection dimensions."""
-        return self.collection
 
     @property
     def ndim(self) -> int:
@@ -184,7 +183,7 @@ class CompositeElement(Element):
         data: Dictionary mapping grade to component GradedElement
     """
 
-    data: dict[int, "Blade"]
+    data: dict[int, "Vector"]
 
     # Prevent numpy from intercepting arithmetic - force use of __rmul__ etc.
     __array_ufunc__ = None

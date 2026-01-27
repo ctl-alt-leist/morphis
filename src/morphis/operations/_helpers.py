@@ -1,9 +1,9 @@
 """
 Geometric Algebra - Utilities
 
-Utility functions for blade validation, dimension checking, and broadcasting.
+Utility functions for vector validation, dimension checking, and broadcasting.
 
-Blade naming convention: u, v, w (never a, b, c for blades).
+Vector naming convention: u, v, w (never a, b, c for vectors).
 """
 
 from __future__ import annotations
@@ -15,85 +15,85 @@ from numpy import broadcast_shapes
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
 
 F = TypeVar("F", bound=Callable)
 
 
 # =============================================================================
-# Blade Dimension Helpers
+# Vector Dimension Helpers
 # =============================================================================
 
 
-def get_common_dim(*blades: Blade) -> int:
+def get_common_dim(*vectors: Vector) -> int:
     """
-    Get the common dimension d of a collection of blades.
+    Get the common dimension d of a collection of vectors.
 
-    Raises ValueError if blades have different dimensions or if no blades
+    Raises ValueError if vectors have different dimensions or if no vectors
     are provided.
 
     Returns the common dimension d.
     """
-    if not blades:
-        raise ValueError("At least one blade required")
+    if not vectors:
+        raise ValueError("At least one vector required")
 
-    dims = [u.dim for u in blades]
+    dims = [u.dim for u in vectors]
     d = dims[0]
 
     if not all(dim == d for dim in dims):
-        raise ValueError(f"Dimension mismatch: blades have dimensions {dims}")
+        raise ValueError(f"Dimension mismatch: vectors have dimensions {dims}")
 
     return d
 
 
-def get_broadcast_collection(*blades: Blade) -> tuple[int, ...]:
+def get_broadcast_collection(*vectors: Vector) -> tuple[int, ...]:
     """
-    Compute the broadcast-compatible collection shape for multiple blades.
+    Compute the broadcast-compatible collection shape for multiple vectors.
 
     Uses numpy-style broadcasting rules to determine the result collection shape.
 
     Returns the broadcasted collection shape.
     """
-    if not blades:
-        raise ValueError("At least one blade required")
+    if not vectors:
+        raise ValueError("At least one vector required")
 
-    return broadcast_shapes(*(u.collection for u in blades))
+    return broadcast_shapes(*(u.collection for u in vectors))
 
 
-def validate_same_dim(*blades: Blade) -> None:
+def validate_same_dim(*vectors: Vector) -> None:
     """
-    Validate that all blades have the same dimension d.
+    Validate that all vectors have the same dimension d.
 
     Raises ValueError if dimensions differ.
     """
-    if len(blades) < 2:
+    if len(vectors) < 2:
         return
 
-    d = blades[0].dim
-    for k, u in enumerate(blades[1:], start=1):
+    d = vectors[0].dim
+    for k, u in enumerate(vectors[1:], start=1):
         if u.dim != d:
-            raise ValueError(f"Dimension mismatch: blade 0 has dim {d}, blade {k} has dim {u.dim}")
+            raise ValueError(f"Dimension mismatch: vector 0 has dim {d}, vector {k} has dim {u.dim}")
 
 
 def same_dim(func: F) -> F:
     """
-    Decorator that validates all Blade arguments have the same dimension.
+    Decorator that validates all Vector arguments have the same dimension.
 
-    Applies to functions where positional arguments are Blades. Validates
+    Applies to functions where positional arguments are Vectors. Validates
     dimensions before calling the function.
 
     Example:
         @same_dim
-        def wedge(*blades: Blade) -> Blade:
+        def wedge(*vectors: Vector) -> Vector:
             ...
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        blades = [arg for arg in args if isinstance(arg, Blade)]
-        validate_same_dim(*blades)
+        vectors = [arg for arg in args if isinstance(arg, Vector)]
+        validate_same_dim(*vectors)
         return func(*args, **kwargs)
 
     return wrapper  # type: ignore[return-value]
@@ -104,9 +104,9 @@ def same_dim(func: F) -> F:
 # =============================================================================
 
 
-def broadcast_collection_shape(*blades: Blade) -> tuple[int, ...]:
+def broadcast_collection_shape(*vectors: Vector) -> tuple[int, ...]:
     """
-    Compute the broadcast shape of collection dimensions for multiple blades.
+    Compute the broadcast shape of collection dimensions for multiple vectors.
 
     Uses numpy-style broadcasting rules: dimensions must be equal or one of
     them must be 1.
@@ -115,4 +115,4 @@ def broadcast_collection_shape(*blades: Blade) -> tuple[int, ...]:
 
     Note: This is an alias for get_broadcast_collection for backwards compatibility.
     """
-    return get_broadcast_collection(*blades)
+    return get_broadcast_collection(*vectors)

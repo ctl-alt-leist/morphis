@@ -13,7 +13,7 @@ distinct from the geometric pseudoscalar.
 
 from numpy import array, exp, pi, real
 
-from morphis.elements import Blade, metric
+from morphis.elements import Vector, metric
 from morphis.operations import (
     conjugate,
     hermitian_norm_squared,
@@ -21,11 +21,11 @@ from morphis.operations import (
     norm_squared,
     wedge,
 )
-from morphis.utils.pretty import section, show_array, show_blade, subsection
+from morphis.utils.pretty import section, subsection
 
 
 # =============================================================================
-# Section 1: Complex Blade Creation
+# Section 1: Complex Vector Creation
 # =============================================================================
 
 
@@ -36,27 +36,31 @@ def demo_complex_creation() -> None:
     g = metric(3)
 
     subsection("Direct complex array")
-    v = Blade([1 + 0j, 2 + 1j, 0 - 1j], grade=1, metric=g)
-    show_blade("v (complex vector)", v)
+    v = Vector([1 + 0j, 2 + 1j, 0 - 1j], grade=1, metric=g)
+    print("v (complex vector):")
+    print(v)
     print(f"  dtype: {v.data.dtype}")
 
     subsection("Phasor from magnitude and phase")
     amplitude = array([1.0, 0.5, 0.25])
     phase = pi / 4  # 45 degrees
-    v_phasor = Blade(amplitude * exp(1j * phase), grade=1, metric=g)
-    show_blade("v_phasor", v_phasor)
+    v_phasor = Vector(amplitude * exp(1j * phase), grade=1, metric=g)
+    print("v_phasor:")
+    print(v_phasor)
     print(f"  phase: {phase:.4f} rad = {phase * 180 / pi:.1f} deg")
 
     subsection("Complex scalar (overall phasor)")
-    s = Blade(2 * exp(1j * pi / 6), grade=0, metric=g)
-    show_blade("scalar phasor", s)
+    s = Vector(2 * exp(1j * pi / 6), grade=0, metric=g)
+    print("scalar phasor:")
+    print(s)
     print(f"  |s| = {abs(s.data):.4f}")
     print(f"  arg(s) = {phase:.4f} rad")
 
     subsection("Scale real blade by complex scalar")
-    e1 = Blade([1.0, 0.0, 0.0], grade=1, metric=g)
+    e1 = Vector([1.0, 0.0, 0.0], grade=1, metric=g)
     e1_rotated = e1 * exp(1j * pi / 3)
-    show_blade("e1 * exp(i*pi/3)", e1_rotated)
+    print("e1 * exp(i*pi/3):")
+    print(e1_rotated)
     print("  -> Real blade becomes complex")
 
 
@@ -72,21 +76,30 @@ def demo_conjugation() -> None:
     g = metric(3)
 
     subsection("Conjugate function and method")
-    v = Blade([1 + 2j, 3 - 4j, 5j], grade=1, metric=g)
-    show_blade("v", v)
-    show_blade("conjugate(v)", conjugate(v))
-    show_blade("v.conj()", v.conj())
+    v = Vector([1 + 2j, 3 - 4j, 5j], grade=1, metric=g)
+    print("v:")
+    print(v)
+    print()
+    print("conjugate(v):")
+    print(conjugate(v))
+    print()
+    print("v.conj():")
+    print(v.conj())
 
     subsection("Double conjugation is identity")
-    show_blade("v.conj().conj()", v.conj().conj())
+    print("v.conj().conj():")
+    print(v.conj().conj())
     print("  -> Same as original v")
 
     subsection("Conjugation on bivector")
-    e1 = Blade([1.0, 0, 0], grade=1, metric=g)
-    e2 = Blade([0, 1.0, 0], grade=1, metric=g)
+    e1 = Vector([1.0, 0, 0], grade=1, metric=g)
+    e2 = Vector([0, 1.0, 0], grade=1, metric=g)
     B = (e1 ^ e2) * (1 + 1j)
-    show_blade("B = (e1 ^ e2) * (1+i)", B)
-    show_blade("B.conj()", B.conj())
+    print("B = (e1 ^ e2) * (1 + i):")
+    print(B)
+    print()
+    print("B.conj():")
+    print(B.conj())
 
 
 # =============================================================================
@@ -101,16 +114,18 @@ def demo_norms() -> None:
     g = metric(3)
 
     subsection("Real blade: both norms agree")
-    v_real = Blade([3.0, 4.0, 0.0], grade=1, metric=g)
-    show_blade("v (real)", v_real)
-    show_array("norm_squared(v)", norm_squared(v_real))
-    show_array("hermitian_norm_squared(v)", hermitian_norm_squared(v_real))
+    v_real = Vector([3.0, 4.0, 0.0], grade=1, metric=g)
+    print("v (real):")
+    print(v_real)
+    print(f"  norm_squared(v) = {norm_squared(v_real)}")
+    print(f"  hermitian_norm_squared(v) = {hermitian_norm_squared(v_real)}")
     print("  -> Identical for real blades")
 
     subsection("Pure phasor: bilinear gives complex, Hermitian gives real")
     phase = pi / 4
-    v_phasor = Blade([3.0, 4.0, 0.0], grade=1, metric=g) * exp(1j * phase)
-    show_blade("v_phasor = [3,4,0] * exp(i*pi/4)", v_phasor)
+    v_phasor = Vector([3.0, 4.0, 0.0], grade=1, metric=g) * exp(1j * phase)
+    print("v_phasor = [3,4,0] * exp(i*pi/4):")
+    print(v_phasor)
 
     ns = norm_squared(v_phasor)
     hns = hermitian_norm_squared(v_phasor)
@@ -122,8 +137,9 @@ def demo_norms() -> None:
     print("    -> Real! |amplitude|^2 = 25")
 
     subsection("Mixed-phase blade: the critical case")
-    v_mixed = Blade([1, 1j, 0], grade=1, metric=g)
-    show_blade("v_mixed = [1, i, 0]", v_mixed)
+    v_mixed = Vector([1, 1j, 0], grade=1, metric=g)
+    print("v_mixed = [1, i, 0]:")
+    print(v_mixed)
 
     ns = norm_squared(v_mixed)
     hns = hermitian_norm_squared(v_mixed)
@@ -140,7 +156,7 @@ def demo_norms() -> None:
 
 
 # =============================================================================
-# Section 4: Operations on Complex Blades
+# Section 4: Operations on Complex Vectors
 # =============================================================================
 
 
@@ -153,23 +169,28 @@ def demo_operations() -> None:
     subsection("Wedge product of phasors")
     phase1 = pi / 4
     phase2 = pi / 6
-    u = Blade([1, 0, 0], grade=1, metric=g) * exp(1j * phase1)
-    v = Blade([0, 1, 0], grade=1, metric=g) * exp(1j * phase2)
+    u = Vector([1, 0, 0], grade=1, metric=g) * exp(1j * phase1)
+    v = Vector([0, 1, 0], grade=1, metric=g) * exp(1j * phase2)
 
     uv = u ^ v
-    show_blade("u ^ v", uv)
+    print("u ^ v:")
+    print(uv)
     print(f"  Combined phase: {phase1 + phase2:.4f} rad")
     print(f"  Result phase: {phase1 + phase2:.4f} rad (phases add)")
 
     subsection("Hodge dual of complex blade")
-    e3 = Blade([0, 0, 1], grade=1, metric=g) * exp(1j * pi / 3)
-    show_blade("e3 * exp(i*pi/3)", e3)
-    show_blade("hodge(e3)", e3.hodge())
+    e3 = Vector([0, 0, 1], grade=1, metric=g) * exp(1j * pi / 3)
+    print("e3 * exp(i*pi/3):")
+    print(e3)
+    print()
+    print("hodge(e3):")
+    print(e3.hodge())
     print("  -> Phase preserved in dual")
 
     subsection("Method chaining: conj then hodge")
     result = e3.conj().hodge()
-    show_blade("e3.conj().hodge()", result)
+    print("e3.conj().hodge():")
+    print(result)
 
 
 # =============================================================================
@@ -196,18 +217,22 @@ def demo_em_phasors() -> None:
     B0 = E0 / 3e8  # B = E/c in vacuum
     phase = pi / 4  # arbitrary phase at z=0
 
-    E_tilde = Blade([E0 * exp(1j * phase), 0, 0], grade=1, metric=g)
-    B_tilde = Blade([0, B0 * exp(1j * phase), 0], grade=1, metric=g)
+    E_tilde = Vector([E0 * exp(1j * phase), 0, 0], grade=1, metric=g)
+    B_tilde = Vector([0, B0 * exp(1j * phase), 0], grade=1, metric=g)
 
-    show_blade("E_tilde (electric phasor)", E_tilde)
-    show_blade("B_tilde (magnetic phasor)", B_tilde)
+    print("E_tilde (electric phasor):")
+    print(E_tilde)
+    print()
+    print("B_tilde (magnetic phasor):")
+    print(B_tilde)
 
     subsection("Time-averaged Poynting vector")
     print("  S = (1/2) Re(E ^ B*)")
 
     # Compute E ^ conj(B)
     S_complex = wedge(E_tilde, B_tilde.conj())
-    show_blade("E ^ B*", S_complex)
+    print("E ^ B*:")
+    print(S_complex)
 
     # For a bivector, hodge dual gives vector
     S_dual = hodge_dual(S_complex)
@@ -235,7 +260,7 @@ def main() -> None:
     print()
     print("=" * 70)
     print("  COMPLEX PHASORS DEMONSTRATION")
-    print("  Blades with complex coefficients for AC field analysis")
+    print("  Vectors with complex coefficients for AC field analysis")
     print("=" * 70)
 
     demo_complex_creation()

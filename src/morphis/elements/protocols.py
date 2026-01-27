@@ -4,7 +4,7 @@ Geometric Algebra - Protocol Definitions
 Protocols define the interfaces for geometric algebra objects. These enable
 duck-typing while providing clear interface contracts for type checking.
 
-Graded: Objects with a single grade and array data (Blade, Frame).
+Graded: Objects with a single grade and array data (Vector, Frame).
 Spanning: Objects with a span (Frame).
 Transformable: Objects that can be transformed by motors/versors.
 """
@@ -28,7 +28,7 @@ class Graded(Protocol):
     """
     Protocol for objects with a single grade and array data.
 
-    Implemented by: Blade, Frame
+    Implemented by: Vector, Frame
 
     Attributes:
         grade: The grade of the element (0=scalar, 1=vector, 2=bivector, etc.)
@@ -74,7 +74,7 @@ class Transformable(Protocol):
     Objects satisfying this protocol can be transformed in-place or copied.
     """
 
-    def transform_by(self, motor: MultiVector) -> None:
+    def transform(self, motor: MultiVector) -> None:
         """
         Transform this object in-place by a motor/versor.
 

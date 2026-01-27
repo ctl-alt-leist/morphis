@@ -11,12 +11,12 @@ Index naming convention:
 - INPUT_GEOMETRIC: "abcd" (up to grade-4 input blades)
 
 Operator storage convention: (*output_geometric, *output_collection, *input_collection, *input_geometric)
-Blade storage convention: (*collection, *geometric)
+Vector storage convention: (*collection, *geometric)
 """
 
 from functools import lru_cache
 
-from morphis.algebra.specs import BladeSpec
+from morphis.algebra.specs import VectorSpec
 
 
 # Index pools (disjoint to avoid collisions)
@@ -27,7 +27,7 @@ INPUT_GEOMETRIC = "abcd"
 
 
 @lru_cache(maxsize=128)
-def forward_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
+def forward_signature(input_spec: VectorSpec, output_spec: VectorSpec) -> str:
     """
     Generate einsum signature for forward operator application: y = L * x
 
@@ -45,16 +45,16 @@ def forward_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     Examples:
         >>> # Scalar currents (N,) to bivector fields (M, 3, 3)
         >>> sig = forward_signature(
-        ...     BladeSpec(grade=0, collection=1, dim=3),
-        ...     BladeSpec(grade=2, collection=1, dim=3),
+        ...     VectorSpec(grade=0, collection=1, dim=3),
+        ...     VectorSpec(grade=2, collection=1, dim=3),
         ... )
         >>> sig
         'WXKn,n->KWX'
 
         >>> # Vector (N, 3) to bivector (M, 3, 3)
         >>> sig = forward_signature(
-        ...     BladeSpec(grade=1, collection=1, dim=3),
-        ...     BladeSpec(grade=2, collection=1, dim=3),
+        ...     VectorSpec(grade=1, collection=1, dim=3),
+        ...     VectorSpec(grade=2, collection=1, dim=3),
         ... )
         >>> sig
         'WXKna,na->KWX'
@@ -86,7 +86,7 @@ def forward_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
 
 
 @lru_cache(maxsize=128)
-def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
+def adjoint_signature(input_spec: VectorSpec, output_spec: VectorSpec) -> str:
     """
     Generate einsum signature for adjoint operator application: x = L^H * y
 
@@ -102,8 +102,8 @@ def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     Examples:
         >>> # Adjoint of scalar->bivector: bivector->scalar
         >>> sig = adjoint_signature(
-        ...     BladeSpec(grade=0, collection=1, dim=3),
-        ...     BladeSpec(grade=2, collection=1, dim=3),
+        ...     VectorSpec(grade=0, collection=1, dim=3),
+        ...     VectorSpec(grade=2, collection=1, dim=3),
         ... )
         >>> sig
         'WXKn,KWX->n'
@@ -119,7 +119,7 @@ def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
     # Operator indices unchanged: out_geo + out_coll + in_coll + in_geo
     op_indices = out_geo + out_coll + in_coll + in_geo
 
-    # Adjoint input (original output blade): out_coll + out_geo
+    # Adjoint input (original output vec): out_coll + out_geo
     adjoint_input = out_coll + out_geo
 
     # Adjoint output (original input space): in_coll + in_geo
@@ -129,8 +129,8 @@ def adjoint_signature(input_spec: BladeSpec, output_spec: BladeSpec) -> str:
 
 
 def operator_shape(
-    input_spec: BladeSpec,
-    output_spec: BladeSpec,
+    input_spec: VectorSpec,
+    output_spec: VectorSpec,
     input_collection: tuple[int, ...],
     output_collection: tuple[int, ...],
 ) -> tuple[int, ...]:
@@ -149,8 +149,8 @@ def operator_shape(
     Examples:
         >>> # Scalar (N=5) to bivector (M=10) in 3D
         >>> shape = operator_shape(
-        ...     BladeSpec(grade=0, collection=1, dim=3),
-        ...     BladeSpec(grade=2, collection=1, dim=3),
+        ...     VectorSpec(grade=0, collection=1, dim=3),
+        ...     VectorSpec(grade=2, collection=1, dim=3),
         ...     input_collection=(5,),
         ...     output_collection=(10,),
         ... )
@@ -169,7 +169,7 @@ def operator_shape(
     return output_spec.geometric_shape + output_collection + input_collection + input_spec.geometric_shape
 
 
-def _validate_spec_limits(input_spec: BladeSpec, output_spec: BladeSpec) -> None:
+def _validate_spec_limits(input_spec: VectorSpec, output_spec: VectorSpec) -> None:
     """Validate that specs are within index pool limits."""
     if input_spec.grade > len(INPUT_GEOMETRIC):
         raise ValueError(f"Input grade {input_spec.grade} exceeds index pool limit {len(INPUT_GEOMETRIC)}")
