@@ -4,21 +4,25 @@ The exponential map is the bridge connecting Lie algebras to Lie groups. In geom
 
 ## The Exponential Map
 
-For a vector $\mathbf{B}$ where $\mathbf{B}^2 = \lambda$ is scalar, the exponential follows from the Taylor series:
+For a k-vector $b$ where $b^2 = \lambda$ is scalar, the exponential follows from the Taylor series:
 
-$$e^{\mathbf{B}} = 1 + \mathbf{B} + \frac{\mathbf{B}^2}{2!} + \frac{\mathbf{B}^3}{3!} + \cdots$$
+$$
+e^{b} = 1 + b + \frac{b^2}{2!} + \frac{b^3}{3!} + \cdots
+$$
 
-This series telescopes into a closed form based on the sign of $\mathbf{B}^2$:
+This series telescopes into a closed form based on the sign of $b^2$:
 
-$$e^{\mathbf{B}} = \begin{cases}
-\cosh\sqrt{\lambda} + \frac{\mathbf{B}}{\sqrt{\lambda}} \sinh\sqrt{\lambda} & \text{if } \lambda > 0 \text{ (hyperbolic)} \\
-\cos\sqrt{-\lambda} + \frac{\mathbf{B}}{\sqrt{-\lambda}} \sin\sqrt{-\lambda} & \text{if } \lambda < 0 \text{ (trigonometric)} \\
-1 + \mathbf{B} & \text{if } \lambda = 0 \text{ (nilpotent)}
-\end{cases}$$
+$$
+e^{b} = \begin{cases}
+\cosh\sqrt{\lambda} + \dfrac{b}{\sqrt{\lambda}} \sinh\sqrt{\lambda} & \text{if } \lambda > 0 \text{ (hyperbolic)} \\[1em]
+\cos\sqrt{-\lambda} + \dfrac{b}{\sqrt{-\lambda}} \sin\sqrt{-\lambda} & \text{if } \lambda < 0 \text{ (trigonometric)} \\[1em]
+1 + b & \text{if } \lambda = 0 \text{ (nilpotent)}
+\end{cases}
+$$
 
 ## Metric Signature Dependence
 
-The sign of $\mathbf{B}^2$ depends on the metric signature:
+The sign of $b^2$ depends on the metric signature:
 
 - **Euclidean**: Bivectors square to negative $\Rightarrow$ trigonometric exponentials (rotations)
 - **Minkowski**: Some bivectors square positive (boosts), others negative (rotations)
@@ -33,21 +37,24 @@ e1, e2, e3 = basis_vectors(g)
 
 b = e1 ^ e2  # Bivector
 b_squared = geometric(b, b)
-# In Euclidean: B^2 = -|B|^2 < 0 (trigonometric case)
+# In Euclidean: b^2 = -|b|^2 < 0 (trigonometric case)
 ```
 
 ## Computational Efficiency
 
-Unlike matrix exponentials which require Padé approximation or eigendecomposition, vector exponentials reduce to **closed-form scalar operations**.
+Unlike matrix exponentials which require Padé approximation or eigendecomposition, k-vector exponentials reduce to **closed-form scalar operations**.
 
 The Taylor series naturally separates:
-$$e^{\mathbf{B}} = \underbrace{\left(1 + \frac{\lambda}{2!} + \frac{\lambda^2}{4!} + \cdots\right)}_{\cos\sqrt{-\lambda}} + \mathbf{B} \underbrace{\left(1 + \frac{\lambda}{3!} + \frac{\lambda^2}{5!} + \cdots\right)}_{\sin(\sqrt{-\lambda})/\sqrt{-\lambda}}$$
+
+$$
+e^{b} = \underbrace{\left(1 + \frac{\lambda}{2!} + \frac{\lambda^2}{4!} + \cdots\right)}_{\cos\sqrt{-\lambda}} + b \underbrace{\left(1 + \frac{\lambda}{3!} + \frac{\lambda^2}{5!} + \cdots\right)}_{\sin(\sqrt{-\lambda})/\sqrt{-\lambda}}
+$$
 
 The computation requires:
-1. One geometric product to compute $\mathbf{B}^2$
+1. One geometric product to compute $b^2$
 2. Extract scalar $\lambda$
 3. Compute scalar trig/hyperbolic functions
-4. Scale the vector
+4. Scale the k-vector
 
 ```python
 from morphis.operations import exp_vector
@@ -58,12 +65,17 @@ R = exp_vector(b)  # Returns MultiVector
 
 ## Rotors from Bivectors
 
-A **rotor** for rotation by angle $\theta$ in the plane defined by unit bivector $\hat{\mathbf{B}}$:
+A **rotor** for rotation by angle $\theta$ in the plane defined by unit bivector $\hat{b}$:
 
-$$R = e^{-\hat{\mathbf{B}}\theta/2} = \cos(\theta/2) - \sin(\theta/2)\hat{\mathbf{B}}$$
+$$
+R = e^{-\hat{b}\theta/2} = \cos(\theta/2) - \sin(\theta/2) \, \hat{b}
+$$
 
 The **half-angle** appears because the sandwich product applies the rotation twice:
-$$\mathbf{v}' = R \mathbf{v} \tilde{R}$$
+
+$$
+v' = R v \tilde{R}
+$$
 
 ```python
 from morphis.transforms import rotor
@@ -83,9 +95,11 @@ v_rotated = R * e1 * ~R  # e1 becomes e2
 
 ## The Logarithm
 
-The **logarithm** extracts the generator from a versor. For rotor $R = a + \mathbf{B}$ where $a$ is scalar and $\mathbf{B}$ is bivector:
+The **logarithm** extracts the generator from a versor. For rotor $R = a + b$ where $a$ is the scalar part and $b$ is the bivector part:
 
-$$\log R = \arctan2(|\mathbf{B}|, a) \cdot \frac{\mathbf{B}}{|\mathbf{B}|}$$
+$$
+\log R = \arctan2(|b|, a) \cdot \frac{b}{|b|}
+$$
 
 The result is a bivector whose:
 - Direction defines the rotation plane
@@ -128,11 +142,13 @@ Linear interpolation of rotor components, by contrast, doesn't preserve unit mag
 
 ## Composition via Addition
 
-A elegant property: rotor composition approximately equals bivector addition:
+An elegant property: rotor composition approximately equals bivector addition:
 
-$$e^{\mathbf{B}_1} e^{\mathbf{B}_2} \approx e^{\mathbf{B}_1 + \mathbf{B}_2}$$
+$$
+e^{b_1} e^{b_2} \approx e^{b_1 + b_2}
+$$
 
-**Exact when**: $[\mathbf{B}_1, \mathbf{B}_2] = 0$ (commuting bivectors)
+**Exact when**: $[b_1, b_2] = 0$ (commuting bivectors)
 
 **General case**: Governed by the Baker-Campbell-Hausdorff formula
 
@@ -186,11 +202,15 @@ M = rotation_about_point(center, b, angle)
 
 The relationship between bivectors and rotors is a specific instance of the exponential map from a Lie algebra to its Lie group:
 
-$$\exp: \mathfrak{so}(n) \to \text{SO}(n)$$
+$$
+\exp: \mathfrak{so}(n) \to \text{SO}(n)
+$$
 
 The bivector space $\bigwedge^2 V$ with the commutator product is the Lie algebra $\mathfrak{so}(V)$:
 
-$$[\mathbf{B}_1, \mathbf{B}_2] = \frac{1}{2}(\mathbf{B}_1 \mathbf{B}_2 - \mathbf{B}_2 \mathbf{B}_1)$$
+$$
+[b_1, b_2] = \frac{1}{2}(b_1 b_2 - b_2 b_1)
+$$
 
 This Lie algebra structure governs:
 - Composition of rotations
@@ -201,7 +221,7 @@ This Lie algebra structure governs:
 
 | Object | Exponential Input | Result |
 |--------|------------------|--------|
-| Euclidean bivector | $e^{-\mathbf{B}\theta/2}$ | Rotor (rotation) |
-| Minkowski timelike bivector | $e^{\mathbf{B}\phi/2}$ | Boost |
-| PGA degenerate bivector | $e^{-\mathbf{t}/2}$ | Translator |
+| Euclidean bivector | $e^{-b\theta/2}$ | Rotor (rotation) |
+| Minkowski timelike bivector | $e^{b\phi/2}$ | Boost |
+| PGA degenerate bivector | $e^{-t/2}$ | Translator |
 | PGA line | $e^{-L\theta/2}$ | Motor (screw motion) |

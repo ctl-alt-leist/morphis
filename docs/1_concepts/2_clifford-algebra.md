@@ -141,9 +141,11 @@ The **reversion** operation reverses the order of vector factors in a product:
 
 $$\widetilde{\mathbf{v}_1 \cdots \mathbf{v}_k} = \mathbf{v}_k \cdots \mathbf{v}_1$$
 
-On a grade-$k$ vector:
+On a grade-$k$ element $u$:
 
-$$\widetilde{\mathbf{A}} = (-1)^{k(k-1)/2} \mathbf{A}$$
+$$
+\widetilde{u} = (-1)^{k(k-1)/2} \, u
+$$
 
 Sign pattern by grade:
 - Grades 0, 1: $+$ (unchanged)
@@ -153,9 +155,13 @@ Sign pattern by grade:
 
 Properties:
 
-$$\widetilde{\mathbf{A}\mathbf{B}} = \widetilde{\mathbf{B}} \, \widetilde{\mathbf{A}}$$
+$$
+\widetilde{MN} = \widetilde{N} \, \widetilde{M}
+$$
 
-$$\widetilde{\widetilde{\mathbf{A}}} = \mathbf{A}$$
+$$
+\widetilde{\widetilde{M}} = M
+$$
 
 In morphis, reversion is available as `~` or `.reverse()`:
 
@@ -172,10 +178,14 @@ b_reversed = ~b  # or b.reverse() or b.rev()
 
 **Grade involution** flips the sign of odd grades:
 
-$$\hat{\mathbf{A}}_k = (-1)^k \mathbf{A}_k$$
+$$
+\hat{M}_k = (-1)^k \, M_k
+$$
 
 **Clifford conjugation** combines reversion and grade involution:
 
-$$\bar{\mathbf{A}} = \widetilde{\hat{\mathbf{A}}}$$
+$$
+\bar{M} = \widetilde{\hat{M}}
+$$
 
 These involutions are essential for defining norms and inverses in different metric signatures.

@@ -35,25 +35,34 @@ g.signature  # (3, 0, 0)  (positive, negative, zero)
 
 ## Extended Inner Products
 
-The metric extends from vectors to all grades. For grade-$k$ vectors:
+The metric extends from vectors to all grades. For grade-$k$ k-vectors:
 
-$$(\mathbf{A}_k \cdot \mathbf{B}_k) = \frac{1}{k!} A^{m_1 \ldots m_k} B^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}$$
+$$
+(u_k \cdot v_k) = \frac{1}{k!} \, u^{m_1 \ldots m_k} v^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+$$
 
 For bivectors specifically:
 
-$$\mathbf{e}_{ij} \cdot \mathbf{e}_{kl} = g_{ik}g_{jl} - g_{il}g_{jk} = \begin{vmatrix} g_{ik} & g_{il} \\ g_{jk} & g_{jl} \end{vmatrix}$$
+$$
+\mathbf{e}_{ij} \cdot \mathbf{e}_{kl} = g_{ik}g_{jl} - g_{il}g_{jk}
+                                    = \begin{vmatrix} g_{ik} & g_{il} \\ g_{jk} & g_{jl} \end{vmatrix}
+$$
 
 The determinant structure generalizes to all grades:
 
-$$(\mathbf{a}_1 \wedge \cdots \wedge \mathbf{a}_k) \cdot (\mathbf{b}_1 \wedge \cdots \wedge \mathbf{b}_k) = \det(\mathbf{a}_i \cdot \mathbf{b}_j)$$
+$$
+(u_1 \wedge \cdots \wedge u_k) \cdot (v_1 \wedge \cdots \wedge v_k) = \det(u_i \cdot v_j)
+$$
 
 ## Norms
 
 ### Squared Norm (Bilinear)
 
-For a grade-$k$ vector $\mathbf{B}$:
+For a grade-$k$ k-vector $b$:
 
-$$|\mathbf{B}|^2 = \frac{1}{k!} B^{m_1 \ldots m_k} B^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}$$
+$$
+|b|^2 = \frac{1}{k!} \, b^{m_1 \ldots m_k} b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+$$
 
 The factorial prevents overcounting due to antisymmetry.
 
@@ -76,17 +85,19 @@ b_unit = b.normalize()
 
 For Euclidean metrics:
 - $|\mathbf{e}_m|^2 = g_{mm} = 1$
-- $|\mathbf{v}|^2 = \sum_m (v^m)^2$ (Pythagorean)
+- $|v|^2 = \sum_m (v^m)^2$ (Pythagorean)
 
 For non-Euclidean metrics:
 - Squared norm can be negative (spacelike/timelike in Minkowski)
-- Null vectors have $|\mathbf{v}|^2 = 0$
+- Null vectors have $|v|^2 = 0$
 
 ### Hermitian Norm (for Phasors)
 
-For complex (phasor) vectors, the **Hermitian norm** uses complex conjugation:
+For complex (phasor) k-vectors, the **Hermitian norm** uses complex conjugation:
 
-$$|\mathbf{B}|^2_H = \frac{1}{k!} \overline{B^{m_1 \ldots m_k}} B^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}$$
+$$
+|b|^2_H = \frac{1}{k!} \, \overline{b^{m_1 \ldots m_k}} \, b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+$$
 
 This always returns real values for real metrics.
 
@@ -100,11 +111,15 @@ mag = hermitian_norm(b)
 
 ### Normalization and Zero Vectors
 
-$$\hat{\mathbf{B}} = \frac{\mathbf{B}}{|\mathbf{B}|}$$
+$$
+\hat{b} = \frac{b}{|b|}
+$$
 
-Zero vectors normalize to zero (handled safely):
+Zero k-vectors normalize to zero (handled safely):
 
-$$\text{normalize}(\mathbf{0}) = \mathbf{0}$$
+$$
+\text{normalize}(0) = 0
+$$
 
 ## Bulk and Weight (PGA)
 

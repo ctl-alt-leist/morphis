@@ -24,27 +24,37 @@ Complements map between grades $k$ and $(d-k)$ using only the **Levi-Civita symb
 
 ### Right Complement
 
-For a grade-$k$ vector $\mathbf{B}$:
+For a grade-$k$ k-vector $b$:
 
-$$\bar{\mathbf{B}}^{m_{k+1} \ldots m_d} = B^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}$$
+$$
+\bar{b}^{m_{k+1} \ldots m_d} = b^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
+$$
 
 ### Left Complement
 
-$$\underline{\mathbf{B}}^{m_1 \ldots m_{d-k}} = \varepsilon_{m_1 \ldots m_d} \, B^{m_{d-k+1} \ldots m_d}$$
+$$
+\underline{b}^{m_1 \ldots m_{d-k}} = \varepsilon_{m_1 \ldots m_d} \, b^{m_{d-k+1} \ldots m_d}
+$$
 
 ### Orthogonality
 
 Complements satisfy the fundamental orthogonality relationship:
 
-$$\mathbf{u} \wedge \overline{\mathbf{u}} = \mathbb{1}$$
+$$
+u \wedge \overline{u} = \mathbb{1}
+$$
 
-$$\underline{\mathbf{u}} \wedge \mathbf{u} = \mathbb{1}$$
+$$
+\underline{u} \wedge u = \mathbb{1}
+$$
 
-This reveals that a vector and its complement span the entire space with no overlap.
+This reveals that a k-vector and its complement span the entire space with no overlap.
 
 ### Sign Relationship
 
-$$\underline{\mathbf{u}} = (-1)^{\text{grade}(\mathbf{u}) \cdot \text{antigrade}(\mathbf{u})} \, \overline{\mathbf{u}}$$
+$$
+\underline{u} = (-1)^{\text{grade}(u) \cdot \text{antigrade}(u)} \, \overline{u}
+$$
 
 where antigrade = $d - $ grade.
 
@@ -52,9 +62,13 @@ where antigrade = $d - $ grade.
 
 Complements are involutions—applying them twice returns the original:
 
-$$\overline{\overline{\mathbf{u}}} = \mathbf{u}$$
+$$
+\overline{\overline{u}} = u
+$$
 
-$$\underline{\underline{\mathbf{u}}} = \mathbf{u}$$
+$$
+\underline{\underline{u}} = u
+$$
 
 ```python
 from morphis.operations import right_complement, left_complement
@@ -81,13 +95,17 @@ This generalizes to higher dimensions:
 
 The **Hodge dual** is the metric-dependent counterpart to complements:
 
-$$\star \mathbf{V} = G(\bar{\mathbf{V}})$$
+$$
+\star v = G(\bar{v})
+$$
 
 where $G$ applies the metric to raise/lower indices.
 
 In components:
 
-$$(\star V)^{m_{k+1} \ldots m_d} = \frac{1}{k!} g^{m_{k+1} n_{k+1}} \cdots g^{m_d n_d} \, V^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}$$
+$$
+(\star v)^{m_{k+1} \ldots m_d} = \frac{1}{k!} \, g^{m_{k+1} n_{k+1}} \cdots g^{m_d n_d} \, v^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
+$$
 
 The key distinction:
 - **Complement**: Uses only Levi-Civita symbol (metric-independent)
@@ -105,11 +123,15 @@ b_dual = hodge_dual(b)
 
 ### Grade Mapping
 
-$$\text{grade}(\star \mathbf{B}) = d - \text{grade}(\mathbf{B})$$
+$$
+\text{grade}(\star b) = d - \text{grade}(b)
+$$
 
 ### Double Hodge Dual
 
-$$\star \star \mathbf{V} = (-1)^{k(d-k)} \, \text{sgn}(g) \, \mathbf{V}$$
+$$
+\star \star v = (-1)^{k(d-k)} \, \text{sgn}(g) \, v
+$$
 
 where $\text{sgn}(g)$ is the sign of the metric determinant:
 - Euclidean: $\text{sgn}(g) = +1$
@@ -118,8 +140,8 @@ where $\text{sgn}(g)$ is the sign of the metric determinant:
 ### Examples by Dimension
 
 **3D Euclidean:**
-- Vector $\mathbf{v} \xrightarrow{\star}$ bivector (perpendicular plane)
-- Bivector $\mathbf{B} \xrightarrow{\star}$ vector (perpendicular direction)
+- Vector $v \xrightarrow{\star}$ bivector (perpendicular plane)
+- Bivector $b \xrightarrow{\star}$ vector (perpendicular direction)
 - Trivector $\xrightarrow{\star}$ scalar
 
 **4D Euclidean:**
@@ -158,7 +180,9 @@ b_dual = hodge_dual(b)  # Requires metric
 
 The intersection (meet) of two subspaces can be computed using complements:
 
-$$\mathbf{A} \vee \mathbf{B} = \overline{\left(\overline{\mathbf{A}} \wedge \overline{\mathbf{B}}\right)}$$
+$$
+u \vee v = \overline{\left(\overline{u} \wedge \overline{v}\right)}
+$$
 
 This duality formula converts intersection to a wedge product in the complement space.
 
@@ -166,7 +190,7 @@ This duality formula converts intersection to a wedge product in the complement 
 from morphis.operations import meet
 
 # Intersection of two subspaces
-intersection = meet(A, B)
+intersection = meet(u, v)
 ```
 
 ## Applications
@@ -190,4 +214,4 @@ Duality operations enable computing in whichever grade is more convenient:
 - Finding intersection of $(d-1)$-dimensional hyperplanes: work with their 1-dimensional normal vectors
 - Testing incidence: work in the simpler dual space
 
-The involution property $\overline{\overline{\mathbf{u}}} = \mathbf{u}$ ensures all such transformations are reversible.
+The involution property $\overline{\overline{u}} = u$ ensures all such transformations are reversible.

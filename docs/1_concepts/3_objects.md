@@ -31,7 +31,7 @@ s = Vector(1.5, grade=0, metric=g)
 
 A **Vector** (homogeneous multivector) is an element of pure grade $k$. In components:
 
-$$\mathbf{A}_k = A^{m_1 \ldots m_k} \mathbf{e}_{m_1 \ldots m_k}$$
+$$\mathbf{v}_k = v^{m_1 \ldots m_k} \mathbf{e}_{m_1 \ldots m_k}$$
 
 where the basis $k$-vectors satisfy:
 
@@ -39,7 +39,7 @@ $$\mathbf{e}_{m_1 \ldots m_k} = \mathbf{e}_{m_1} \wedge \cdots \wedge \mathbf{e}
 
 Properties of Vectors:
 - **Fixed grade**: All components have the same grade
-- **Antisymmetric**: $A^{\ldots m \ldots n \ldots} = -A^{\ldots n \ldots m \ldots}$
+- **Antisymmetric**: $v^{\ldots m \ldots n \ldots} = -v^{\ldots n \ldots m \ldots}$
 - **Form a vector space**: Can add, subtract, scalar multiply
 
 ```python
@@ -63,11 +63,11 @@ d = b + c  # Still grade-2
 
 A **blade** (or simple $k$-vector) is a Vector that can be written as the wedge product of $k$ grade-1 vectors:
 
-$$\mathbf{B} = \mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{v}_k$$
+$$\mathbf{b} = \mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{v}_k$$
 
 Blades represent **oriented $k$-dimensional subspaces**. The magnitude encodes the $k$-dimensional volume, and the orientation determines the "sense" of the subspace.
 
-Not every Vector is a blade. For example, in 4D:
+Not every k-vector is a blade. For example, in 4D:
 
 $$\mathbf{e}_{12} + \mathbf{e}_{34}$$
 

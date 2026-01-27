@@ -18,11 +18,13 @@ $$(\bigwedge^k A)(\mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{
 
 ### Component Form
 
-For a $d \times d$ matrix $A^i{}_j$ and grade-$k$ vector $B^{m_1 \ldots m_k}$:
+For a $d \times d$ matrix $A^i{}_j$ and grade-$k$ k-vector $b^{m_1 \ldots m_k}$:
 
-$$(\bigwedge^k A)(\mathbf{B})^{i_1 \ldots i_k} = A^{i_1}{}_{m_1} \cdots A^{i_k}{}_{m_k} \, B^{m_1 \ldots m_k}$$
+$$
+(\bigwedge^k A)(b)^{i_1 \ldots i_k} = A^{i_1}{}_{m_1} \cdots A^{i_k}{}_{m_k} \, b^{m_1 \ldots m_k}
+$$
 
-This is simply $k$ copies of $A$ contracting with the $k$ indices of the vector—a natural einsum operation.
+This is simply $k$ copies of $A$ contracting with the $k$ indices of the k-vector—a natural einsum operation.
 
 ### Special Cases
 
@@ -111,7 +113,7 @@ The **sandwich product** by a versor $V$ defines an outermorphism:
 
 $$\mathbf{x} \mapsto V \mathbf{x} V^{-1}$$
 
-For a rotor $R$, this gives a rotation. The fact that $R \mathbf{B} \tilde{R}$ preserves grade for vectors is precisely because the sandwich product is an outermorphism when $V$ is a versor.
+For a rotor $R$, this gives a rotation. The fact that $R b \tilde{R}$ preserves grade for k-vectors is precisely because the sandwich product is an outermorphism when $V$ is a versor.
 
 ## Implementation Details
 
