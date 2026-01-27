@@ -2,7 +2,7 @@
 Geometric Algebra - Frame
 
 An ordered collection of vectors in d-dimensional space. A Frame preserves
-the specific choice of spanning vectors, unlike a Blade which encodes only
+the specific choice of spanning vectors, unlike a Vector which encodes only
 the subspace.
 
 Every Frame requires a Metric which defines the complete geometric context.
@@ -12,24 +12,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numpy import stack
+from numpy import stack, where
 from pydantic import ConfigDict, model_validator
 
-from morphis.elements.elements import GradedElement
+from morphis.config import TOLERANCE
+from morphis.elements.base import GradedElement
 from morphis.elements.metric import Metric
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
 
 
 class Frame(GradedElement):
     """
-    An ordered collection of vectors in d-dimensional space.
+    An ordered collection of grade-1 vectors in d-dimensional space.
 
     A frame F = {e1, e2, ..., ek} represents vectors that span a subspace.
-    Unlike a blade (which encodes only the subspace), a frame preserves the
+    Unlike a k-vector (which encodes only the subspace), a frame preserves the
     specific choice of spanning vectors.
 
     Storage shape is (*collection, span, dim) where:
@@ -37,9 +38,9 @@ class Frame(GradedElement):
     - span: number of vectors in the frame
     - dim: dimension of each vector
 
-    Key distinction from Blade:
-    - Blade: holistic object, transforms as b' = M b ~M
-    - Frame: collection of vectors, transforms component-wise
+    Key distinction from k-Vector:
+    - k-Vector: holistic object, transforms as b' = M b ~M
+    - Frame: collection of grade-1 vectors, transforms component-wise
 
     Attributes:
         data: The underlying array of frame vectors (inherited)
@@ -49,11 +50,15 @@ class Frame(GradedElement):
         span: Number of vectors in the frame
 
     Examples:
-        >>> from morphis.elements.metric import euclidean
-        >>> m = euclidean(3)
+        >>> from morphis.elements.metric import euclidean_metric
+        >>> m = euclidean_metric(3)
         >>> F = Frame([[1, 0, 0], [0, 1, 0]], metric=m)
         >>> F.span
         2
+
+        >>> # Or from Vectors:
+        >>> e1, e2 = basis_vectors(m)[:2]
+        >>> F = Frame(e1, e2)
     """
 
     model_config = ConfigDict(
@@ -68,10 +73,44 @@ class Frame(GradedElement):
     # Constructors
     # =========================================================================
 
-    def __init__(self, data=None, /, **kwargs):
-        """Allow positional argument for data: Frame(arr, metric=m)."""
-        if data is not None:
+    def __init__(self, *args, **kwargs):
+        """
+        Create a Frame from array data or Vectors.
+
+        Supports two forms:
+            Frame(v1, v2, v3)           # positional grade-1 Vectors
+            Frame(data, metric=m)       # array data with keyword args
+
+        When using positional Vectors:
+            - All vectors must be grade-1
+            - All vectors must have compatible metrics
+        """
+        from morphis.elements.vector import Vector
+
+        # Check if positional arguments are Vectors
+        if args and all(isinstance(v, Vector) for v in args):
+            # Validate all are grade-1
+            for i, v in enumerate(args):
+                if v.grade != 1:
+                    raise ValueError(f"Frame requires grade-1 vectors, vector {i} has grade {v.grade}")
+
+            # Merge metrics and stack data
+            metric = Metric.merge(*(v.metric for v in args))
+            data = stack([v.data for v in args], axis=0)
+
             kwargs["data"] = data
+            kwargs["span"] = len(args)
+            kwargs["metric"] = metric
+            kwargs["collection"] = ()
+        elif args:
+            # Single positional arg (data array)
+            if len(args) == 1:
+                kwargs["data"] = args[0]
+            else:
+                raise TypeError(
+                    "Frame positional arguments must be grade-1 Vectors. Use Frame(data=arr, metric=m) for array form."
+                )
+
         super().__init__(**kwargs)
 
     # =========================================================================
@@ -123,25 +162,25 @@ class Frame(GradedElement):
     # =========================================================================
     # Properties
     # =========================================================================
-    # (dim, shape, collection_shape inherited from GradedElement)
+    # (dim, shape, collection inherited from GradedElement)
 
     # =========================================================================
     # Vector Access
     # =========================================================================
 
-    def vector(self, i: int) -> Blade:
+    def vector(self, i: int) -> Vector:
         """
-        Extract the i-th vector as a grade-1 Blade.
+        Extract the i-th vector as a grade-1 Vector.
 
         Args:
             i: Index of vector (0-indexed)
 
         Returns:
-            Grade-1 Blade containing the i-th vector
+            Grade-1 Vector containing the i-th vector
         """
-        from morphis.elements.blade import Blade
+        from morphis.elements.vector import Vector
 
-        return Blade(
+        return Vector(
             data=self.data[..., i, :].copy(),
             grade=1,
             metric=self.metric,
@@ -152,16 +191,16 @@ class Frame(GradedElement):
     # GA Operators
     # =========================================================================
 
-    def _as_blade(self) -> Blade:
+    def as_vector(self) -> Vector:
         """
-        View frame vectors as a batch of grade-1 blades (internal helper).
+        View frame vectors as a batch of grade-1 vectors.
 
-        Returns Blade with collection = (*self.collection, span), treating
+        Returns Vector with collection = (*self.collection, span), treating
         the vectors as a batch for vectorized geometric operations.
         """
-        from morphis.elements.blade import Blade
+        from morphis.elements.vector import Vector
 
-        return Blade(
+        return Vector(
             data=self.data,
             grade=1,
             metric=self.metric,
@@ -173,27 +212,27 @@ class Frame(GradedElement):
         Multiplication: F * x
 
         - F * scalar → Frame (scalar multiplication)
-        - F * Blade/MultiVector → MultiVector (geometric product)
+        - F * Vector/MultiVector → MultiVector (geometric product)
 
         For sandwich products: (M * F * ~M)[1] gives transformed vectors.
         """
-        from morphis.elements.blade import Blade
         from morphis.elements.multivector import MultiVector
-        from morphis.elements.operator import Operator
+        from morphis.elements.vector import Vector
+        from morphis.operations.operator import Operator
 
         # Scalar multiplication (numeric)
         if isinstance(other, (int, float, complex)):
             return Frame(data=self.data * other, metric=self.metric)
 
-        # Scalar multiplication (grade-0 Blade)
-        if isinstance(other, Blade) and other.grade == 0:
+        # Scalar multiplication (grade-0 Vector)
+        if isinstance(other, Vector) and other.grade == 0:
             return Frame(data=self.data * other.data, metric=self.metric)
 
-        # Geometric product with Blade/MultiVector
-        if isinstance(other, (Blade, MultiVector)):
+        # Geometric product with Vector/MultiVector
+        if isinstance(other, (Vector, MultiVector)):
             from morphis.operations.products import geometric
 
-            return geometric(self._as_blade(), other)
+            return geometric(self.as_vector(), other)
 
         # Operator on right side not supported
         if isinstance(other, Operator):
@@ -206,24 +245,24 @@ class Frame(GradedElement):
         Reverse multiplication: x * F
 
         - scalar * F → Frame (scalar multiplication, commutative)
-        - Blade/MultiVector * F → MultiVector (geometric product)
+        - Vector/MultiVector * F → MultiVector (geometric product)
         """
-        from morphis.elements.blade import Blade
         from morphis.elements.multivector import MultiVector
+        from morphis.elements.vector import Vector
 
         # Scalar multiplication (numeric, commutative)
         if isinstance(other, (int, float, complex)):
             return Frame(data=other * self.data, metric=self.metric)
 
-        # Scalar multiplication (grade-0 Blade, commutative)
-        if isinstance(other, Blade) and other.grade == 0:
+        # Scalar multiplication (grade-0 Vector, commutative)
+        if isinstance(other, Vector) and other.grade == 0:
             return Frame(data=other.data * self.data, metric=self.metric)
 
-        # Geometric product with Blade/MultiVector
-        if isinstance(other, (Blade, MultiVector)):
+        # Geometric product with Vector/MultiVector
+        if isinstance(other, (Vector, MultiVector)):
             from morphis.operations.products import geometric
 
-            return geometric(other, self._as_blade())
+            return geometric(other, self.as_vector())
 
         return NotImplemented
 
@@ -275,11 +314,11 @@ class Frame(GradedElement):
     # Conversion Methods
     # =========================================================================
 
-    def to_blade(self) -> Blade:
+    def to_vector(self) -> Vector:
         """
-        Convert frame to blade by wedging all vectors.
+        Convert frame to k-vector by wedging all vectors.
 
-        Returns the blade: e1 ^ e2 ^ ... ^ e_span
+        Returns the k-vector: e1 ^ e2 ^ ... ^ e_span
         """
         from morphis.operations.products import wedge
 
@@ -304,7 +343,6 @@ class Frame(GradedElement):
         Returns:
             New Frame with unit-length vectors
         """
-        from numpy import where
         from numpy.linalg import norm as np_norm
 
         new_data = self.data.copy()
@@ -312,7 +350,7 @@ class Frame(GradedElement):
             vec = new_data[..., i, :]
             n = np_norm(vec, axis=-1, keepdims=True)
             # Safe division - avoid divide by zero
-            n = where(n > 1e-12, n, 1.0)
+            n = where(n > TOLERANCE, n, 1.0)
             new_data[..., i, :] = vec / n
 
         return Frame(
@@ -340,48 +378,10 @@ class Frame(GradedElement):
             collection=self.collection,
         )
 
+    def __str__(self) -> str:
+        from morphis.utils.pretty import format_frame
+
+        return format_frame(self)
+
     def __repr__(self) -> str:
-        return f"Frame(span={self.span}, dim={self.dim}, collection={self.collection}, shape={self.shape})"
-
-
-# =============================================================================
-# Constructor Functions
-# =============================================================================
-
-
-def frame_from_vectors(*vectors: Blade) -> Frame:
-    """
-    Create a Frame from a collection of grade-1 Blades (vectors).
-
-    All vectors must have the same metric. The resulting Frame has shape (span, dim)
-    where span is the number of vectors and dim is the dimension.
-
-    Args:
-        *vectors: Grade-1 Blades to include in the frame
-
-    Returns:
-        Frame containing all vectors
-
-    Example:
-        e1, e2, e3 = basis_vectors(metric=euclidean(3))
-        E = frame_from_vectors(e1, e2, e3)  # Frame with shape (3, 3)
-    """
-    from morphis.elements.blade import Blade
-
-    if not vectors:
-        raise ValueError("At least one vector required")
-
-    # Validate all are grade-1
-    for i, v in enumerate(vectors):
-        if not isinstance(v, Blade):
-            raise TypeError(f"Vector {i} is not a Blade")
-        if v.grade != 1:
-            raise ValueError(f"Vector {i} has grade {v.grade}, expected 1")
-
-    # Merge all metrics (raises if incompatible)
-    metric = Metric.merge(*(v.metric for v in vectors))
-
-    # Stack vector data: each is shape (dim,), result is (span, dim)
-    data = stack([v.data for v in vectors], axis=0)
-
-    return Frame(data=data, span=len(vectors), metric=metric, collection=())
+        return self.__str__()

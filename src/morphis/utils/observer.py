@@ -12,9 +12,9 @@ This is useful for:
 
 Example:
     from morphis.utils.observer import Observer
-    from morphis.elements import basis_vectors, euclidean
+    from morphis.elements import basis_vectors, euclidean_metric
 
-    e1, e2, e3 = basis_vectors(euclidean(3))
+    e1, e2, e3 = basis_vectors(euclidean_metric(3))
     q = e1 ^ e2 ^ e3
 
     obs = Observer()
@@ -27,28 +27,29 @@ Example:
     print(obs.snapshot())
 """
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from numpy import copy as np_copy, ndarray, stack
 from numpy.linalg import norm
+from pydantic import BaseModel, ConfigDict, Field
 
 from morphis.elements import Element
 
 
 if TYPE_CHECKING:
-    from morphis.elements import Blade
+    from morphis.elements import Vector
 
 
-@dataclass
-class TrackedObject:
+class TrackedObject(BaseModel):
     """Internal record for a tracked object."""
 
-    obj: Element
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    obj: Any  # Element - using Any for compatibility
     obj_id: int
     name: str | None
-    baseline: ndarray | None = None  # For computing diffs
-    cached_spanning_vectors: list["Blade"] | None = field(default=None, repr=False)
+    baseline: Any | None = None  # ndarray | None - For computing diffs
+    cached_spanning_vectors: Any | None = Field(default=None, repr=False)  # list[Vector] | None
 
 
 class Observer:
@@ -79,7 +80,7 @@ class Observer:
         Register one or more objects to observe.
 
         Args:
-            *objects: GA objects to watch (Blade, MultiVector, etc.)
+            *objects: GA objects to watch (Vector, MultiVector, etc.)
             names: Optional list of names for the objects (for easier lookup)
 
         Returns:
@@ -328,9 +329,9 @@ class Observer:
             obj_type = type(tracked.obj).__name__
             print(f"{prefix}  [{obj_type}]{name_str}: {data}")
 
-    def spanning_vectors(self, obj_or_name: Element | str) -> tuple["Blade", ...] | None:
+    def spanning_vectors(self, obj_or_name: Element | str) -> tuple["Vector", ...] | None:
         """
-        Get the spanning vectors for a tracked blade.
+        Get the spanning vectors for a tracked vec.
 
         For a k-blade B = v₁ ∧ v₂ ∧ ... ∧ vₖ, returns (v₁, v₂, ..., vₖ).
         This is the primary way to extract visualization-ready data from
@@ -340,9 +341,9 @@ class Observer:
             obj_or_name: The blade or its name
 
         Returns:
-            Tuple of grade-1 Blades that span the blade, or None if not a Blade
+            Tuple of grade-1 Vectors that span the blade, or None if not a Vector
         """
-        from morphis.elements import Blade
+        from morphis.elements import Vector
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)
@@ -356,10 +357,10 @@ class Observer:
 
         tracked = self._tracked[obj_id]
 
-        if not isinstance(tracked.obj, Blade):
+        if not isinstance(tracked.obj, Vector):
             return None
 
-        return tracked.obj.spanning_vectors()
+        return tracked.obj.span()
 
     def spanning_vectors_as_array(self, obj_or_name: Element | str) -> ndarray | None:
         """
@@ -382,7 +383,7 @@ class Observer:
 
     def capture_state(self, obj_or_name: Element | str) -> dict | None:
         """
-        Capture complete visualization state for a tracked blade.
+        Capture complete visualization state for a tracked vec.
 
         This is the primary method for animation systems to extract all
         needed data for rendering a blade at the current time.
@@ -392,14 +393,14 @@ class Observer:
 
         Returns:
             Dict with keys:
-                - 'grade': Blade grade
+                - 'grade': Vector grade
                 - 'dim': Vector space dimension
                 - 'data': Raw blade data (copy)
                 - 'spanning_vectors': Array of shape (k, dim)
                 - 'context': Geometric context (PGA, etc.) or None
-            Or None if not a tracked Blade
+            Or None if not a tracked Vector
         """
-        from morphis.elements import Blade
+        from morphis.elements import Vector
 
         if isinstance(obj_or_name, str):
             obj_id = self._names.get(obj_or_name)
@@ -413,11 +414,11 @@ class Observer:
 
         tracked = self._tracked[obj_id]
 
-        if not isinstance(tracked.obj, Blade):
+        if not isinstance(tracked.obj, Vector):
             return None
 
         blade = tracked.obj
-        vectors = blade.spanning_vectors()
+        vectors = blade.span()
 
         return {
             "grade": blade.grade,

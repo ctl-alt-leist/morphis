@@ -7,7 +7,7 @@ from morphis.algebra import (
     INPUT_GEOMETRIC,
     OUTPUT_COLLECTION,
     OUTPUT_GEOMETRIC,
-    BladeSpec,
+    VectorSpec,
     adjoint_signature,
     forward_signature,
     operator_shape,
@@ -19,8 +19,8 @@ class TestForwardSignature:
 
     def test_scalar_to_bivector(self):
         """Test pattern for scalar currents to bivector fields."""
-        input_spec = BladeSpec(grade=0, collection=1, dim=3)
-        output_spec = BladeSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, collection=1, dim=3)
+        output_spec = VectorSpec(grade=2, collection=1, dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
@@ -31,8 +31,8 @@ class TestForwardSignature:
 
     def test_vector_to_bivector(self):
         """Test pattern for vector to bivector."""
-        input_spec = BladeSpec(grade=1, collection=1, dim=3)
-        output_spec = BladeSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, collection=1, dim=3)
+        output_spec = VectorSpec(grade=2, collection=1, dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
@@ -43,8 +43,8 @@ class TestForwardSignature:
 
     def test_scalar_to_scalar(self):
         """Test pattern for scalar to scalar."""
-        input_spec = BladeSpec(grade=0, collection=1, dim=3)
-        output_spec = BladeSpec(grade=0, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, collection=1, dim=3)
+        output_spec = VectorSpec(grade=0, collection=1, dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
@@ -55,8 +55,8 @@ class TestForwardSignature:
 
     def test_vector_to_vector(self):
         """Test pattern for vector to vector (rotation matrix)."""
-        input_spec = BladeSpec(grade=1, collection=1, dim=3)
-        output_spec = BladeSpec(grade=1, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, collection=1, dim=3)
+        output_spec = VectorSpec(grade=1, collection=1, dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
@@ -67,8 +67,8 @@ class TestForwardSignature:
 
     def test_bivector_to_scalar(self):
         """Test pattern for bivector to scalar."""
-        input_spec = BladeSpec(grade=2, collection=1, dim=3)
-        output_spec = BladeSpec(grade=0, collection=1, dim=3)
+        input_spec = VectorSpec(grade=2, collection=1, dim=3)
+        output_spec = VectorSpec(grade=0, collection=1, dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
@@ -79,8 +79,8 @@ class TestForwardSignature:
 
     def test_no_collection(self):
         """Test pattern without collection dimensions."""
-        input_spec = BladeSpec(grade=1, collection=0, dim=3)
-        output_spec = BladeSpec(grade=2, collection=0, dim=3)
+        input_spec = VectorSpec(grade=1, collection=0, dim=3)
+        output_spec = VectorSpec(grade=2, collection=0, dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
@@ -91,8 +91,8 @@ class TestForwardSignature:
 
     def test_multiple_collection(self):
         """Test pattern with multiple collection dimensions."""
-        input_spec = BladeSpec(grade=0, collection=2, dim=3)
-        output_spec = BladeSpec(grade=1, collection=2, dim=3)
+        input_spec = VectorSpec(grade=0, collection=2, dim=3)
+        output_spec = VectorSpec(grade=1, collection=2, dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
@@ -103,8 +103,8 @@ class TestForwardSignature:
 
     def test_caching(self):
         """Test that signatures are cached."""
-        input_spec = BladeSpec(grade=0, collection=1, dim=3)
-        output_spec = BladeSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, collection=1, dim=3)
+        output_spec = VectorSpec(grade=2, collection=1, dim=3)
 
         sig1 = forward_signature(input_spec, output_spec)
         sig2 = forward_signature(input_spec, output_spec)
@@ -117,8 +117,8 @@ class TestAdjointSignature:
 
     def test_scalar_to_bivector_adjoint(self):
         """Test adjoint pattern for scalar->bivector (becomes bivector->scalar)."""
-        input_spec = BladeSpec(grade=0, collection=1, dim=3)
-        output_spec = BladeSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, collection=1, dim=3)
+        output_spec = VectorSpec(grade=2, collection=1, dim=3)
 
         sig = adjoint_signature(input_spec, output_spec)
 
@@ -129,8 +129,8 @@ class TestAdjointSignature:
 
     def test_vector_to_vector_adjoint(self):
         """Test adjoint pattern for vector->vector."""
-        input_spec = BladeSpec(grade=1, collection=1, dim=3)
-        output_spec = BladeSpec(grade=1, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, collection=1, dim=3)
+        output_spec = VectorSpec(grade=1, collection=1, dim=3)
 
         sig = adjoint_signature(input_spec, output_spec)
 
@@ -145,8 +145,8 @@ class TestOperatorShape:
 
     def test_scalar_to_bivector_shape(self):
         """Test operator shape for scalar->bivector case."""
-        input_spec = BladeSpec(grade=0, collection=1, dim=3)
-        output_spec = BladeSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, collection=1, dim=3)
+        output_spec = VectorSpec(grade=2, collection=1, dim=3)
 
         shape = operator_shape(
             input_spec,
@@ -161,8 +161,8 @@ class TestOperatorShape:
 
     def test_vector_to_vector_shape(self):
         """Test operator shape for vector->vector case."""
-        input_spec = BladeSpec(grade=1, collection=1, dim=3)
-        output_spec = BladeSpec(grade=1, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, collection=1, dim=3)
+        output_spec = VectorSpec(grade=1, collection=1, dim=3)
 
         shape = operator_shape(
             input_spec,
@@ -176,8 +176,8 @@ class TestOperatorShape:
 
     def test_wrong_input_collection_raises(self):
         """Test that wrong input collection shape raises."""
-        input_spec = BladeSpec(grade=0, collection=1, dim=3)
-        output_spec = BladeSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, collection=1, dim=3)
+        output_spec = VectorSpec(grade=2, collection=1, dim=3)
 
         with pytest.raises(ValueError, match="input_collection has 2 dims"):
             operator_shape(
@@ -189,8 +189,8 @@ class TestOperatorShape:
 
     def test_wrong_output_collection_raises(self):
         """Test that wrong output collection shape raises."""
-        input_spec = BladeSpec(grade=0, collection=1, dim=3)
-        output_spec = BladeSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, collection=1, dim=3)
+        output_spec = VectorSpec(grade=2, collection=1, dim=3)
 
         with pytest.raises(ValueError, match="output_collection has 0 dims"):
             operator_shape(

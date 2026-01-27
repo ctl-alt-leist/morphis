@@ -20,8 +20,8 @@ from morphis.transforms.rotations import rotor
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
 
 
 # =============================================================================
@@ -30,22 +30,22 @@ if TYPE_CHECKING:
 
 
 def rotate(
-    b: Blade,
-    B: Blade,
+    b: Vector,
+    B: Vector,
     angle: float | NDArray,
-) -> Blade:
+) -> Vector:
     """
-    Rotate a blade by angle in the plane defined by bivector B.
+    Rotate a vector by angle in the plane defined by bivector B.
 
     Creates a rotor and applies it via sandwich product: M * b * ~M
 
     Args:
-        b: Blade to rotate (any grade).
+        b: Vector to rotate (any grade).
         B: Bivector defining the rotation plane.
         angle: Rotation angle in radians.
 
     Returns:
-        Rotated blade of same grade.
+        Rotated vector of same grade.
 
     Example:
         v_rotated = rotate(v, e1 ^ e2, pi/4)
@@ -68,33 +68,33 @@ def rotate(
 # =============================================================================
 
 
-def translate(
-    b: Blade,
-    displacement: NDArray,
-) -> Blade:
+def translate(u: Vector, v: Vector) -> Vector:
     """
-    Translate a blade by displacement vector (PGA only).
+    Translate a vector by a direction (PGA only).
 
-    Creates a translator and applies it via sandwich product: M * b * ~M
+    Creates a translator and applies it via sandwich product: M * u * ~M
 
     Args:
-        b: PGA blade to translate (any grade).
-        displacement: Translation vector.
+        u: PGA vector to translate (any grade).
+        v: Direction Vector representing the translation displacement.
 
     Returns:
-        Translated blade of same grade.
+        Translated vector of same grade.
 
     Example:
-        p_translated = translate(p, [1, 0, 0])
+        from morphis.transforms.projective import direction
+        d = direction([1, 0, 0])
+        p_translated = translate(p, d)
     """
-    M = translator(displacement, metric=b.metric)
+    Metric.merge(u.metric, v.metric)
+    M = translator(v)
 
-    # Sandwich product: M * b * ~M
+    # Sandwich product: M * u * ~M
     M_rev = reverse(M)
-    temp = geometric(M, b)
+    temp = geometric(M, u)
     result = geometric(temp, M_rev)
 
-    return grade_project(result, b.grade)
+    return grade_project(result, u.grade)
 
 
 # =============================================================================
@@ -103,20 +103,20 @@ def translate(
 
 
 def transform(
-    b: Blade,
+    b: Vector,
     M: MultiVector,
-) -> Blade:
+) -> Vector:
     """
-    Apply a motor/versor transformation to a blade via sandwich product.
+    Apply a motor/versor transformation to a vector via sandwich product.
 
     Computes: M * b * ~M
 
     Args:
-        b: Blade to transform (any grade).
+        b: Vector to transform (any grade).
         M: Motor (MultiVector with grades {0, 2}) representing the transformation.
 
     Returns:
-        Transformed blade of same grade.
+        Transformed vector of same grade.
 
     Example:
         M = rotor(B, pi/2)

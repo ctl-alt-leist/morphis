@@ -16,11 +16,44 @@ essential nature.
 
 ## Features
 
-- **Geometric Algebra Core**: Blades, multivectors, and operations (wedge, geometric product, duality)
+- **Geometric Algebra Core**: Vectors (k-vectors), multivectors, and operations (wedge, geometric product, duality)
 - **Metric-Aware**: Objects carry their metric context (Euclidean, projective, etc.)
-- **Linear Operators**: Structured linear maps between blade spaces with SVD, pseudoinverse, least squares
-- **Visualization**: 3D rendering of blades with PyVista, timeline-based animation, 4D projection
+- **Linear Operators**: Structured linear maps between vector spaces with SVD, pseudoinverse, least squares
+- **Visualization**: 3D rendering of vectors with PyVista, timeline-based animation, 4D projection
 - **Motor Transforms**: Rotors and translations via sandwich product
+
+## Documentation
+
+- [Project Overview](docs/0_project-overview.md) — Vision and scope
+- [Concepts](docs/1_concepts/) — Mathematical foundations (vectors, products, duality, transforms)
+- [API Reference](docs/3_api/api.md) — Public interface
+- [Architecture](docs/5_dev/1_architecture.md) — Design philosophy and decisions
+
+## Quick Start
+
+```python
+from morphis.elements import Frame, basis_vectors, euclidean_metric
+from morphis.operations import normalize
+from morphis.transforms import rotor
+from numpy import pi
+
+# Create a 3D Euclidean metric and basis vectors
+g = euclidean_metric(3)
+e1, e2, e3 = basis_vectors(g)
+
+# Bivector: oriented plane of rotation
+b = (e1 ^ e2).normalize()
+
+# Frame: ordered collection of vectors
+F = Frame(e1, e2, e3)
+
+# Rotor: multivector that performs rotation
+R = rotor(b, pi / 4)
+
+# Transform vector and frame via sandwich product
+e1_rotated = e1.transform(R)
+F_rotated = F.transform(R)
+```
 
 ## Installation
 
@@ -43,16 +76,16 @@ make install
 ```
 morphis/
 ├── src/morphis/
-│   ├── elements/       # Core GA objects: Blade, MultiVector, Frame, Operator, Metric
+│   ├── elements/       # Core GA objects: Vector, MultiVector, Frame, Metric
 │   │   └── tests/
-│   ├── algebra/        # Linear algebra: BladeSpec, einsum patterns, solvers
+│   ├── algebra/        # Linear algebra: VectorSpec, einsum patterns, solvers
 │   │   └── tests/
 │   ├── operations/     # GA operations: wedge, geometric product, duality, norms
 │   │   └── tests/
 │   ├── transforms/     # Rotors, translators, PGA, motor constructors
 │   │   └── tests/
 │   ├── visuals/        # PyVista rendering, animation, themes
-│   │   └── drawing/    # Blade mesh generation
+│   │   └── drawing/    # Vector mesh generation
 │   ├── examples/       # Runnable demos
 │   └── utils/          # Easing functions, observers, pretty printing
 ├── docs/               # Design documents

@@ -15,7 +15,7 @@ from morphis.operations.duality import (
 
 # Exponentials and logarithms
 from morphis.operations.exponential import (
-    exp_blade as exp_blade,
+    exp_vector as exp_vector,
     log_versor as log_versor,
     slerp as slerp,
 )
@@ -28,13 +28,13 @@ from morphis.operations.factorization import (
 
 # Matrix representations
 from morphis.operations.matrix_rep import (
-    blade_to_vector as blade_to_vector,
+    array_to_multivector as array_to_multivector,
     left_matrix as left_matrix,
-    multivector_to_vector as multivector_to_vector,
+    multivector_to_array as multivector_to_array,
     operator_to_matrix as operator_to_matrix,
     right_matrix as right_matrix,
-    vector_to_blade as vector_to_blade,
-    vector_to_multivector as vector_to_multivector,
+    vector_to_array as vector_to_array,
+    vector_to_vector as vector_to_vector,
 )
 
 # Norms
@@ -46,21 +46,19 @@ from morphis.operations.norms import (
     norm_squared as norm_squared,
     normalize as normalize,
 )
+
+# Operator (linear maps between vector spaces)
+from morphis.operations.operator import Operator as Operator
 from morphis.operations.products import (
     anticommutator as anticommutator,
     antiwedge as antiwedge,
     commutator as commutator,
     geometric as geometric,
-    geometric_bl_mv as geometric_bl_mv,
-    geometric_mv_bl as geometric_mv_bl,
     grade_project as grade_project,
     inverse as inverse,
     reverse as reverse,
     scalar_product as scalar_product,
     wedge as wedge,
-    wedge_bl_mv as wedge_bl_mv,
-    wedge_mv_bl as wedge_mv_bl,
-    wedge_mv_mv as wedge_mv_mv,
 )
 
 # Projections and interior products
@@ -77,7 +75,7 @@ from morphis.operations.projections import (
 from morphis.operations.spectral import (
     bivector_eigendecomposition as bivector_eigendecomposition,
     bivector_to_skew_matrix as bivector_to_skew_matrix,
-    blade_principal_vectors as blade_principal_vectors,
+    principal_vectors as principal_vectors,
 )
 
 # Structure constants (for advanced users)

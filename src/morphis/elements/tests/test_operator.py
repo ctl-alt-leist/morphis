@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from morphis.algebra import BladeSpec
-from morphis.elements import Blade, Operator, euclidean
+from morphis.algebra import VectorSpec
+from morphis.elements import Vector, euclidean_metric
+from morphis.operations import Operator
 
 
 class TestOperatorConstruction:
@@ -18,9 +19,9 @@ class TestOperatorConstruction:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         assert op.shape == (d, d, M, N)
@@ -34,9 +35,9 @@ class TestOperatorConstruction:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=1, collection=1, dim=d),
-            output_spec=BladeSpec(grade=1, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=1, dim=d),
+            output_spec=VectorSpec(grade=1, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         assert op.shape == (d, M, N, d)
@@ -50,9 +51,9 @@ class TestOperatorConstruction:
         with pytest.raises(ValueError, match="Data has 3 dimensions"):
             Operator(
                 data=G_data,
-                input_spec=BladeSpec(grade=0, collection=1, dim=3),
-                output_spec=BladeSpec(grade=2, collection=1, dim=3),
-                metric=euclidean(3),
+                input_spec=VectorSpec(grade=0, collection=1, dim=3),
+                output_spec=VectorSpec(grade=2, collection=1, dim=3),
+                metric=euclidean_metric(3),
             )
 
     def test_mismatched_dims_raises(self):
@@ -62,9 +63,9 @@ class TestOperatorConstruction:
         with pytest.raises(ValueError, match="Input dim 4 doesn't match output dim 3"):
             Operator(
                 data=G_data,
-                input_spec=BladeSpec(grade=0, collection=1, dim=4),  # Wrong dim
-                output_spec=BladeSpec(grade=2, collection=1, dim=3),
-                metric=euclidean(3),
+                input_spec=VectorSpec(grade=0, collection=1, dim=4),  # Wrong dim
+                output_spec=VectorSpec(grade=2, collection=1, dim=3),
+                metric=euclidean_metric(3),
             )
 
     def test_complex_data_preserved(self):
@@ -73,9 +74,9 @@ class TestOperatorConstruction:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         assert op.data.dtype == np.complex128
@@ -92,17 +93,17 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        I = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B = op.apply(I)
 
         assert B.grade == 2
         assert B.shape == (M, d, d)
-        assert B.metric == euclidean(d)
+        assert B.metric == euclidean_metric(d)
 
     def test_forward_preserves_antisymmetry(self):
         """Test that bivector output is antisymmetric."""
@@ -112,12 +113,12 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        I = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B = op.apply(I)
 
         # Check antisymmetry: B[m, a, b] = -B[m, b, a]
@@ -130,12 +131,12 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=1, collection=1, dim=d),
-            output_spec=BladeSpec(grade=1, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=1, collection=1, dim=d),
+            output_spec=VectorSpec(grade=1, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        v = Blade(np.random.randn(N, d), grade=1, metric=euclidean(d))
+        v = Vector(np.random.randn(N, d), grade=1, metric=euclidean_metric(d))
         w = op.apply(v)
 
         assert w.grade == 1
@@ -148,12 +149,12 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        I = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B1 = op.apply(I)
         B2 = op * I
 
@@ -166,12 +167,12 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        I = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+        I = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
         B1 = op.apply(I)
         B2 = op(I)
 
@@ -183,12 +184,12 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
-        v = Blade(np.random.randn(5, 3), grade=1, metric=euclidean(3))  # Wrong grade
+        v = Vector(np.random.randn(5, 3), grade=1, metric=euclidean_metric(3))  # Wrong grade
 
         with pytest.raises(ValueError, match="Input grade 1 doesn't match"):
             op.apply(v)
@@ -199,12 +200,12 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
-        I = Blade(np.random.randn(7), grade=0, metric=euclidean(3))  # Wrong size
+        I = Vector(np.random.randn(7), grade=0, metric=euclidean_metric(3))  # Wrong size
 
         with pytest.raises(ValueError, match="Input shape"):
             op.apply(I)
@@ -216,16 +217,16 @@ class TestOperatorApply:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
         # Complex input (phasor)
-        I = Blade(
+        I = Vector(
             np.random.randn(N) + 1j * np.random.randn(N),
             grade=0,
-            metric=euclidean(d),
+            metric=euclidean_metric(d),
         )
         B = op.apply(I)
 
@@ -241,9 +242,9 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         adj = op.adjoint()
@@ -257,9 +258,9 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         adj_adj = op.adjoint().adjoint()
@@ -272,9 +273,9 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         adj = op.adjoint()
@@ -289,9 +290,9 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         assert_allclose(op.H.data, op.adjoint().data)
@@ -303,13 +304,13 @@ class TestOperatorAdjoint:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=d),
-            output_spec=BladeSpec(grade=2, collection=1, dim=d),
-            metric=euclidean(d),
+            input_spec=VectorSpec(grade=0, collection=1, dim=d),
+            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            metric=euclidean_metric(d),
         )
 
-        x = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
-        y = Blade(np.random.randn(M, d, d), grade=2, metric=euclidean(d))
+        x = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
+        y = Vector(np.random.randn(M, d, d), grade=2, metric=euclidean_metric(d))
 
         Lx = op.apply(x)
         Lhy = op.adjoint().apply(y)
@@ -331,9 +332,9 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         assert op.dim == 3
@@ -344,9 +345,9 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         assert op.input_collection == (5,)
@@ -357,9 +358,9 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         assert op.output_collection == (10,)
@@ -370,9 +371,9 @@ class TestOperatorProperties:
 
         op = Operator(
             data=G_data,
-            input_spec=BladeSpec(grade=0, collection=1, dim=3),
-            output_spec=BladeSpec(grade=2, collection=1, dim=3),
-            metric=euclidean(3),
+            input_spec=VectorSpec(grade=0, collection=1, dim=3),
+            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            metric=euclidean_metric(3),
         )
 
         repr_str = repr(op)

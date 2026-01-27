@@ -1,24 +1,23 @@
 """
-Geometric Algebra - Linear Operators Example
+Linear Operators
 
-Demonstrates Operator for structured linear maps between blade spaces:
-- Creating operators with BladeSpec for input/output structure
+Demonstrates structured linear maps between blade spaces:
+- Creating operators with VectorSpec for input/output structure
 - Forward application: P = L * q
 - Adjoint: L^H with proper conjugate transpose
-- Least squares inversion with regularization
-- SVD decomposition for analysis
+- Least squares inversion and SVD decomposition
 - Complex-valued operators for phasor systems
 
-Example system: scalar sources q mapping to bivector fields P via transfer operator L.
-Index structure: P^{ab}_m = L^{ab}_{mn} q_n
+Run: uv run python -m morphis.examples.operators
 """
 
 import numpy as np
 from numpy import exp, pi
 
-from morphis.algebra import BladeSpec
-from morphis.elements import Blade, MultiVector, Operator, euclidean
-from morphis.utils.pretty import section, show_array, show_blade, subsection
+from morphis.algebra import VectorSpec
+from morphis.elements import MultiVector, Vector, euclidean_metric
+from morphis.operations import Operator
+from morphis.utils.pretty import section, subsection
 
 
 # =============================================================================
@@ -27,7 +26,7 @@ from morphis.utils.pretty import section, show_array, show_blade, subsection
 
 
 def demo_operator_construction() -> None:
-    """Demonstrate creating Operator with BladeSpec."""
+    """Demonstrate creating Operator with VectorSpec."""
     section("1. OPERATOR CONSTRUCTION")
 
     d = 3  # Vector space dimension
@@ -38,13 +37,13 @@ def demo_operator_construction() -> None:
     print(f"  Input:  scalar sources q_n, shape ({N},)")
     print(f"  Output: bivector fields P^{{ab}}_m, shape ({M}, {d}, {d})")
     print()
-    print("  BladeSpec describes the structure:")
+    print("  VectorSpec describes the structure:")
     print("    grade: 0=scalar, 1=vector, 2=bivector, ...")
     print("    collection: number of batch dimensions")
     print("    dim: underlying vector space dimension")
 
-    input_spec = BladeSpec(grade=0, collection=1, dim=d)
-    output_spec = BladeSpec(grade=2, collection=1, dim=d)
+    input_spec = VectorSpec(grade=0, collection=1, dim=d)
+    output_spec = VectorSpec(grade=2, collection=1, dim=d)
     print()
     print(f"  input_spec  = {input_spec}")
     print(f"  output_spec = {output_spec}")
@@ -61,7 +60,7 @@ def demo_operator_construction() -> None:
         data=L_data,
         input_spec=input_spec,
         output_spec=output_spec,
-        metric=euclidean(d),
+        metric=euclidean_metric(d),
     )
     print(f"  L.shape = {L.shape}")
     print(f"  L.input_shape = {L.input_shape}")
@@ -89,19 +88,21 @@ def demo_forward_application() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=0, collection=1, dim=d),
+        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
 
     subsection("Create source distribution q")
-    q = Blade(np.array([1.0, 0.5, -0.3, 0.8, -0.2]), grade=0, metric=euclidean(d))
-    show_blade("q (scalar sources)", q)
+    q = Vector(np.array([1.0, 0.5, -0.3, 0.8, -0.2]), grade=0, metric=euclidean_metric(d))
+    print("q (scalar sources):")
+    print(q)
     print(f"  shape: {q.shape}")
 
     subsection("Apply operator: P = L * q")
     P = L * q
-    show_blade("P (bivector field)", P)
+    print("P (bivector field):")
+    print(P)
     print(f"  shape: {P.shape}")
     print(f"  grade: {P.grade}")
 
@@ -133,9 +134,9 @@ def demo_adjoint() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=0, collection=1, dim=d),
+        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
 
     subsection("Compute adjoint")
@@ -154,8 +155,8 @@ def demo_adjoint() -> None:
     print(f"  Max |L - (L^H)^H|: {np.max(np.abs(L.data - L_HH.data)):.2e}")
 
     subsection("Inner product property: <Lq, P> = <q, L^H P>")
-    q = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
-    P = Blade(np.random.randn(M, d, d), grade=2, metric=euclidean(d))
+    q = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
+    P = Vector(np.random.randn(M, d, d), grade=2, metric=euclidean_metric(d))
 
     Lq = L * q
     LhP = L.H * P
@@ -184,27 +185,29 @@ def demo_least_squares() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=0, collection=1, dim=d),
+        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
 
     subsection("Generate synthetic data")
-    q_true = Blade(np.array([1.0, -0.5, 0.3, 0.8, -0.2]), grade=0, metric=euclidean(d))
+    q_true = Vector(np.array([1.0, -0.5, 0.3, 0.8, -0.2]), grade=0, metric=euclidean_metric(d))
     P = L * q_true
-    show_blade("q_true (ground truth)", q_true)
+    print("q_true (ground truth):")
+    print(q_true)
     print(f"  P shape: {P.shape} (overdetermined: {M} > {N})")
 
     subsection("Recover sources via least squares")
     q_est = L.solve(P, method="lstsq")
-    show_blade("q_est (recovered)", q_est)
+    print("q_est (recovered):")
+    print(q_est)
 
     error = np.linalg.norm(q_est.data - q_true.data)
     print(f"  Recovery error: {error:.2e}")
 
     subsection("With measurement noise")
     noise_level = 0.01
-    P_noisy = Blade(P.data + noise_level * np.random.randn(*P.shape), grade=2, metric=euclidean(d))
+    P_noisy = Vector(P.data + noise_level * np.random.randn(*P.shape), grade=2, metric=euclidean_metric(d))
 
     q_est_noisy = L.solve(P_noisy, method="lstsq")
     error_noisy = np.linalg.norm(q_est_noisy.data - q_true.data)
@@ -233,9 +236,9 @@ def demo_svd() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=0, collection=1, dim=d),
+        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
 
     subsection("Compute SVD: L = U * diag(S) * Vt")
@@ -245,18 +248,18 @@ def demo_svd() -> None:
     print(f"  S has {len(S)} singular values")
 
     subsection("Singular values (sorted descending)")
-    show_array("S", S)
+    print(f"S = {S}")
     print(f"  Condition number: {S[0] / S[-1]:.2f}")
 
     subsection("Verify reconstruction")
-    q = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+    q = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
 
     # Original: P = L * q
     P_orig = L * q
 
     # Via SVD: P = U * (S * (Vt * q))
     vt_q = Vt * q
-    s_vt_q = Blade(S * vt_q.data, grade=0, metric=euclidean(d))
+    s_vt_q = Vector(S * vt_q.data, grade=0, metric=euclidean_metric(d))
     P_svd = U * s_vt_q
 
     recon_error = np.max(np.abs(P_orig.data - P_svd.data))
@@ -282,9 +285,9 @@ def demo_pseudoinverse() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=0, collection=1, dim=d),
+        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
 
     subsection("Compute pseudoinverse")
@@ -293,7 +296,7 @@ def demo_pseudoinverse() -> None:
     print(f"  L^+ maps: {L_pinv.input_shape} -> {L_pinv.output_shape}")
 
     subsection("Pseudoinverse identity: L * L^+ * L = L")
-    q = Blade(np.random.randn(N), grade=0, metric=euclidean(d))
+    q = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
 
     Lq = L * q
     LpLq = L_pinv * Lq
@@ -334,17 +337,18 @@ def demo_complex_operators() -> None:
 
     L = Operator(
         data=L_data,
-        input_spec=BladeSpec(grade=0, collection=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=0, collection=1, dim=d),
+        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
     print(f"  L.data.dtype = {L.data.dtype}")
 
     subsection("Complex source phasors")
     q_mag = np.array([1.0, 0.5, 0.3, 0.8, 0.2])
     q_phase = np.array([0, pi / 4, pi / 2, -pi / 4, pi / 3])
-    q_tilde = Blade(q_mag * exp(1j * q_phase), grade=0, metric=euclidean(d))
-    show_blade("q_tilde (source phasors)", q_tilde)
+    q_tilde = Vector(q_mag * exp(1j * q_phase), grade=0, metric=euclidean_metric(d))
+    print("q_tilde (source phasors):")
+    print(q_tilde)
 
     subsection("Forward application preserves complex structure")
     P_tilde = L * q_tilde
@@ -379,16 +383,16 @@ def demo_vector_operator() -> None:
 
     T = Operator(
         data=T_data,
-        input_spec=BladeSpec(grade=1, collection=1, dim=d),
-        output_spec=BladeSpec(grade=1, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=1, collection=1, dim=d),
+        output_spec=VectorSpec(grade=1, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
     print(f"  T.shape = {T.shape}")
     print(f"  T.input_shape = {T.input_shape}")
     print(f"  T.output_shape = {T.output_shape}")
 
     subsection("Apply to vector collection")
-    v = Blade(np.random.randn(N, d), grade=1, metric=euclidean(d))
+    v = Vector(np.random.randn(N, d), grade=1, metric=euclidean_metric(d))
     w = T * v
     print(f"  Input v: shape {v.shape}, grade {v.grade}")
     print(f"  Output w: shape {w.shape}, grade {w.grade}")
@@ -427,27 +431,30 @@ def demo_outermorphism() -> None:
 
     R = Operator(
         data=R_data,
-        input_spec=BladeSpec(grade=1, collection=0, dim=d),
-        output_spec=BladeSpec(grade=1, collection=0, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=1, collection=0, dim=d),
+        output_spec=VectorSpec(grade=1, collection=0, dim=d),
+        metric=euclidean_metric(d),
     )
     print(f"  R.is_outermorphism = {R.is_outermorphism}")
     print(f"  R.shape = {R.shape}")
     print()
     print("  R.vector_map gives the d×d matrix that defines the outermorphism:")
-    show_array("R.vector_map", R.vector_map)
+    print(f"R.vector_map =\n{R.vector_map}")
 
     subsection("Apply to a vector (grade-1)")
-    v = Blade(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean(d))
+    v = Vector(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
     v_rotated = R * v
-    show_blade("v", v)
-    show_blade("R * v", v_rotated)
+    print("v:")
+    print(v)
+    print()
+    print("R * v:")
+    print(v_rotated)
 
     subsection("Apply to a bivector (grade-2) via exterior power")
     from morphis.operations.products import wedge
 
-    e1 = Blade(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean(d))
-    e2 = Blade(np.array([0.0, 1.0, 0.0]), grade=1, metric=euclidean(d))
+    e1 = Vector(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
+    e2 = Vector(np.array([0.0, 1.0, 0.0]), grade=1, metric=euclidean_metric(d))
     B = wedge(e1, e2)  # xy-plane
     print("  Bivector B = e1 ∧ e2 represents the xy-plane")
     print()
@@ -456,8 +463,11 @@ def demo_outermorphism() -> None:
     print("  R * B applies the 2nd exterior power ⋀²R")
     print("  This is equivalent to: (R * e1) ∧ (R * e2)")
     print()
-    show_blade("B", B)
-    show_blade("R * B", B_rotated)
+    print("B:")
+    print(B)
+    print()
+    print("R * B:")
+    print(B_rotated)
 
     # Verify equivalence
     Re1 = R * e1
@@ -466,8 +476,8 @@ def demo_outermorphism() -> None:
     print(f"  Max |R*B - (R*e1)∧(R*e2)|: {np.max(np.abs(B_rotated.data - B_expected.data)):.2e}")
 
     subsection("Apply to a full multivector")
-    s = Blade(np.array(5.0), grade=0, metric=euclidean(d))
-    M = MultiVector(data={0: s, 1: v, 2: B}, metric=euclidean(d))
+    s = Vector(np.array(5.0), grade=0, metric=euclidean_metric(d))
+    M = MultiVector(data={0: s, 1: v, 2: B}, metric=euclidean_metric(d))
     print(f"  M has grades: {M.grades}")
     print()
 
@@ -485,9 +495,9 @@ def demo_outermorphism() -> None:
     print("  (⋀ᵈA)(I) = det(A) · I")
     print()
 
-    from morphis.elements.blade import pseudoscalar
+    from morphis.elements.vector import pseudoscalar
 
-    I = pseudoscalar(euclidean(d))
+    I = pseudoscalar(euclidean_metric(d))
 
     # Use a general matrix to see nontrivial determinant
     A_data = np.array(
@@ -500,9 +510,9 @@ def demo_outermorphism() -> None:
     )
     A = Operator(
         data=A_data,
-        input_spec=BladeSpec(grade=1, collection=0, dim=d),
-        output_spec=BladeSpec(grade=1, collection=0, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=1, collection=0, dim=d),
+        output_spec=VectorSpec(grade=1, collection=0, dim=d),
+        metric=euclidean_metric(d),
     )
 
     I_transformed = A * I
@@ -520,9 +530,9 @@ def demo_outermorphism() -> None:
     print("  Operators that don't map grade-1 → grade-1 cannot act on multivectors:")
     L = Operator(
         data=np.random.randn(d, d, 5, 3),
-        input_spec=BladeSpec(grade=0, collection=1, dim=d),
-        output_spec=BladeSpec(grade=2, collection=1, dim=d),
-        metric=euclidean(d),
+        input_spec=VectorSpec(grade=0, collection=1, dim=d),
+        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        metric=euclidean_metric(d),
     )
     print(f"  L maps scalar -> bivector: L.is_outermorphism = {L.is_outermorphism}")
     print("  L * M would raise TypeError for this operator")

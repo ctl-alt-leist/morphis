@@ -35,6 +35,7 @@ dmypy.json
 # IDE and editor files
 .idea/
 .vscode/
+.obsidian/
 *.swp
 *.swo
 *~

@@ -1,5 +1,5 @@
 """
-Blade Drawing Functions
+Vector Drawing Functions
 
 Core drawing functions for geometric algebra blades. Uses PyVista for rendering
 with clean, professional aesthetics.
@@ -8,7 +8,7 @@ Key functions:
 - draw_blade: Draw any blade (vector, bivector, trivector) at a position
 - draw_coordinate_basis: Draw the standard basis vectors e1, e2, e3
 
-Blade Visualization API:
+Vector Visualization API:
 - visualize_blade: Main entry point for blade visualization
 - render_scalar, render_vector, render_bivector, render_trivector: Grade-specific
 """
@@ -20,7 +20,6 @@ try:
 except ImportError:
     pass  # LaTeX rendering may not be available
 
-from dataclasses import dataclass
 from typing import Literal
 
 import pyvista as pv
@@ -41,8 +40,9 @@ from numpy import (
 )
 from numpy.linalg import norm, svd
 from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict
 
-from morphis.elements.blade import Blade
+from morphis.elements.vector import Vector
 from morphis.operations.factorization import spanning_vectors
 from morphis.visuals.theme import Color
 
@@ -52,9 +52,10 @@ from morphis.visuals.theme import Color
 # =============================================================================
 
 
-@dataclass
-class BladeStyle:
+class VectorStyle(BaseModel):
     """Style parameters for blade rendering."""
+
+    model_config = ConfigDict(frozen=True)
 
     color: Color | None = None
     opacity: float = 0.8
@@ -93,12 +94,12 @@ class BladeStyle:
 # =============================================================================
 
 
-def _extract_vector_data(blade: Blade) -> ndarray:
+def _extract_vector_data(blade: Vector) -> ndarray:
     """Extract the raw numpy array from a grade-1 blade."""
     return blade.data
 
 
-def _factor_blade_to_arrays(B: Blade) -> tuple[ndarray, ...]:
+def _factor_blade_to_arrays(B: Vector) -> tuple[ndarray, ...]:
     """
     Factor a blade and return raw numpy arrays (for mesh creation).
 
@@ -108,10 +109,10 @@ def _factor_blade_to_arrays(B: Blade) -> tuple[ndarray, ...]:
     return tuple(_extract_vector_data(v) for v in vectors)
 
 
-def _pad_to_3d(vec: NDArray) -> NDArray:
+def _pad_to_3d(blade: NDArray) -> NDArray:
     """Pad a vector to 3D by adding zeros."""
     result = zeros(3)
-    result[: len(vec)] = vec
+    result[: len(blade)] = blade
     return result
 
 
@@ -521,11 +522,11 @@ def create_frame_mesh(
     k = vectors.shape[0]
 
     # Project to 3D if needed
-    def project_to_3d(vec, axes):
-        if axes is None or len(vec) <= 3:
-            v = vec[:3] if len(vec) >= 3 else array([*vec, *[0.0] * (3 - len(vec))])
+    def project_to_3d(blade, axes):
+        if axes is None or len(blade) <= 3:
+            v = blade[:3] if len(blade) >= 3 else array([*blade, *[0.0] * (3 - len(blade))])
             return v
-        return array([vec[axes[0]], vec[axes[1]], vec[axes[2]]])
+        return array([blade[axes[0]], blade[axes[1]], blade[axes[2]]])
 
     origin_3d = project_to_3d(origin, projection_axes)
     vecs_3d = [project_to_3d(vectors[i], projection_axes) for i in range(k)]
@@ -713,7 +714,7 @@ def create_blade_mesh(
     This is the main entry point for mesh creation.
 
     Args:
-        grade: Blade grade (1, 2, 3, or 4)
+        grade: Vector grade (1, 2, 3, or 4)
         origin: Origin point (nD)
         vectors: Spanning vectors (shape depends on grade)
         shaft_radius: Arrow shaft radius (for vectors/bivectors)
@@ -855,8 +856,8 @@ def _draw_parallelepiped(
 
 def draw_blade(
     plotter: pv.Plotter,
-    b: Blade,
-    p: Blade | ndarray | tuple = None,
+    b: Vector,
+    p: Vector | ndarray | tuple = None,
     color: Color = (0.85, 0.85, 0.85),
     tetrad: bool = True,
     surface: bool = True,
@@ -876,7 +877,7 @@ def draw_blade(
     Args:
         plotter: PyVista plotter
         b: The blade to draw
-        p: Position (origin) for the blade. Can be Blade, array, or tuple.
+        p: Position (origin) for the blade. Can be Vector, array, or tuple.
            Defaults to origin.
         color: RGB color tuple (0-1 range)
         tetrad: If True, draw edges/arrows
@@ -891,7 +892,7 @@ def draw_blade(
     # Handle position
     if p is None:
         origin = zeros(3)
-    elif isinstance(p, Blade):
+    elif isinstance(p, Vector):
         origin = p.data[:3] if len(p.data) >= 3 else array([*p.data, *[0.0] * (3 - len(p.data))])
     elif isinstance(p, (list, tuple)):
         origin = array(p, dtype=float)
@@ -1306,10 +1307,10 @@ def _trivector_to_spanning_vectors(T: NDArray) -> tuple[NDArray, NDArray, NDArra
 
 
 def render_scalar(
-    blade: Blade,
+    blade: Vector,
     canvas,
     position: tuple[float, float, float] | None = None,
-    style: BladeStyle | None = None,
+    style: VectorStyle | None = None,
 ) -> None:
     """
     Render scalar blade as sphere at origin (or specified position).
@@ -1321,7 +1322,7 @@ def render_scalar(
     if blade.grade != 0:
         raise ValueError(f"render_scalar requires grade-0, got {blade.grade}")
 
-    style = style or BladeStyle()
+    style = style or VectorStyle()
     position = position or (0.0, 0.0, 0.0)
 
     # Handle collection dimensions - render first element for now
@@ -1339,10 +1340,10 @@ def render_scalar(
 
 
 def render_vector(
-    blade: Blade,
+    blade: Vector,
     canvas,
     projection=None,
-    style: BladeStyle | None = None,
+    style: VectorStyle | None = None,
 ) -> None:
     """
     Render vector blade as arrow from origin.
@@ -1355,7 +1356,7 @@ def render_vector(
     if blade.grade != 1:
         raise ValueError(f"render_vector requires grade-1, got {blade.grade}")
 
-    style = style or BladeStyle()
+    style = style or VectorStyle()
 
     # Project if needed
     if blade.dim > 3:
@@ -1384,11 +1385,11 @@ def render_vector(
 
 
 def render_bivector(
-    blade: Blade,
+    blade: Vector,
     canvas,
     mode: Literal["circle", "parallelogram", "plane", "circular_arrow"] = "circle",
     projection=None,
-    style: BladeStyle | None = None,
+    style: VectorStyle | None = None,
 ) -> None:
     """
     Render bivector blade with multiple visualization modes.
@@ -1406,7 +1407,7 @@ def render_bivector(
     if blade.grade != 2:
         raise ValueError(f"render_bivector requires grade-2, got {blade.grade}")
 
-    style = style or BladeStyle()
+    style = style or VectorStyle()
 
     # Project if needed
     if blade.dim > 3:
@@ -1436,7 +1437,7 @@ def render_bivector(
         raise ValueError(f"Unknown bivector mode: {mode}")
 
 
-def _render_bivector_circle(B: NDArray, canvas, style: BladeStyle) -> None:
+def _render_bivector_circle(B: NDArray, canvas, style: VectorStyle) -> None:
     """Render bivector as circle in the plane."""
     normal, magnitude = _bivector_to_normal_and_magnitude(B)
 
@@ -1453,7 +1454,7 @@ def _render_bivector_circle(B: NDArray, canvas, style: BladeStyle) -> None:
     canvas.curve(points, color=style.color, radius=style.edge_radius)
 
 
-def _render_bivector_parallelogram(B: NDArray, canvas, style: BladeStyle) -> None:
+def _render_bivector_parallelogram(B: NDArray, canvas, style: VectorStyle) -> None:
     """Render bivector as parallelogram from spanning vectors."""
     a, b = _bivector_to_spanning_vectors(B)
 
@@ -1485,7 +1486,7 @@ def _render_bivector_parallelogram(B: NDArray, canvas, style: BladeStyle) -> Non
         canvas.plane(center, normal, size=size, color=style.color, opacity=style.parallelogram_opacity)
 
 
-def _render_bivector_plane(B: NDArray, canvas, style: BladeStyle) -> None:
+def _render_bivector_plane(B: NDArray, canvas, style: VectorStyle) -> None:
     """Render bivector as semi-transparent plane with normal arrow."""
     normal, magnitude = _bivector_to_normal_and_magnitude(B)
 
@@ -1513,7 +1514,7 @@ def _render_bivector_plane(B: NDArray, canvas, style: BladeStyle) -> None:
     )
 
 
-def _render_bivector_circular_arrow(B: NDArray, canvas, style: BladeStyle) -> None:
+def _render_bivector_circular_arrow(B: NDArray, canvas, style: VectorStyle) -> None:
     """Render bivector as circle with orientation arrow."""
     normal, magnitude = _bivector_to_normal_and_magnitude(B)
 
@@ -1544,11 +1545,11 @@ def _render_bivector_circular_arrow(B: NDArray, canvas, style: BladeStyle) -> No
 
 
 def render_trivector(
-    blade: Blade,
+    blade: Vector,
     canvas,
     mode: Literal["parallelepiped", "sphere"] = "parallelepiped",
     projection=None,
-    style: BladeStyle | None = None,
+    style: VectorStyle | None = None,
 ) -> None:
     """
     Render trivector blade as 3D volume element.
@@ -1564,7 +1565,7 @@ def render_trivector(
     if blade.grade != 3:
         raise ValueError(f"render_trivector requires grade-3, got {blade.grade}")
 
-    style = style or BladeStyle()
+    style = style or VectorStyle()
 
     # Project if needed
     if blade.dim > 3:
@@ -1584,7 +1585,7 @@ def render_trivector(
         raise ValueError(f"Unknown trivector mode: {mode}")
 
 
-def _render_trivector_parallelepiped(T: NDArray, canvas, style: BladeStyle) -> None:
+def _render_trivector_parallelepiped(T: NDArray, canvas, style: VectorStyle) -> None:
     """Render trivector as parallelepiped from spanning vectors."""
     a, b, c = _trivector_to_spanning_vectors(T)
 
@@ -1637,7 +1638,7 @@ def _render_trivector_parallelepiped(T: NDArray, canvas, style: BladeStyle) -> N
     canvas.plane(c / 2, cross(a, b), size=norm(a), color=style.color, opacity=style.volume_opacity)
 
 
-def _render_trivector_sphere(T: NDArray, canvas, style: BladeStyle) -> None:
+def _render_trivector_sphere(T: NDArray, canvas, style: VectorStyle) -> None:
     """Render trivector as sphere with radius proportional to magnitude^(1/3)."""
     magnitude = _trivector_magnitude(T)
 
@@ -1649,18 +1650,18 @@ def _render_trivector_sphere(T: NDArray, canvas, style: BladeStyle) -> None:
 
 
 def visualize_blade(
-    blade: Blade,
+    blade: Vector,
     canvas=None,
     mode: str = "auto",
     projection=None,
     show_dual: bool = False,
-    style: BladeStyle | None = None,
+    style: VectorStyle | None = None,
 ):
     """
     Main entry point for blade visualization.
 
     Args:
-        blade: Blade to visualize
+        blade: Vector to visualize
         canvas: Existing canvas (creates new if None)
         mode: Rendering mode (grade-specific, or 'auto' to choose)
         projection: Configuration for d > 3 projection
@@ -1675,7 +1676,7 @@ def visualize_blade(
     if canvas is None:
         canvas = Canvas(show_basis=True)
 
-    style = style or BladeStyle()
+    style = style or VectorStyle()
 
     # Determine mode based on grade if auto
     if mode == "auto":
@@ -1704,7 +1705,7 @@ def visualize_blade(
 def visualize_blades(
     blades: list,
     canvas=None,
-    style: BladeStyle | None = None,
+    style: VectorStyle | None = None,
 ):
     """
     Visualize multiple blades on same canvas.
@@ -1716,11 +1717,11 @@ def visualize_blades(
     if canvas is None:
         canvas = Canvas(show_basis=True)
 
-    style = style or BladeStyle()
+    style = style or VectorStyle()
 
     for blade in blades:
         # Use next palette color for each blade
-        blade_style = BladeStyle(
+        blade_style = VectorStyle(
             color=None,  # Will use canvas cycling
             **{k: v for k, v in style.__dict__.items() if k != "color"},
         )
@@ -1729,7 +1730,7 @@ def visualize_blades(
     return canvas
 
 
-def _auto_mode(blade: Blade) -> str:
+def _auto_mode(blade: Vector) -> str:
     """Select default rendering mode based on grade."""
     if blade.grade == 2:
         return "circle"
@@ -1739,10 +1740,10 @@ def _auto_mode(blade: Blade) -> str:
 
 
 def _render_higher_grade(
-    blade: Blade,
+    blade: Vector,
     canvas,
     projection,
-    style: BladeStyle,
+    style: VectorStyle,
     show_dual: bool,
 ) -> None:
     """Render blades with grade > 3."""
@@ -1753,7 +1754,7 @@ def _render_higher_grade(
     dual_grade = dual.grade
 
     if dual_grade <= 3:
-        dual_style = BladeStyle(
+        dual_style = VectorStyle(
             color=style.dual_color or style.color,
             opacity=style.dual_opacity,
             scale=style.scale,
@@ -1765,17 +1766,17 @@ def _render_higher_grade(
 
 
 def _render_dual(
-    blade: Blade,
+    blade: Vector,
     canvas,
     projection,
-    style: BladeStyle,
+    style: VectorStyle,
 ) -> None:
     """Render the dual of a blade."""
     from morphis.operations.duality import right_complement
 
     dual = right_complement(blade)
 
-    dual_style = BladeStyle(
+    dual_style = VectorStyle(
         color=style.dual_color or canvas.theme.muted,
         opacity=style.dual_opacity,
         scale=style.scale * 0.8,

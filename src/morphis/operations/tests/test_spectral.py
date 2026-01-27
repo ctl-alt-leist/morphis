@@ -6,13 +6,13 @@ import pytest
 from numpy import array
 from numpy.testing import assert_allclose
 
-from morphis.elements import Blade, basis_vectors, euclidean
+from morphis.elements import Vector, basis_vectors, euclidean_metric
 from morphis.elements.metric import GASignature, GAStructure, Metric
 from morphis.operations import norm, wedge
 from morphis.operations.spectral import (
     bivector_eigendecomposition,
     bivector_to_skew_matrix,
-    blade_principal_vectors,
+    principal_vectors,
 )
 
 
@@ -26,8 +26,8 @@ class TestBivectorToSkewMatrix:
 
     def test_euclidean_3d_xy_plane(self):
         """e1^e2 bivector produces correct skew matrix."""
-        m = euclidean(3)
-        e1, e2, _ = basis_vectors(m)
+        g = euclidean_metric(3)
+        e1, e2, _ = basis_vectors(g)
         B = wedge(e1, e2)  # e1 ^ e2
 
         M = bivector_to_skew_matrix(B)
@@ -57,8 +57,8 @@ class TestBivectorToSkewMatrix:
 
     def test_euclidean_3d_scaled_bivector(self):
         """Scaled bivector produces scaled matrix."""
-        m = euclidean(3)
-        e1, e2, _ = basis_vectors(m)
+        g = euclidean_metric(3)
+        e1, e2, _ = basis_vectors(g)
         B_unit = wedge(e1, e2)
         B_scaled = B_unit * 3.0
 
@@ -70,8 +70,8 @@ class TestBivectorToSkewMatrix:
 
     def test_euclidean_4d_bivector(self):
         """4D bivector produces 4x4 skew matrix."""
-        m = euclidean(4)
-        e1, e2, e3, e4 = basis_vectors(m)
+        g = euclidean_metric(4)
+        e1, e2, e3, e4 = basis_vectors(g)
         B = wedge(e1, e2) + wedge(e3, e4)
 
         M = bivector_to_skew_matrix(B)
@@ -81,17 +81,17 @@ class TestBivectorToSkewMatrix:
 
     def test_rejects_non_bivector(self):
         """Raises on non-grade-2 input."""
-        m = euclidean(3)
-        e1 = basis_vectors(m)[0]
+        g = euclidean_metric(3)
+        e1 = basis_vectors(g)[0]
 
         with pytest.raises(ValueError, match="grade-2"):
             bivector_to_skew_matrix(e1)
 
     def test_rejects_collection_dims(self):
         """Raises on blade with collection dimensions."""
-        m = euclidean(3)
+        g = euclidean_metric(3)
         B_data = array([[[0, 1, 0], [-1, 0, 0], [0, 0, 0]]])
-        B = Blade(B_data, grade=2, metric=m, collection=(1,))
+        B = Vector(B_data, grade=2, metric=g, collection=(1,))
 
         with pytest.raises(ValueError, match="collection"):
             bivector_to_skew_matrix(B)
@@ -107,8 +107,8 @@ class TestBivectorEigendecomposition:
 
     def test_single_plane_3d(self):
         """3D bivector decomposes into single plane."""
-        m = euclidean(3)
-        e1, e2, _ = basis_vectors(m)
+        g = euclidean_metric(3)
+        e1, e2, _ = basis_vectors(g)
         B = wedge(e1, e2) * 2.0
 
         rates, planes = bivector_eigendecomposition(B)
@@ -127,8 +127,8 @@ class TestBivectorEigendecomposition:
 
     def test_two_planes_4d(self):
         """4D bivector decomposes into two orthogonal planes."""
-        m = euclidean(4)
-        e1, e2, e3, e4 = basis_vectors(m)
+        g = euclidean_metric(4)
+        e1, e2, e3, e4 = basis_vectors(g)
         B = wedge(e1, e2) * 3.0 + wedge(e3, e4) * 2.0
 
         rates, planes = bivector_eigendecomposition(B)
@@ -147,8 +147,8 @@ class TestBivectorEigendecomposition:
 
     def test_zero_bivector(self):
         """Zero bivector returns empty decomposition."""
-        m = euclidean(3)
-        B = Blade(array([[0, 0, 0], [0, 0, 0], [0, 0, 0]]), grade=2, metric=m)
+        g = euclidean_metric(3)
+        B = Vector(array([[0, 0, 0], [0, 0, 0], [0, 0, 0]]), grade=2, metric=g)
 
         rates, planes = bivector_eigendecomposition(B)
 
@@ -157,28 +157,28 @@ class TestBivectorEigendecomposition:
 
     def test_rejects_non_bivector(self):
         """Raises on non-grade-2 input."""
-        m = euclidean(3)
-        e1 = basis_vectors(m)[0]
+        g = euclidean_metric(3)
+        e1 = basis_vectors(g)[0]
 
         with pytest.raises(ValueError, match="grade-2"):
             bivector_eigendecomposition(e1)
 
 
 # =============================================================================
-# Test Blade Principal Vectors
+# Test Vector Principal Vectors
 # =============================================================================
 
 
-class TestBladePrincipalVectors:
-    """Tests for blade_principal_vectors."""
+class TestVectorPrincipalVectors:
+    """Tests for principal_vectors."""
 
     def test_vector_returns_itself(self):
         """Grade-1 blade returns single normalized vector."""
-        m = euclidean(3)
-        e1 = basis_vectors(m)[0]
+        g = euclidean_metric(3)
+        e1 = basis_vectors(g)[0]
         v = e1 * 2.0
 
-        vectors = blade_principal_vectors(v)
+        vectors = principal_vectors(v)
 
         assert len(vectors) == 1
         # The returned vector should have same direction, scaled appropriately
@@ -186,11 +186,11 @@ class TestBladePrincipalVectors:
 
     def test_bivector_returns_two_vectors(self):
         """Grade-2 blade returns two orthogonal vectors."""
-        m = euclidean(3)
-        e1, e2, _ = basis_vectors(m)
+        g = euclidean_metric(3)
+        e1, e2, _ = basis_vectors(g)
         B = wedge(e1, e2)
 
-        vectors = blade_principal_vectors(B)
+        vectors = principal_vectors(B)
 
         assert len(vectors) == 2
 
@@ -202,11 +202,11 @@ class TestBladePrincipalVectors:
 
     def test_trivector_returns_three_vectors(self):
         """Grade-3 blade returns three orthogonal vectors."""
-        m = euclidean(3)
-        e1, e2, e3 = basis_vectors(m)
+        g = euclidean_metric(3)
+        e1, e2, e3 = basis_vectors(g)
         T = wedge(wedge(e1, e2), e3) * 2.0
 
-        vectors = blade_principal_vectors(T)
+        vectors = principal_vectors(T)
 
         assert len(vectors) == 3
 
@@ -216,11 +216,11 @@ class TestBladePrincipalVectors:
 
     def test_rejects_scalar(self):
         """Raises on grade-0 input."""
-        m = euclidean(3)
-        s = Blade(array(2.0), grade=0, metric=m)
+        g = euclidean_metric(3)
+        s = Vector(array(2.0), grade=0, metric=g)
 
         with pytest.raises(ValueError, match="grade 0"):
-            blade_principal_vectors(s)
+            principal_vectors(s)
 
 
 # =============================================================================
@@ -234,14 +234,14 @@ class TestDifferentMetrics:
     def test_lorentzian_bivector(self):
         """Lorentzian metric handles timelike/spacelike planes."""
         # Create Lorentzian metric (-,+,+)
-        g = array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
-        m = Metric(
-            data=g,
+        metric_data = array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+        g = Metric(
+            data=metric_data,
             signature=GASignature.LORENTZIAN,
             structure=GAStructure.FLAT,
         )
 
-        e0, e1, e2 = basis_vectors(m)
+        e0, e1, e2 = basis_vectors(g)
 
         # Spacelike bivector (e1^e2 squares negative)
         B_space = wedge(e1, e2)
@@ -256,8 +256,8 @@ class TestDifferentMetrics:
 
     def test_higher_dimension_euclidean(self):
         """Works in higher dimensions."""
-        m = euclidean(5)
-        basis = basis_vectors(m)
+        g = euclidean_metric(5)
+        basis = basis_vectors(g)
 
         # Create bivector with multiple planes
         B = wedge(basis[0], basis[1]) + wedge(basis[2], basis[3]) * 2.0

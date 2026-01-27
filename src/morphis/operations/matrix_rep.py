@@ -23,18 +23,18 @@ from numpy.typing import NDArray
 
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
     from morphis.elements.metric import Metric
     from morphis.elements.multivector import MultiVector
-    from morphis.elements.operator import Operator
+    from morphis.elements.vector import Vector
+    from morphis.operations.operator import Operator
 
 
 # =============================================================================
-# Blade <-> Vector Conversion
+# Vector <-> Vector Conversion
 # =============================================================================
 
 
-def blade_to_vector(b: Blade) -> NDArray:
+def vector_to_array(b: Vector) -> NDArray:
     """
     Flatten a blade's components to a 1D vector.
 
@@ -43,7 +43,7 @@ def blade_to_vector(b: Blade) -> NDArray:
     the blade's data array.
 
     Args:
-        b: Blade without collection dimensions
+        b: Vector without collection dimensions
 
     Returns:
         1D array of shape (d^k,)
@@ -53,21 +53,21 @@ def blade_to_vector(b: Blade) -> NDArray:
 
     Examples:
         >>> m = euclidean(3)
-        >>> v = Blade([1, 2, 3], grade=1, metric=m)
-        >>> blade_to_vector(v)
+        >>> v = Vector([1, 2, 3], grade=1, metric=m)
+        >>> vector_to_array(v)
         array([1., 2., 3.])
 
-        >>> B = Blade([[0, 1, 0], [-1, 0, 0], [0, 0, 0]], grade=2, metric=m)
-        >>> blade_to_vector(B).shape
+        >>> B = Vector([[0, 1, 0], [-1, 0, 0], [0, 0, 0]], grade=2, metric=m)
+        >>> vector_to_array(B).shape
         (9,)
     """
     if b.collection != ():
-        raise ValueError(f"blade_to_vector requires blade without collection dimensions, got {b.collection}")
+        raise ValueError(f"vector_to_array requires blade without collection dimensions, got {b.collection}")
 
     return b.data.ravel()
 
 
-def vector_to_blade(v: NDArray, grade: int, metric: Metric) -> Blade:
+def vector_to_vector(v: NDArray, grade: int, metric: Metric) -> Vector:
     """
     Reconstruct a blade from a flattened vector.
 
@@ -77,7 +77,7 @@ def vector_to_blade(v: NDArray, grade: int, metric: Metric) -> Blade:
         metric: The metric context
 
     Returns:
-        Blade with the given grade and metric
+        Vector with the given grade and metric
 
     Raises:
         ValueError: If v has wrong length for the specified grade
@@ -85,11 +85,11 @@ def vector_to_blade(v: NDArray, grade: int, metric: Metric) -> Blade:
     Examples:
         >>> m = euclidean(3)
         >>> v = array([1, 2, 3])
-        >>> b = vector_to_blade(v, grade=1, metric=m)
+        >>> b = vector_to_vector(v, grade=1, metric=m)
         >>> b.data
         array([1., 2., 3.])
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
     d = metric.dim
     expected_len = d**grade if grade > 0 else 1
@@ -102,7 +102,7 @@ def vector_to_blade(v: NDArray, grade: int, metric: Metric) -> Blade:
         shape = (d,) * grade
         data = v.reshape(shape)
 
-    return Blade(data, grade=grade, metric=metric)
+    return Vector(data, grade=grade, metric=metric)
 
 
 # =============================================================================
@@ -117,7 +117,7 @@ def _binomial(n: int, k: int) -> int:
     return comb(n, k)
 
 
-def multivector_to_vector(M: MultiVector) -> NDArray:
+def multivector_to_array(M: MultiVector) -> NDArray:
     """
     Flatten a multivector to a vector of length 2^d.
 
@@ -168,7 +168,7 @@ def multivector_to_vector(M: MultiVector) -> NDArray:
     return result
 
 
-def vector_to_multivector(v: NDArray, metric: Metric) -> MultiVector:
+def array_to_multivector(v: NDArray, metric: Metric) -> MultiVector:
     """
     Reconstruct a multivector from a flattened vector.
 
@@ -187,8 +187,8 @@ def vector_to_multivector(v: NDArray, metric: Metric) -> MultiVector:
     """
     from itertools import combinations
 
-    from morphis.elements.blade import Blade
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
     from morphis.operations.structure import antisymmetrize
 
     d = metric.dim
@@ -205,7 +205,7 @@ def vector_to_multivector(v: NDArray, metric: Metric) -> MultiVector:
 
         if grade == 0:
             # Scalar
-            components[grade] = Blade(coeffs[0], grade=0, metric=metric)
+            components[grade] = Vector(coeffs[0], grade=0, metric=metric)
         else:
             # Build antisymmetric tensor from coefficients
             result_data = zeros((d,) * grade)
@@ -215,7 +215,7 @@ def vector_to_multivector(v: NDArray, metric: Metric) -> MultiVector:
 
             # Antisymmetrize the tensor over all axes
             result_data = antisymmetrize(result_data, grade)
-            components[grade] = Blade(result_data, grade=grade, metric=metric)
+            components[grade] = Vector(result_data, grade=grade, metric=metric)
 
         offset += n_basis
 
@@ -227,15 +227,15 @@ def vector_to_multivector(v: NDArray, metric: Metric) -> MultiVector:
 # =============================================================================
 
 
-def left_matrix(A: Blade | MultiVector) -> NDArray:
+def left_matrix(A: Vector | MultiVector) -> NDArray:
     """
     Compute the matrix representation of left multiplication by A.
 
     For multivector A, returns the 2^d x 2^d matrix L_A such that:
-        L_A @ multivector_to_vector(X) = multivector_to_vector(A * X)
+        L_A @ multivector_to_array(X) = multivector_to_array(A * X)
 
     Args:
-        A: Blade or MultiVector to represent as left-multiplier
+        A: Vector or MultiVector to represent as left-multiplier
 
     Returns:
         2D array of shape (2^d, 2^d)
@@ -247,11 +247,11 @@ def left_matrix(A: Blade | MultiVector) -> NDArray:
         >>> L.shape
         (8, 8)
     """
-    from morphis.elements.blade import Blade, geometric_basis
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector, geometric_basis
     from morphis.operations.products import geometric
 
-    if isinstance(A, Blade):
+    if isinstance(A, Vector):
         A = MultiVector(data={A.grade: A}, metric=A.metric)
 
     d = A.dim
@@ -272,21 +272,21 @@ def left_matrix(A: Blade | MultiVector) -> NDArray:
         product = geometric(A, e_j)
 
         # Extract coefficients into column j
-        col = multivector_to_vector(product)
+        col = multivector_to_array(product)
         L[:, j] = col
 
     return L
 
 
-def right_matrix(A: Blade | MultiVector) -> NDArray:
+def right_matrix(A: Vector | MultiVector) -> NDArray:
     """
     Compute the matrix representation of right multiplication by A.
 
     For multivector A, returns the 2^d x 2^d matrix R_A such that:
-        R_A @ multivector_to_vector(X) = multivector_to_vector(X * A)
+        R_A @ multivector_to_array(X) = multivector_to_array(X * A)
 
     Args:
-        A: Blade or MultiVector to represent as right-multiplier
+        A: Vector or MultiVector to represent as right-multiplier
 
     Returns:
         2D array of shape (2^d, 2^d)
@@ -298,11 +298,11 @@ def right_matrix(A: Blade | MultiVector) -> NDArray:
         >>> R.shape
         (8, 8)
     """
-    from morphis.elements.blade import Blade, geometric_basis
     from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector, geometric_basis
     from morphis.operations.products import geometric
 
-    if isinstance(A, Blade):
+    if isinstance(A, Vector):
         A = MultiVector(data={A.grade: A}, metric=A.metric)
 
     d = A.dim
@@ -323,7 +323,7 @@ def right_matrix(A: Blade | MultiVector) -> NDArray:
         product = geometric(e_j, A)
 
         # Extract coefficients into column j
-        col = multivector_to_vector(product)
+        col = multivector_to_array(product)
         R[:, j] = col
 
     return R

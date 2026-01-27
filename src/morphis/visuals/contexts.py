@@ -1,5 +1,5 @@
 """
-Context-Specific Blade Visualization
+Context-Specific Vector Visualization
 
 Rendering functions for blades in specific geometric algebra contexts:
 - PGA (Projective Geometric Algebra): Points, lines, planes as geometric entities
@@ -10,17 +10,15 @@ representation. Points are at specific locations, lines extend infinitely,
 planes are infinite surfaces.
 """
 
-from dataclasses import dataclass
-
 from numpy import array, cross, zeros
 from numpy.linalg import norm as np_norm
 from numpy.typing import NDArray
 
-from morphis.elements.blade import Blade
 from morphis.elements.metric import GAStructure
+from morphis.elements.vector import Vector
 from morphis.transforms.projective import bulk, euclidean, is_point
 from morphis.visuals.canvas import Canvas
-from morphis.visuals.drawing.blades import BladeStyle
+from morphis.visuals.drawing.vectors import VectorStyle
 
 
 # =============================================================================
@@ -28,8 +26,7 @@ from morphis.visuals.drawing.blades import BladeStyle
 # =============================================================================
 
 
-@dataclass
-class PGAStyle(BladeStyle):
+class PGAStyle(VectorStyle):
     """Style parameters for PGA visualization."""
 
     # Point rendering
@@ -50,7 +47,7 @@ class PGAStyle(BladeStyle):
 
 
 def render_pga_point(
-    blade: Blade,
+    blade: Vector,
     canvas: Canvas,
     style: PGAStyle | None = None,
 ) -> None:
@@ -83,7 +80,7 @@ def render_pga_point(
         canvas.arrow([0, 0, 0], direction_3d, color=style.color, shaft_radius=style.arrow_shaft_radius)
 
 
-def _render_pga_points_batch(blade: Blade, canvas: Canvas, style: PGAStyle) -> None:
+def _render_pga_points_batch(blade: Vector, canvas: Canvas, style: PGAStyle) -> None:
     """Render batch of PGA points."""
     cdim = len(blade.collection)
     n_points = blade.data.shape[0] if cdim == 1 else blade.data.reshape(-1, blade.dim).shape[0]
@@ -94,7 +91,7 @@ def _render_pga_points_batch(blade: Blade, canvas: Canvas, style: PGAStyle) -> N
         else:
             point_data = blade.data.reshape(-1, blade.dim)[k]
 
-        single_blade = Blade(data=point_data, grade=1, metric=blade.metric)
+        single_blade = Vector(data=point_data, grade=1, metric=blade.metric)
 
         if is_point(single_blade):
             coords = euclidean(single_blade)
@@ -117,7 +114,7 @@ def _to_3d(coords: NDArray) -> NDArray:
 
 
 def render_pga_line(
-    blade: Blade,
+    blade: Vector,
     canvas: Canvas,
     style: PGAStyle | None = None,
 ) -> None:
@@ -187,7 +184,7 @@ def render_pga_line(
 
 
 def render_pga_plane(
-    blade: Blade,
+    blade: Vector,
     canvas: Canvas,
     style: PGAStyle | None = None,
 ) -> None:
@@ -249,13 +246,13 @@ def render_pga_plane(
 # =============================================================================
 
 
-def is_pga_context(blade: Blade) -> bool:
+def is_pga_context(vec: Vector) -> bool:
     """Check if blade has PGA context."""
-    return blade.metric.structure == GAStructure.PROJECTIVE
+    return vec.metric.structure == GAStructure.PROJECTIVE
 
 
 def visualize_pga_blade(
-    blade: Blade,
+    blade: Vector,
     canvas: Canvas | None = None,
     style: PGAStyle | None = None,
 ) -> Canvas:
@@ -290,7 +287,7 @@ def visualize_pga_blade(
 
 
 def visualize_pga_scene(
-    *blades: Blade,
+    *blades: Vector,
     canvas: Canvas | None = None,
     style: PGAStyle | None = None,
 ) -> Canvas:

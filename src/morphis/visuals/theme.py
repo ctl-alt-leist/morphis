@@ -12,7 +12,7 @@ Each theme provides:
 - Accent colors for highlights and emphasis
 """
 
-from dataclasses import dataclass, field
+from pydantic import BaseModel, ConfigDict
 
 
 Color = tuple[float, float, float]
@@ -50,8 +50,7 @@ BLACK: Color = (0.10, 0.10, 0.10)
 # =============================================================================
 
 
-@dataclass(frozen=True)
-class Palette:
+class Palette(BaseModel):
     """
     A color palette designed for a specific background.
 
@@ -60,8 +59,9 @@ class Palette:
     visual rhythm without jarring transitions.
     """
 
+    model_config = ConfigDict(frozen=True)
+
     colors: tuple[Color, ...]
-    _index: int = field(default=0, compare=False, repr=False)
 
     def __len__(self) -> int:
         return len(self.colors)
@@ -82,8 +82,7 @@ class Palette:
 # =============================================================================
 
 
-@dataclass(frozen=True)
-class Theme:
+class Theme(BaseModel):
     """
     Complete visual theme for 3D rendering.
 
@@ -101,6 +100,8 @@ class Theme:
         grid_color: Grid lines (subtle, low contrast)
         text_color: Text and tick labels (high contrast)
     """
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     background: Color
@@ -180,14 +181,16 @@ OBSIDIAN = Theme(
     e1=(0.85, 0.35, 0.30),  # Warm red, slightly desaturated
     e2=(0.40, 0.75, 0.45),  # Fresh green, not neon
     e3=(0.35, 0.50, 0.90),  # Clear blue, lifted value
-    palette=Palette((
-        (0.95, 0.55, 0.45),  # Coral - warm anchor
-        (0.55, 0.80, 0.70),  # Seafoam - cool shift
-        (0.90, 0.75, 0.40),  # Amber - warm return
-        (0.50, 0.65, 0.90),  # Periwinkle - cool
-        (0.85, 0.50, 0.70),  # Rose - warm pink
-        (0.45, 0.80, 0.85),  # Cyan - cool accent
-    )),
+    palette=Palette(
+        colors=(
+            (0.95, 0.55, 0.45),  # Coral - warm anchor
+            (0.55, 0.80, 0.70),  # Seafoam - cool shift
+            (0.90, 0.75, 0.40),  # Amber - warm return
+            (0.50, 0.65, 0.90),  # Periwinkle - cool
+            (0.85, 0.50, 0.70),  # Rose - warm pink
+            (0.45, 0.80, 0.85),  # Cyan - cool accent
+        )
+    ),
     accent=(0.95, 0.85, 0.40),
     muted=(0.45, 0.47, 0.50),
     label=(0.82, 0.84, 0.86),
@@ -207,14 +210,16 @@ PAPER = Theme(
     e1=(0.75, 0.22, 0.18),  # Brick red
     e2=(0.18, 0.55, 0.25),  # Forest green
     e3=(0.15, 0.30, 0.70),  # Ultramarine
-    palette=Palette((
-        (0.70, 0.25, 0.20),  # Rust - warm anchor
-        (0.15, 0.50, 0.55),  # Teal - cool shift
-        (0.80, 0.55, 0.15),  # Ochre - warm earth
-        (0.35, 0.35, 0.65),  # Slate blue - cool
-        (0.65, 0.30, 0.50),  # Plum - warm violet
-        (0.20, 0.55, 0.45),  # Viridian - cool green
-    )),
+    palette=Palette(
+        colors=(
+            (0.70, 0.25, 0.20),  # Rust - warm anchor
+            (0.15, 0.50, 0.55),  # Teal - cool shift
+            (0.80, 0.55, 0.15),  # Ochre - warm earth
+            (0.35, 0.35, 0.65),  # Slate blue - cool
+            (0.65, 0.30, 0.50),  # Plum - warm violet
+            (0.20, 0.55, 0.45),  # Viridian - cool green
+        )
+    ),
     accent=(0.85, 0.45, 0.15),
     muted=(0.60, 0.58, 0.55),
     label=(0.18, 0.16, 0.14),
@@ -234,14 +239,16 @@ MIDNIGHT = Theme(
     e1=(0.90, 0.40, 0.35),  # Warm red to pop against cool bg
     e2=(0.45, 0.85, 0.55),  # Bright green
     e3=(0.45, 0.60, 0.95),  # Bright blue
-    palette=Palette((
-        (0.90, 0.65, 0.50),  # Peach - warm start
-        (0.50, 0.85, 0.80),  # Aqua - cool shift
-        (0.95, 0.80, 0.50),  # Gold - warm
-        (0.60, 0.70, 0.95),  # Lavender - cool
-        (0.95, 0.55, 0.65),  # Salmon - warm
-        (0.55, 0.90, 0.70),  # Mint - cool
-    )),
+    palette=Palette(
+        colors=(
+            (0.90, 0.65, 0.50),  # Peach - warm start
+            (0.50, 0.85, 0.80),  # Aqua - cool shift
+            (0.95, 0.80, 0.50),  # Gold - warm
+            (0.60, 0.70, 0.95),  # Lavender - cool
+            (0.95, 0.55, 0.65),  # Salmon - warm
+            (0.55, 0.90, 0.70),  # Mint - cool
+        )
+    ),
     accent=(0.95, 0.90, 0.55),
     muted=(0.40, 0.42, 0.48),
     label=(0.78, 0.80, 0.85),
@@ -261,14 +268,16 @@ CHALK = Theme(
     e1=(0.80, 0.25, 0.25),  # Clear red
     e2=(0.20, 0.60, 0.30),  # Grass green
     e3=(0.20, 0.35, 0.75),  # Royal blue
-    palette=Palette((
-        (0.75, 0.30, 0.25),  # Crimson - warm
-        (0.20, 0.55, 0.60),  # Steel teal - cool
-        (0.85, 0.60, 0.20),  # Marigold - warm
-        (0.40, 0.40, 0.70),  # Iris - cool
-        (0.70, 0.35, 0.55),  # Magenta - warm
-        (0.25, 0.60, 0.50),  # Jade - cool
-    )),
+    palette=Palette(
+        colors=(
+            (0.75, 0.30, 0.25),  # Crimson - warm
+            (0.20, 0.55, 0.60),  # Steel teal - cool
+            (0.85, 0.60, 0.20),  # Marigold - warm
+            (0.40, 0.40, 0.70),  # Iris - cool
+            (0.70, 0.35, 0.55),  # Magenta - warm
+            (0.25, 0.60, 0.50),  # Jade - cool
+        )
+    ),
     accent=(0.90, 0.50, 0.20),
     muted=(0.55, 0.56, 0.58),
     label=(0.15, 0.15, 0.18),

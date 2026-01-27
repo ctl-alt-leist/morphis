@@ -26,9 +26,9 @@ from morphis.visuals.contexts import (
     visualize_pga_scene as visualize_pga_scene,
 )
 
-# Blade visualization
-from morphis.visuals.drawing.blades import (
-    BladeStyle as BladeStyle,
+# Vector visualization
+from morphis.visuals.drawing.vectors import (
+    VectorStyle as VectorStyle,
     draw_blade as draw_blade,
     render_bivector as render_bivector,
     render_trivector as render_trivector,

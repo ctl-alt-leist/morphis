@@ -21,9 +21,11 @@ from numpy import abs as np_abs, argsort, array, imag, real, sqrt, zeros
 from numpy.linalg import eig
 from numpy.typing import NDArray
 
+from morphis.config import TOLERANCE
+
 
 if TYPE_CHECKING:
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
 
 
 # =============================================================================
@@ -31,7 +33,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-def bivector_to_skew_matrix(b: Blade) -> NDArray:
+def bivector_to_skew_matrix(b: Vector) -> NDArray:
     """
     Convert a bivector to its d×d skew-symmetric matrix representation.
 
@@ -80,7 +82,7 @@ def bivector_to_skew_matrix(b: Blade) -> NDArray:
 # =============================================================================
 
 
-def bivector_eigendecomposition(b: Blade, tol: float = 1e-12) -> tuple[NDArray, list[Blade]]:
+def bivector_eigendecomposition(b: Vector, tol: float | None = None) -> tuple[NDArray, list[Vector]]:
     """
     Decompose a bivector into orthogonal rotation planes.
 
@@ -119,9 +121,12 @@ def bivector_eigendecomposition(b: Blade, tol: float = 1e-12) -> tuple[NDArray, 
         >>> # rates ≈ [2.0, 3.0] (sorted by magnitude)
         >>> # planes[0] ~ e1^e2, planes[1] ~ e3^e4
     """
-    from morphis.elements.blade import Blade
+    from morphis.elements.vector import Vector
     from morphis.operations.norms import norm, normalize
     from morphis.operations.products import wedge
+
+    if tol is None:
+        tol = TOLERANCE
 
     if b.grade != 2:
         raise ValueError(f"bivector_eigendecomposition requires grade-2 blade, got grade {b.grade}")
@@ -189,8 +194,8 @@ def bivector_eigendecomposition(b: Blade, tol: float = 1e-12) -> tuple[NDArray, 
                         w = w / w_norm
 
                     # Create bivector from u ^ w
-                    u_blade = Blade(data=u, grade=1, metric=metric, collection=())
-                    w_blade = Blade(data=w, grade=1, metric=metric, collection=())
+                    u_blade = Vector(data=u, grade=1, metric=metric, collection=())
+                    w_blade = Vector(data=w, grade=1, metric=metric, collection=())
                     plane = wedge(u_blade, w_blade)
 
                     # Normalize the plane bivector
@@ -233,8 +238,8 @@ def bivector_eigendecomposition(b: Blade, tol: float = 1e-12) -> tuple[NDArray, 
                         w = w / sqrt(np_abs(w_norm_sq))
 
                     # Create bivector
-                    u_blade = Blade(data=u, grade=1, metric=metric, collection=())
-                    w_blade = Blade(data=w, grade=1, metric=metric, collection=())
+                    u_blade = Vector(data=u, grade=1, metric=metric, collection=())
+                    w_blade = Vector(data=w, grade=1, metric=metric, collection=())
                     plane = wedge(u_blade, w_blade)
 
                     plane_norm = norm(plane)
@@ -255,11 +260,11 @@ def bivector_eigendecomposition(b: Blade, tol: float = 1e-12) -> tuple[NDArray, 
 
 
 # =============================================================================
-# Blade Principal Vectors
+# Vector Principal Vectors
 # =============================================================================
 
 
-def blade_principal_vectors(b: Blade, tol: float = 1e-12) -> tuple[Blade, ...]:
+def principal_vectors(b: Vector, tol: float | None = None) -> tuple[Vector, ...]:
     """
     Extract principal orthonormal vectors spanning a blade's subspace.
 
@@ -270,7 +275,7 @@ def blade_principal_vectors(b: Blade, tol: float = 1e-12) -> tuple[Blade, ...]:
     ensures the output is orthonormalized.
 
     Args:
-        b: Blade of any grade (grade > 0)
+        b: Vector of any grade (grade > 0)
         tol: Numerical tolerance
 
     Returns:
@@ -283,7 +288,7 @@ def blade_principal_vectors(b: Blade, tol: float = 1e-12) -> tuple[Blade, ...]:
         >>> m = euclidean(3)
         >>> e1, e2 = basis_vectors(m)[:2]
         >>> B = wedge(e1, e2)
-        >>> v1, v2 = blade_principal_vectors(B)
+        >>> v1, v2 = principal_vectors(B)
         >>> # v1 and v2 are orthonormal and span the same plane as B
     """
     from morphis.operations.factorization import spanning_vectors
