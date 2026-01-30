@@ -98,18 +98,18 @@ class TestVectorConstruction:
 
     def test_validation_wrong_grade(self):
         g = euclidean_metric(4)
-        with pytest.raises(ValueError, match="collection.*rank.*ndim"):
-            Vector(data=zeros((4, 4)), grade=1, metric=g, collection=())
+        with pytest.raises(ValueError, match="lot.*rank.*ndim"):
+            Vector(data=zeros((4, 4)), grade=1, metric=g, lot=())
 
     def test_validation_wrong_dim(self):
         g = euclidean_metric(4)
         with pytest.raises(ValueError, match="Geometric axis"):
-            Vector(data=zeros((4, 3)), grade=2, metric=g, collection=())
+            Vector(data=zeros((4, 3)), grade=2, metric=g, lot=())
 
     def test_validation_negative_grade(self):
         g = euclidean_metric(4)
         with pytest.raises(ValueError, match="non-negative"):
-            Vector(data=zeros(4), grade=-1, metric=g, collection=())
+            Vector(data=zeros(4), grade=-1, metric=g, lot=())
 
 
 # =============================================================================
@@ -118,18 +118,37 @@ class TestVectorConstruction:
 
 
 class TestVectorInterface:
-    def test_getitem(self):
+    def test_getitem_returns_vector(self):
+        """Test that __getitem__ returns a Vector with proper grade tracking."""
         g = euclidean_metric(4)
         data = array([1.0, 2.0, 3.0, 4.0])
         b = Vector(data, grade=1, metric=g)
-        assert b[0] == 1.0
-        assert b[..., 0] == 1.0
+
+        # Indexing returns a Vector
+        result = b[0]
+        assert isinstance(result, Vector)
+        assert result.grade == 0  # grade-1 indexed by int -> grade-0
+        assert result.data == 1.0
+
+        # v[idx].data == v.data[idx]
+        assert b[0].data == b.data[0]
+        assert b[..., 0].data == b.data[..., 0]
+
+    def test_getitem_raw_access(self):
+        """Test raw data access via .data[idx]."""
+        g = euclidean_metric(4)
+        data = array([1.0, 2.0, 3.0, 4.0])
+        b = Vector(data, grade=1, metric=g)
+
+        # Raw access returns scalar
+        assert b.data[0] == 1.0
+        assert b.data[..., 0] == 1.0
 
     def test_setitem(self):
         g = euclidean_metric(4)
         data = zeros((4, 4))
         b = Vector(data, grade=2, metric=g)
-        b[0, 1] = 5.0
+        b.data[0, 1] = 5.0  # Use .data for raw assignment
         assert b.data[0, 1] == 5.0
 
     def test_asarray(self):
@@ -270,21 +289,21 @@ class TestMultiVector:
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
         b_2 = Vector(zeros((4, 4)), grade=2, metric=g)
-        M = MultiVector(data={0: b_0, 2: b_2}, metric=g, collection=())
+        M = MultiVector(data={0: b_0, 2: b_2}, metric=g, lot=())
         assert M.grades == [0, 2]
 
     def test_grade_select(self):
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
         b_2 = Vector(zeros((4, 4)), grade=2, metric=g)
-        M = MultiVector(data={0: b_0, 2: b_2}, metric=g, collection=())
+        M = MultiVector(data={0: b_0, 2: b_2}, metric=g, lot=())
         assert M.grade_select(2) is b_2
         assert M.grade_select(1) is None
 
     def test_getitem(self):
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
-        M = MultiVector(data={0: b_0}, metric=g, collection=())
+        M = MultiVector(data={0: b_0}, metric=g, lot=())
         assert M[0] is b_0
 
     def test_add(self):
@@ -292,8 +311,8 @@ class TestMultiVector:
         b_0a = Vector(1.0, grade=0, metric=g)
         b_0b = Vector(2.0, grade=0, metric=g)
         b_1 = Vector(ones(4), grade=1, metric=g)
-        M1 = MultiVector(data={0: b_0a}, metric=g, collection=())
-        M2 = MultiVector(data={0: b_0b, 1: b_1}, metric=g, collection=())
+        M1 = MultiVector(data={0: b_0a}, metric=g, lot=())
+        M2 = MultiVector(data={0: b_0b, 1: b_1}, metric=g, lot=())
         M3 = M1 + M2
         assert M3.grades == [0, 1]
         assert M3[0].data == 3.0
@@ -302,22 +321,22 @@ class TestMultiVector:
         g = euclidean_metric(4)
         b_0a = Vector(5.0, grade=0, metric=g)
         b_0b = Vector(2.0, grade=0, metric=g)
-        M1 = MultiVector(data={0: b_0a}, metric=g, collection=())
-        M2 = MultiVector(data={0: b_0b}, metric=g, collection=())
+        M1 = MultiVector(data={0: b_0a}, metric=g, lot=())
+        M2 = MultiVector(data={0: b_0b}, metric=g, lot=())
         M3 = M1 - M2
         assert M3[0].data == 3.0
 
     def test_scalar_multiply(self):
         g = euclidean_metric(4)
         b_0 = Vector(2.0, grade=0, metric=g)
-        M = MultiVector(data={0: b_0}, metric=g, collection=())
+        M = MultiVector(data={0: b_0}, metric=g, lot=())
         M2 = 2.0 * M
         assert M2[0].data == 4.0
 
     def test_negate(self):
         g = euclidean_metric(4)
         b_0 = Vector(3.0, grade=0, metric=g)
-        M = MultiVector(data={0: b_0}, metric=g, collection=())
+        M = MultiVector(data={0: b_0}, metric=g, lot=())
         M2 = -M
         assert M2[0].data == -3.0
 
@@ -341,34 +360,34 @@ class TestMultiVector:
         g = euclidean_metric(4)
         b_1 = Vector(zeros(4), grade=1, metric=g)
         with pytest.raises(ValueError, match="grade"):
-            MultiVector(data={2: b_1}, metric=g, collection=())
+            MultiVector(data={2: b_1}, metric=g, lot=())
 
     def test_is_even_true(self):
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
         b_2 = Vector(zeros((4, 4)), grade=2, metric=g)
-        mv = MultiVector(data={0: b_0, 2: b_2}, metric=g, collection=())
+        mv = MultiVector(data={0: b_0, 2: b_2}, metric=g, lot=())
         assert mv.is_even is True
 
     def test_is_even_false(self):
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
         b_1 = Vector(ones(4), grade=1, metric=g)
-        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, collection=())
+        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, lot=())
         assert mv.is_even is False
 
     def test_is_odd_true(self):
         g = euclidean_metric(4)
         b_1 = Vector(ones(4), grade=1, metric=g)
         b_3 = Vector(zeros((4, 4, 4)), grade=3, metric=g)
-        mv = MultiVector(data={1: b_1, 3: b_3}, metric=g, collection=())
+        mv = MultiVector(data={1: b_1, 3: b_3}, metric=g, lot=())
         assert mv.is_odd is True
 
     def test_is_odd_false(self):
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
         b_1 = Vector(ones(4), grade=1, metric=g)
-        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, collection=())
+        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, lot=())
         assert mv.is_odd is False
 
     def test_is_rotor_true(self):
@@ -390,14 +409,14 @@ class TestMultiVector:
         """A multivector with odd grades is not a rotor."""
         g = euclidean_metric(4)
         b_1 = Vector(ones(4), grade=1, metric=g)
-        mv = MultiVector(data={1: b_1}, metric=g, collection=())
+        mv = MultiVector(data={1: b_1}, metric=g, lot=())
         assert mv.is_rotor is False
 
     def test_is_rotor_false_not_unit(self):
         """An even multivector that is not unit norm is not a rotor."""
         g = euclidean_metric(4)
         b_0 = Vector(2.0, grade=0, metric=g)  # Not unit
-        mv = MultiVector(data={0: b_0}, metric=g, collection=())
+        mv = MultiVector(data={0: b_0}, metric=g, lot=())
         assert mv.is_rotor is False
 
     def test_is_motor_true(self):
@@ -420,7 +439,7 @@ class TestMultiVector:
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
         b_1 = Vector(ones(4), grade=1, metric=g)
-        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, collection=())
+        mv = MultiVector(data={0: b_0, 1: b_1}, metric=g, lot=())
         assert mv.is_motor is False
 
 

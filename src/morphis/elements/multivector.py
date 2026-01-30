@@ -28,12 +28,12 @@ class MultiVector(CompositeElement):
     A general multivector: sum of vectors of different grades.
 
     Stored as a dictionary mapping grade to Vector (sparse representation).
-    All component vectors must have the same dim and compatible collection shapes.
+    All component vectors must have the same dim and compatible lot shapes.
 
     Attributes:
         data: Dictionary mapping grade to Vector (inherited)
         metric: The complete geometric context (inherited)
-        collection: Shape of the collection dimensions (inherited)
+        lot: Shape of the lot (collection) dimensions (inherited)
 
     Examples:
         >>> from morphis.elements.metric import euclidean_metric
@@ -71,7 +71,7 @@ class MultiVector(CompositeElement):
         if vectors and all(isinstance(v, Vector) for v in vectors):
             # Build from vectors
             metric = Metric.merge(*(v.metric for v in vectors))
-            collection = broadcast_shapes(*(v.collection for v in vectors))
+            lot = broadcast_shapes(*(v.lot for v in vectors))
             components: dict[int, Vector] = {}
 
             for vec in vectors:
@@ -82,7 +82,7 @@ class MultiVector(CompositeElement):
 
             kwargs["data"] = components
             kwargs["metric"] = metric
-            kwargs["collection"] = collection
+            kwargs["lot"] = lot
         elif vectors:
             # Single non-Vector positional arg (e.g., data dict passed positionally)
             if len(vectors) == 1 and isinstance(vectors[0], dict):
@@ -100,7 +100,7 @@ class MultiVector(CompositeElement):
 
     @model_validator(mode="after")
     def _validate_components(self):
-        """Infer metric and collection if not provided, then verify consistency."""
+        """Infer metric and lot if not provided, then verify consistency."""
         # Infer metric from first component if not provided
         if self.metric is None:
             if self.data:
@@ -113,15 +113,15 @@ class MultiVector(CompositeElement):
 
                 object.__setattr__(self, "metric", euclidean_metric(3))
 
-        # Infer collection from components if not provided
-        if self.collection is None:
+        # Infer lot from components if not provided
+        if self.lot is None:
             if self.data:
-                # Compute broadcast-compatible collection from all components
-                collections = [vec.collection for vec in self.data.values()]
-                inferred = broadcast_shapes(*collections)
-                object.__setattr__(self, "collection", inferred)
+                # Compute broadcast-compatible lot from all components
+                lots = [vec.lot for vec in self.data.values()]
+                inferred = broadcast_shapes(*lots)
+                object.__setattr__(self, "lot", inferred)
             else:
-                object.__setattr__(self, "collection", ())
+                object.__setattr__(self, "lot", ())
 
         # Validate all components
         for k, vec in self.data.items():
@@ -131,11 +131,9 @@ class MultiVector(CompositeElement):
                 raise ValueError(f"Component grade {k} has incompatible metric: {vec.metric} vs {self.metric}")
             # Check broadcast compatibility (not exact match)
             try:
-                broadcast_shapes(vec.collection, self.collection)
+                broadcast_shapes(vec.lot, self.lot)
             except ValueError as e:
-                raise ValueError(
-                    f"Component grade {k} collection {vec.collection} not compatible with {self.collection}"
-                ) from e
+                raise ValueError(f"Component grade {k} lot {vec.lot} not compatible with {self.lot}") from e
 
         return self
 
@@ -245,7 +243,7 @@ class MultiVector(CompositeElement):
             raise TypeError(f"Cannot add MultiVector and {type(other)}")
 
         metric = Metric.merge(self.metric, other.metric)
-        collection = broadcast_shapes(self.collection, other.collection)
+        lot = broadcast_shapes(self.lot, other.lot)
         components = {}
         all_grades = set(self.grades) | set(other.grades)
 
@@ -262,7 +260,7 @@ class MultiVector(CompositeElement):
         return MultiVector(
             data=components,
             metric=metric,
-            collection=collection,
+            lot=lot,
         )
 
     def __sub__(self, other: MultiVector) -> MultiVector:
@@ -271,7 +269,7 @@ class MultiVector(CompositeElement):
             raise TypeError(f"Cannot subtract MultiVector and {type(other)}")
 
         metric = Metric.merge(self.metric, other.metric)
-        collection = broadcast_shapes(self.collection, other.collection)
+        lot = broadcast_shapes(self.lot, other.lot)
         components = {}
         all_grades = set(self.grades) | set(other.grades)
 
@@ -288,7 +286,7 @@ class MultiVector(CompositeElement):
         return MultiVector(
             data=components,
             metric=metric,
-            collection=collection,
+            lot=lot,
         )
 
     def __mul__(self, other) -> MultiVector:
@@ -320,7 +318,7 @@ class MultiVector(CompositeElement):
             return MultiVector(
                 data={k: vec * other for k, vec in self.data.items()},
                 metric=self.metric,
-                collection=self.collection,
+                lot=self.lot,
             )
 
     def __rmul__(self, other) -> MultiVector:
@@ -340,7 +338,7 @@ class MultiVector(CompositeElement):
             return MultiVector(
                 data={k: vec * other for k, vec in self.data.items()},
                 metric=self.metric,
-                collection=self.collection,
+                lot=self.lot,
             )
 
     def __neg__(self) -> MultiVector:
@@ -348,7 +346,7 @@ class MultiVector(CompositeElement):
         return MultiVector(
             data={k: -vec for k, vec in self.data.items()},
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     # =========================================================================
@@ -493,7 +491,7 @@ class MultiVector(CompositeElement):
         return MultiVector(
             data={k: vec.copy() for k, vec in self.data.items()},
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def with_metric(self, metric: Metric) -> MultiVector:
@@ -501,7 +499,7 @@ class MultiVector(CompositeElement):
         return MultiVector(
             data={k: vec.with_metric(metric) for k, vec in self.data.items()},
             metric=metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def __str__(self) -> str:
