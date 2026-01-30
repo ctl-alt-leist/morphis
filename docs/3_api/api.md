@@ -13,6 +13,8 @@ Core geometric algebra objects.
 ```python
 class Element(BaseModel):
     @property
+    def collection(self): ...
+    @property
     def dim(self): ...
     def __init__(self, /, **data: 'Any') -> 'None'
 ```
@@ -24,6 +26,8 @@ class GradedElement(Element):
     @property
     def ndim(self): ...
     @property
+    def collection(self): ...
+    @property
     def dim(self): ...
     def with_metric(self, metric: 'Metric') -> 'Self'
     def __init__(self, /, **data: 'Any') -> 'None'
@@ -33,6 +37,8 @@ class GradedElement(Element):
 class CompositeElement(Element):
     @property
     def grades(self): ...
+    @property
+    def collection(self): ...
     @property
     def dim(self): ...
     def with_metric(self, metric: 'Metric') -> 'Self'
@@ -83,7 +89,7 @@ class Tensor(Element):
     @property
     def total_rank(self): ...
     @property
-    def geometric_shape(self): ...
+    def geo(self): ...
     @property
     def contravariant_shape(self): ...
     @property
@@ -92,6 +98,10 @@ class Tensor(Element):
     def shape(self): ...
     @property
     def ndim(self): ...
+    @property
+    def collection(self): ...
+    @property
+    def geometric_shape(self): ...
     @property
     def dim(self): ...
     def with_metric(self, metric: 'Metric') -> 'Self'
@@ -102,15 +112,33 @@ class Tensor(Element):
 ### `morphis.elements.vector`
 
 ```python
+class AtAccessor:
+    def __init__(self, vector: "'Vector'")
+```
+
+```python
+class OnAccessor:
+    def __init__(self, vector: "'Vector'")
+```
+
+```python
 class Vector(Tensor):
     @property
     def is_blade(self): ...
+    @property
+    def at(self): ...
+    @property
+    def on(self): ...
+    @property
+    def collection(self): ...
     @property
     def contravariant_shape(self): ...
     @property
     def covariant_shape(self): ...
     @property
     def dim(self): ...
+    @property
+    def geo(self): ...
     @property
     def geometric_shape(self): ...
     @property
@@ -159,6 +187,8 @@ class MultiVector(CompositeElement):
     @property
     def is_motor(self): ...
     @property
+    def collection(self): ...
+    @property
     def dim(self): ...
     @property
     def grades(self): ...
@@ -176,6 +206,8 @@ class MultiVector(CompositeElement):
 
 ```python
 class Frame(GradedElement):
+    @property
+    def collection(self): ...
     @property
     def dim(self): ...
     @property
@@ -407,17 +439,22 @@ Linear algebra utilities for operators.
 ```python
 class VectorSpec(BaseModel):
     @property
+    def geo(self): ...
+    @property
+    def shape(self): ...
+    @property
     def geometric_shape(self): ...
     @property
+    def collection(self): ...
+    @property
     def total_axes(self): ...
-    def vector_shape(self, collection_shape: tuple[int, ...]) -> tuple[int, ...]
     def __init__(self, /, **data: 'Any') -> 'None'
 ```
 
 **Functions:**
 
 ```python
-def vector_spec(grade: int, dim: int, collection: int = 1) -> specs.VectorSpec
+def vector_spec(grade: int, dim: int, lot: tuple[int, ...] | None = None, collection: int | None = None) -> specs.VectorSpec
 ```
 
 
@@ -694,14 +731,17 @@ Helper utilities.
 **Functions:**
 
 ```python
-def format_matrix(arr: numpy.ndarray, precision: int = 4) -> str
-def print_matrix(arr: numpy.ndarray, precision: int = 4) -> None
-def section(title: str, width: int = 70) -> None
-def subsection(title: str) -> None
-def show_vec(name: str, blade: vector.Vector, precision: int = 4) -> None
-def show_array(name: str, arr, precision: int = 4) -> None
-def show_scalar(name: str, value, precision: int = 4) -> None
-def show_mv(name: str, M: multivector.MultiVector, precision: int = 4) -> None
+def format_matrix(arr: 'NDArray', precision: 'int' = 4, max_rows: 'int' = 8, max_cols: 'int' = 8, max_slices: 'int' = 5) -> 'str'
+def print_matrix(arr: 'NDArray', precision: 'int' = 4) -> 'None'
+def section(title: 'str', width: 'int' = 70) -> 'None'
+def subsection(title: 'str') -> 'None'
+def show_vec(name: 'str', blade: 'Vector', precision: 'int' = 4) -> 'None'
+def show_array(name: 'str', arr, precision: 'int' = 4) -> 'None'
+def show_scalar(name: 'str', value, precision: 'int' = 4) -> 'None'
+def show_mv(name: 'str', M: 'MultiVector', precision: 'int' = 4) -> 'None'
+def format_vector(v: 'Vector', precision: 'int' = 4) -> 'str'
+def format_multivector(M: 'MultiVector', precision: 'int' = 4) -> 'str'
+def format_frame(F: 'Frame', precision: 'int' = 4) -> 'str'
 ```
 
 

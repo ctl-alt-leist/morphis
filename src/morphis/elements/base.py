@@ -5,7 +5,7 @@ Base classes for all geometric algebra objects. Every GA element has a metric
 that defines its complete geometric context.
 
 Hierarchy:
-    Element (metric, collection)
+    Element (metric, lot)
     ├── Tensor (+ data: NDArray, contravariant: int, covariant: int)
     │   └── Vector (antisymmetric, covariant=0)
     ├── GradedElement (+ data: NDArray, grade: int)
@@ -43,7 +43,7 @@ class Element(BaseModel):
 
     Attributes:
         metric: The complete geometric context (optional, defaults to Euclidean)
-        collection: Shape of the collection dimensions
+        lot: Shape of the lot (collection) dimensions
     """
 
     model_config = ConfigDict(
@@ -52,7 +52,13 @@ class Element(BaseModel):
     )
 
     metric: Metric | None = None
-    collection: tuple[int, ...] | None = None
+    lot: tuple[int, ...] | None = None
+
+    # Backwards compatibility alias
+    @property
+    def collection(self) -> tuple[int, ...] | None:
+        """Alias for lot (backwards compatibility)."""
+        return self.lot
 
     @property
     def dim(self) -> int:
@@ -65,7 +71,7 @@ class GradedElement(Element):
     Base class for elements with a single grade and array data.
 
     GradedElements store their geometric content in a NumPy array with shape
-    (*collection, *geometric_shape) where geometric_shape depends on grade.
+    (*lot, *geo) where geo shape depends on grade.
 
     Subclasses: Frame
 

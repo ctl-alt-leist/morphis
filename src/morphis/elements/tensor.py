@@ -4,12 +4,12 @@ Geometric Algebra - Tensor Base Class
 A Tensor represents a general (p,q)-tensor with p contravariant (upper) indices
 and q covariant (lower) indices.
 
-Storage shape is (*collection, *contravariant_dims, *covariant_dims) where:
-- collection: batch/collection dimensions
+Storage shape is (*lot, *contravariant_dims, *covariant_dims) where:
+- lot: batch/collection dimensions
 - contravariant_dims: (dim,) * contravariant
 - covariant_dims: (dim,) * covariant
 
-Vector (formerly Vector) inherits from Tensor with covariant=0.
+Vector inherits from Tensor with covariant=0.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ class Tensor(Element):
     """
     A general (p,q)-tensor in geometric algebra.
 
-    Storage shape is (*collection, *contravariant_dims, *covariant_dims) where
+    Storage shape is (*lot, *contravariant_dims, *covariant_dims) where
     contravariant_dims and covariant_dims are each (dim,) repeated the appropriate
     number of times.
 
@@ -37,14 +37,14 @@ class Tensor(Element):
         contravariant: Number of contravariant (upper) indices
         covariant: Number of covariant (lower) indices
         metric: The complete geometric context (inherited)
-        collection: Shape of the collection dimensions (inherited)
+        lot: Shape of the lot (collection) dimensions (inherited)
 
     Examples:
         >>> from morphis.elements.metric import euclidean_metric
         >>> m = euclidean_metric(3)
         >>> # A (1,0)-tensor (vector) in 3D
         >>> t = Tensor(data=[1, 0, 0], contravariant=1, covariant=0, metric=m)
-        >>> t.geometric_shape
+        >>> t.geo
         (3,)
     """
 
@@ -94,7 +94,7 @@ class Tensor(Element):
 
     @model_validator(mode="after")
     def _infer_and_validate(self):
-        """Infer metric and collection if not provided, then validate shape."""
+        """Infer metric and lot if not provided, then validate shape."""
         rank = self.contravariant + self.covariant
         actual_ndim = self.data.ndim
 
@@ -113,28 +113,28 @@ class Tensor(Element):
 
         dim = self.metric.dim
 
-        # Infer collection from data shape if not provided
-        if self.collection is None:
-            collection_ndim = actual_ndim - rank
-            if collection_ndim < 0:
+        # Infer lot from data shape if not provided
+        if self.lot is None:
+            lot_ndim = actual_ndim - rank
+            if lot_ndim < 0:
                 raise ValueError(
                     f"Array has {actual_ndim} dimensions but tensor rank "
                     f"({self.contravariant}, {self.covariant}) requires at least {rank} geometric axes"
                 )
-            object.__setattr__(self, "collection", self.data.shape[:collection_ndim])
+            object.__setattr__(self, "lot", self.data.shape[:lot_ndim])
         else:
-            # Collection was explicitly provided - validate it matches actual shape
-            expected_collection = self.data.shape[: len(self.collection)]
-            if expected_collection != self.collection:
+            # Lot was explicitly provided - validate it matches actual shape
+            expected_lot = self.data.shape[: len(self.lot)]
+            if expected_lot != self.lot:
                 raise ValueError(
-                    f"Explicit collection {self.collection} does not match "
+                    f"Explicit lot {self.lot} does not match "
                     f"actual data shape {self.data.shape}. "
-                    f"Expected collection {expected_collection} from shape."
+                    f"Expected lot {expected_lot} from shape."
                 )
 
-        # Validate: len(collection) + rank == ndim
-        if len(self.collection) + rank != actual_ndim:
-            raise ValueError(f"len(collection)={len(self.collection)} + rank={rank} != ndim={actual_ndim}")
+        # Validate: len(lot) + rank == ndim
+        if len(self.lot) + rank != actual_ndim:
+            raise ValueError(f"len(lot)={len(self.lot)} + rank={rank} != ndim={actual_ndim}")
 
         # Validate: geometric axes match dim
         if rank > 0:
@@ -159,14 +159,14 @@ class Tensor(Element):
         return self.contravariant + self.covariant
 
     @property
-    def geometric_shape(self) -> tuple[int, ...]:
+    def geo(self) -> tuple[int, ...]:
         """Shape of the trailing geometric dimensions."""
-        return self.data.shape[len(self.collection) :]
+        return self.data.shape[len(self.lot) :]
 
     @property
     def contravariant_shape(self) -> tuple[int, ...]:
         """Shape of the contravariant (upper index) dimensions."""
-        start = len(self.collection)
+        start = len(self.lot)
         end = start + self.contravariant
         return self.data.shape[start:end]
 
@@ -175,7 +175,7 @@ class Tensor(Element):
         """Shape of the covariant (lower index) dimensions."""
         if self.covariant == 0:
             return ()
-        start = len(self.collection) + self.contravariant
+        start = len(self.lot) + self.contravariant
         return self.data.shape[start:]
 
     @property
@@ -187,6 +187,17 @@ class Tensor(Element):
     def ndim(self) -> int:
         """Total number of dimensions."""
         return self.data.ndim
+
+    # Backwards compatibility aliases
+    @property
+    def collection(self) -> tuple[int, ...]:
+        """Alias for lot (backwards compatibility)."""
+        return self.lot
+
+    @property
+    def geometric_shape(self) -> tuple[int, ...]:
+        """Alias for geo (backwards compatibility)."""
+        return self.geo
 
     # =========================================================================
     # NumPy Interface
@@ -217,7 +228,7 @@ class Tensor(Element):
             contravariant=self.contravariant,
             covariant=self.covariant,
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def with_metric(self, metric: Metric) -> Self:
@@ -227,7 +238,7 @@ class Tensor(Element):
             contravariant=self.contravariant,
             covariant=self.covariant,
             metric=metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def __repr__(self) -> str:

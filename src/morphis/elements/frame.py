@@ -33,8 +33,8 @@ class Frame(GradedElement):
     Unlike a k-vector (which encodes only the subspace), a frame preserves the
     specific choice of spanning vectors.
 
-    Storage shape is (*collection, span, dim) where:
-    - collection: shape of collection dimensions (for batch operations)
+    Storage shape is (*lot, span, dim) where:
+    - lot: shape of lot (collection) dimensions (for batch operations)
     - span: number of vectors in the frame
     - dim: dimension of each vector
 
@@ -46,7 +46,7 @@ class Frame(GradedElement):
         data: The underlying array of frame vectors (inherited)
         grade: Always 1 for frames (vectors) (inherited)
         metric: The complete geometric context (inherited)
-        collection: Shape of the collection dimensions (inherited)
+        lot: Shape of the lot (collection) dimensions (inherited)
         span: Number of vectors in the frame
 
     Examples:
@@ -119,7 +119,7 @@ class Frame(GradedElement):
 
     @model_validator(mode="after")
     def _infer_and_validate(self):
-        """Infer span and collection if not provided, then validate shape consistency."""
+        """Infer span and lot if not provided, then validate shape consistency."""
         dim = self.metric.dim
 
         # Frame data must have at least 2 dimensions: (span, dim)
@@ -130,26 +130,24 @@ class Frame(GradedElement):
         if self.span is None:
             object.__setattr__(self, "span", self.data.shape[-2])
 
-        # Infer collection from data shape if not provided
-        if self.collection is None:
-            collection_ndim = self.data.ndim - 2  # everything except (span, dim)
-            object.__setattr__(self, "collection", self.data.shape[:collection_ndim])
+        # Infer lot from data shape if not provided
+        if self.lot is None:
+            lot_ndim = self.data.ndim - 2  # everything except (span, dim)
+            object.__setattr__(self, "lot", self.data.shape[:lot_ndim])
         else:
-            # Collection was explicitly provided - validate it matches actual shape
-            expected_collection = self.data.shape[: len(self.collection)]
-            if expected_collection != self.collection:
+            # Lot was explicitly provided - validate it matches actual shape
+            expected_lot = self.data.shape[: len(self.lot)]
+            if expected_lot != self.lot:
                 raise ValueError(
-                    f"Explicit collection {self.collection} does not match "
+                    f"Explicit lot {self.lot} does not match "
                     f"actual data shape {self.data.shape}. "
-                    f"Expected collection {expected_collection} from shape."
+                    f"Expected lot {expected_lot} from shape."
                 )
 
-        # Validate: len(collection) + 2 == ndim
-        expected_ndim = len(self.collection) + 2
+        # Validate: len(lot) + 2 == ndim
+        expected_ndim = len(self.lot) + 2
         if self.data.ndim != expected_ndim:
-            raise ValueError(
-                f"Frame with collection={self.collection} expects {expected_ndim} dimensions, got {self.data.ndim}"
-            )
+            raise ValueError(f"Frame with lot={self.lot} expects {expected_ndim} dimensions, got {self.data.ndim}")
 
         # Validate shape matches span and dim
         if self.data.shape[-1] != dim:
@@ -184,7 +182,7 @@ class Frame(GradedElement):
             data=self.data[..., i, :].copy(),
             grade=1,
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     # =========================================================================
@@ -195,7 +193,7 @@ class Frame(GradedElement):
         """
         View frame vectors as a batch of grade-1 vectors.
 
-        Returns Vector with collection = (*self.collection, span), treating
+        Returns Vector with collection = (*self.lot, span), treating
         the vectors as a batch for vectorized geometric operations.
         """
         from morphis.elements.vector import Vector
@@ -204,7 +202,7 @@ class Frame(GradedElement):
             data=self.data,
             grade=1,
             metric=self.metric,
-            collection=self.collection + (self.span,),
+            lot=self.lot + (self.span,),
         )
 
     def __mul__(self, other) -> MultiVector | Frame:
@@ -357,7 +355,7 @@ class Frame(GradedElement):
             data=new_data,
             span=self.span,
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def copy(self) -> Frame:
@@ -366,7 +364,7 @@ class Frame(GradedElement):
             data=self.data.copy(),
             span=self.span,
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def with_metric(self, metric: Metric) -> Frame:
@@ -375,7 +373,7 @@ class Frame(GradedElement):
             data=self.data.copy(),
             span=self.span,
             metric=metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def __str__(self) -> str:

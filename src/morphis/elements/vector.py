@@ -2,7 +2,7 @@
 Geometric Algebra - Vector
 
 A Vector represents a homogeneous multivector of pure grade k in geometric algebra.
-Storage shape is (*collection, *geometric_shape) where geometric_shape is (dim,) * grade.
+Storage shape is (*lot, *geo) where geo is (dim,) * grade.
 
 Vectors are antisymmetric (k,0)-tensors. A Vector that can be factorized as
 v1 ^ v2 ^ ... ^ vk is called a "blade" (simple k-vector) and represents a
@@ -27,6 +27,107 @@ if TYPE_CHECKING:
 
 
 # =============================================================================
+# Accessor Classes for Slicing
+# =============================================================================
+
+
+class AtAccessor:
+    """
+    Accessor for lot-only (collection) slicing on a Vector.
+
+    Usage:
+        v.at[0]        # Slice first lot dimension
+        v.at[:, 1:]    # Slice first two lot dimensions
+
+    Indexing through .at only affects lot dimensions; geometric dimensions
+    are preserved with implicit slice(None).
+    """
+
+    __slots__ = ("_vector",)
+
+    def __init__(self, vector: "Vector"):
+        self._vector = vector
+
+    def __getitem__(self, index) -> "Vector":
+        """Slice lot dimensions only, preserving geometric structure."""
+        # Normalize index to tuple
+        if not isinstance(index, tuple):
+            index = (index,)
+
+        n_lot = len(self._vector.lot)
+        n_geo = self._vector.grade
+
+        # Validate: can't specify more indices than lot dims
+        if len(index) > n_lot:
+            raise IndexError(
+                f"Too many indices for lot dimensions: got {len(index)}, but vector has {n_lot} lot dimensions"
+            )
+
+        # Pad with slice(None) to cover remaining lot dims
+        if len(index) < n_lot:
+            index = index + (slice(None),) * (n_lot - len(index))
+
+        # Add slice(None) for all geometric axes
+        full_index = index + (slice(None),) * n_geo
+
+        new_data = self._vector.data[full_index]
+        return Vector(new_data, grade=self._vector.grade, metric=self._vector.metric)
+
+    def __repr__(self) -> str:
+        return f"AtAccessor(lot={self._vector.lot})"
+
+
+class OnAccessor:
+    """
+    Accessor for geo-only (geometric) slicing on a Vector.
+
+    Usage:
+        v.on[0]        # Slice first geometric dimension
+        v.on[0, 1]     # Extract component v^{01} for a bivector
+
+    Indexing through .on only affects geometric dimensions; lot dimensions
+    are preserved with implicit slice(None).
+    """
+
+    __slots__ = ("_vector",)
+
+    def __init__(self, vector: "Vector"):
+        self._vector = vector
+
+    def __getitem__(self, index) -> "Vector":
+        """Slice geometric dimensions only, preserving lot structure."""
+        # Normalize index to tuple
+        if not isinstance(index, tuple):
+            index = (index,)
+
+        n_lot = len(self._vector.lot)
+        n_geo = self._vector.grade
+
+        # Validate: can't specify more indices than geo dims
+        if len(index) > n_geo:
+            raise IndexError(
+                f"Too many indices for geometric dimensions: got {len(index)}, "
+                f"but vector has {n_geo} geometric dimensions (grade={self._vector.grade})"
+            )
+
+        # Build full index: slice(None) for lot dims, then the geo indices
+        full_index = (slice(None),) * n_lot + index
+
+        new_data = self._vector.data[full_index]
+
+        # Compute new grade: each integer index reduces grade by 1
+        new_grade = n_geo
+        for idx in index:
+            if isinstance(idx, int):
+                new_grade -= 1
+
+        return Vector(new_data, grade=new_grade, metric=self._vector.metric)
+
+    def __repr__(self) -> str:
+        return f"OnAccessor(geo={self._vector.geo})"
+
+
+# =============================================================================
 # Vector Class
 # =============================================================================
 
@@ -36,7 +137,7 @@ class Vector(Tensor):
     A Vector (k-vector) in geometric algebra.
 
     Represents a homogeneous multivector of pure grade k. Storage shape is
-    (*collection, *geometric_shape) where geometric_shape is (dim,) * grade.
+    (*lot, *geo) where geo is (dim,) * grade.
     Scalars have grade=0, grade-1 vectors, bivectors grade=2, etc.
 
     The components V^{m_1 ... m_k} are stored with full redundancy (all d^k
@@ -50,7 +151,7 @@ class Vector(Tensor):
         data: The underlying array of components (inherited)
         grade: The grade (0=scalar, 1=vector, 2=bivector, etc.)
         metric: The complete geometric context (inherited)
-        collection: Shape of the collection dimensions (inherited)
+        lot: Shape of the lot (collection) dimensions (inherited)
 
     Examples:
         >>> from morphis.elements.metric import euclidean_metric
@@ -130,6 +231,105 @@ class Vector(Tensor):
         except ValueError:
             return False
 
+    @property
+    def at(self) -> AtAccessor:
+        """
+        Accessor for lot-only (collection) slicing.
+
+        Usage:
+            v.at[0]        # Slice first lot dimension
+            v.at[:, 1:]    # Slice first two lot dimensions
+
+        Indexing through .at only affects lot dimensions; geometric dimensions
+        are preserved with implicit slice(None).
+        """
+        return AtAccessor(self)
+
+    @property
+    def on(self) -> OnAccessor:
+        """
+        Accessor for geo-only (geometric) slicing.
+
+        Usage:
+            v.on[0]        # Slice first geometric dimension
+            v.on[0, 1]     # Extract component v^{01} for a bivector
+
+        Indexing through .on only affects geometric dimensions; lot dimensions
+        are preserved with implicit slice(None).
+        """
+        return OnAccessor(self)
+
+    # =========================================================================
+    # Indexing
+    # =========================================================================
+
+    def __getitem__(self, index) -> "Vector":
+        """
+        Index into the Vector, returning a new Vector.
+
+        Indexing follows numpy semantics but always returns a Vector.
+        The index is applied positionally to the full shape (lot + geo).
+        Lot and geo axes are tracked independently:
+        - Integer indices reduce the corresponding lot or geo axis
+        - Slice indices preserve the axis with potentially different size
+
+        Examples:
+            v = Vector(data, grade=2, metric=m)  # lot=(M, N), geo=(3, 3)
+
+            v[0]           # lot=(N,), geo=(3, 3) - index first lot axis
+            v[:, :, 0]     # lot=(M, N), geo=(3,) - index first geo axis (grade 1)
+            v[0, :, 0, :]  # lot=(N,), geo=(3,) - index lot axis 0 and geo axis 0
+
+        For explicit lot-only or geo-only indexing, use v.at[...] or v.on[...].
+        """
+        # Normalize index to tuple
+        if not isinstance(index, tuple):
+            index = (index,)
+
+        n_lot = len(self.lot)
+        n_geo = self.grade
+
+        # Apply index to data
+        new_data = self.data[index]
+
+        # Determine new grade by counting integer indices in geo positions
+        # First, figure out which indices apply to lot vs geo
+        # Handle ellipsis expansion
+        expanded_index = self._expand_index(index, n_lot + n_geo)
+
+        new_grade = n_geo
+        for i, idx in enumerate(expanded_index):
+            if i >= n_lot:  # This is a geo axis
+                if isinstance(idx, int):
+                    new_grade -= 1
+
+        return Vector(new_data, grade=new_grade, metric=self.metric)
+
+    def _expand_index(self, index: tuple, ndim: int) -> tuple:
+        """Expand ellipsis in index to explicit slices."""
+        # Count non-ellipsis elements
+        n_non_ellipsis = sum(1 for idx in index if idx is not ...)
+        n_ellipsis = sum(1 for idx in index if idx is ...)
+
+        if n_ellipsis > 1:
+            raise IndexError("Only one ellipsis allowed in index")
+
+        if n_ellipsis == 0:
+            # No ellipsis - pad with slice(None) to match ndim
+            if len(index) < ndim:
+                return index + (slice(None),) * (ndim - len(index))
+            return index
+
+        # Expand ellipsis
+        n_to_expand = ndim - n_non_ellipsis
+        expanded = []
+        for idx in index:
+            if idx is ...:
+                expanded.extend([slice(None)] * n_to_expand)
+            else:
+                expanded.append(idx)
+        return tuple(expanded)
+
     # =========================================================================
     # Arithmetic Operators
     # =========================================================================
@@ -142,13 +342,13 @@ class Vector(Tensor):
             raise ValueError(f"Cannot add Vectors of grade {self.grade} and {other.grade}")
 
         metric = Metric.merge(self.metric, other.metric)
-        collection = broadcast_shapes(self.collection, other.collection)
+        lot = broadcast_shapes(self.lot, other.lot)
 
         return Vector(
             data=self.data + other.data,
             grade=self.grade,
             metric=metric,
-            collection=collection,
+            lot=lot,
         )
 
     def __sub__(self, other: Vector) -> Vector:
@@ -159,13 +359,13 @@ class Vector(Tensor):
             raise ValueError(f"Cannot subtract Vectors of grade {self.grade} and {other.grade}")
 
         metric = Metric.merge(self.metric, other.metric)
-        collection = broadcast_shapes(self.collection, other.collection)
+        lot = broadcast_shapes(self.lot, other.lot)
 
         return Vector(
             data=self.data - other.data,
             grade=self.grade,
             metric=metric,
-            collection=collection,
+            lot=lot,
         )
 
     def __mul__(self, other) -> Vector | MultiVector:
@@ -189,7 +389,7 @@ class Vector(Tensor):
             return _geometric_v_mv(self, other)
         elif isinstance(other, Operator):
             # Grade-0 Vector (scalar) can multiply Operator via Operator.__rmul__
-            if self.grade == 0 and self.collection == ():
+            if self.grade == 0 and self.lot == ():
                 return NotImplemented
             raise TypeError("Vector * Operator not currently supported (use L * v)")
         elif isinstance(other, Frame):
@@ -203,7 +403,7 @@ class Vector(Tensor):
                 data=self.data * other,
                 grade=self.grade,
                 metric=self.metric,
-                collection=self.collection,
+                lot=self.lot,
             )
 
     def __rmul__(self, other) -> Vector | MultiVector:
@@ -224,7 +424,7 @@ class Vector(Tensor):
                 data=self.data * other,
                 grade=self.grade,
                 metric=self.metric,
-                collection=self.collection,
+                lot=self.lot,
             )
 
     def __truediv__(self, scalar) -> Vector:
@@ -233,7 +433,7 @@ class Vector(Tensor):
             data=self.data / scalar,
             grade=self.grade,
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def __neg__(self) -> Vector:
@@ -242,7 +442,7 @@ class Vector(Tensor):
             data=-self.data,
             grade=self.grade,
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     # =========================================================================
@@ -388,7 +588,7 @@ class Vector(Tensor):
             data=self.data.copy(),
             grade=self.grade,
             metric=self.metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def with_metric(self, metric: Metric) -> Vector:
@@ -397,7 +597,7 @@ class Vector(Tensor):
             data=self.data.copy(),
             grade=self.grade,
             metric=metric,
-            collection=self.collection,
+            lot=self.lot,
         )
 
     def normalize(self) -> Vector:

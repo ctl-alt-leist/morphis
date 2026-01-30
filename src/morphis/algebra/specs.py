@@ -2,10 +2,12 @@
 Linear Algebra - Vector Specifications
 
 Defines VectorSpec for describing the structure of k-vectors in linear operator contexts.
-A VectorSpec captures the grade, collection dimensions, and vector space dimension.
+A VectorSpec captures the grade, lot (collection) shape, and vector space dimension.
 """
 
-from pydantic import BaseModel, ConfigDict, model_validator
+import warnings
+
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class VectorSpec(BaseModel):
@@ -14,53 +16,83 @@ class VectorSpec(BaseModel):
 
     Describes how to interpret the axes of a k-vector tensor:
     - grade: Number of geometric axes (0=scalar, 1=vector, 2=bivector, etc.)
-    - collection: Number of leading collection/batch dimensions
+    - lot: Shape of leading lot (collection/batch) dimensions
     - dim: Dimension of the underlying vector space
 
-    Storage convention: (*collection, *geometric) where geometric = (dim,) * grade
+    Storage convention: (*lot, *geo) where geo = (dim,) * grade
 
     Attributes:
         grade: Grade of the k-vector (0=scalar, 1=vector, 2=bivector, etc.)
-        collection: Number of collection dimensions (batch/sensor/time axes)
+        lot: Shape of lot dimensions (batch/sensor/time axes)
         dim: Dimension of the underlying vector space
 
     Examples:
-        >>> # Scalar with collection dim (e.g., N currents)
-        >>> spec = VectorSpec(grade=0, collection=1, dim=3)
-        >>> spec.geometric_shape
+        >>> # Scalar with lot shape (N,) (e.g., N currents)
+        >>> spec = VectorSpec(grade=0, lot=(5,), dim=3)
+        >>> spec.geo
         ()
-        >>> spec.total_axes
-        1
+        >>> spec.shape
+        (5,)
 
-        >>> # Bivector with collection dim (e.g., M magnetic field measurements)
-        >>> spec = VectorSpec(grade=2, collection=1, dim=3)
-        >>> spec.geometric_shape
+        >>> # Bivector with lot shape (M,) (e.g., M magnetic field measurements)
+        >>> spec = VectorSpec(grade=2, lot=(10,), dim=3)
+        >>> spec.geo
         (3, 3)
-        >>> spec.total_axes
-        3
+        >>> spec.shape
+        (10, 3, 3)
     """
 
     model_config = ConfigDict(frozen=True)
 
     grade: int
-    collection: int
+    lot: tuple[int, ...]
     dim: int
+
+    @model_validator(mode="before")
+    @classmethod
+    def _handle_legacy_collection(cls, data):
+        """Convert legacy collection=int to lot=tuple."""
+        if isinstance(data, dict) and "collection" in data and "lot" not in data:
+            collection = data.pop("collection")
+            if isinstance(collection, int):
+                # Legacy: collection was a count, not a shape
+                # We can't know the actual sizes, so we use placeholder sizes of 1
+                # This is for backwards compatibility during transition
+                warnings.warn(
+                    "VectorSpec(collection=int) is deprecated. Use lot=(size,) tuple instead. "
+                    "Using placeholder lot dimensions.",
+                    DeprecationWarning,
+                    stacklevel=4,
+                )
+                data["lot"] = (1,) * collection
+            else:
+                data["lot"] = collection
+        return data
+
+    @field_validator("lot", mode="before")
+    @classmethod
+    def _convert_lot_to_tuple(cls, v):
+        """Convert list to tuple for lot."""
+        if isinstance(v, list):
+            return tuple(v)
+        return v
 
     @model_validator(mode="after")
     def _validate_spec(self):
         """Validate spec parameters."""
         if self.grade < 0:
             raise ValueError(f"grade must be non-negative, got {self.grade}")
-        if self.collection < 0:
-            raise ValueError(f"collection must be non-negative, got {self.collection}")
         if self.dim < 1:
             raise ValueError(f"dim must be positive, got {self.dim}")
         if self.grade > self.dim:
             raise ValueError(f"grade {self.grade} cannot exceed dim {self.dim}")
+        for i, size in enumerate(self.lot):
+            if size < 0:
+                raise ValueError(f"lot dimension {i} must be non-negative, got {size}")
         return self
 
     @property
-    def geometric_shape(self) -> tuple[int, ...]:
+    def geo(self) -> tuple[int, ...]:
         """
         Shape of the geometric (trailing) dimensions.
 
@@ -69,49 +101,65 @@ class VectorSpec(BaseModel):
         return (self.dim,) * self.grade
 
     @property
+    def shape(self) -> tuple[int, ...]:
+        """Full shape: lot + geo."""
+        return self.lot + self.geo
+
+    # Backwards compatibility aliases
+    @property
+    def geometric_shape(self) -> tuple[int, ...]:
+        """Alias for geo (backwards compatibility)."""
+        return self.geo
+
+    @property
+    def collection(self) -> int:
+        """Number of lot dimensions (backwards compatibility)."""
+        return len(self.lot)
+
+    @property
     def total_axes(self) -> int:
-        """Total number of axes: collection + grade."""
-        return self.collection + self.grade
-
-    def vector_shape(self, collection_shape: tuple[int, ...]) -> tuple[int, ...]:
-        """
-        Compute full vector shape given collection shape.
-
-        Args:
-            collection_shape: Shape of collection dimensions
-
-        Returns:
-            Full shape (*collection_shape, *geometric_shape)
-
-        Raises:
-            ValueError: If collection_shape length doesn't match collection
-        """
-        if len(collection_shape) != self.collection:
-            raise ValueError(f"collection_shape has {len(collection_shape)} dims, but spec expects {self.collection}")
-
-        return collection_shape + self.geometric_shape
+        """Total number of axes: len(lot) + grade."""
+        return len(self.lot) + self.grade
 
 
-def vector_spec(grade: int, dim: int, collection: int = 1) -> VectorSpec:
+def vector_spec(
+    grade: int,
+    dim: int,
+    lot: tuple[int, ...] | None = None,
+    collection: int | None = None,
+) -> VectorSpec:
     """
     Create a VectorSpec with convenient defaults.
 
     Args:
         grade: Grade of k-vector (0=scalar, 1=vector, 2=bivector, etc.)
         dim: Dimension of vector space
-        collection: Number of collection dimensions (default 1)
+        lot: Shape of lot dimensions (default empty tuple)
+        collection: DEPRECATED. Number of lot dimensions (use lot instead)
 
     Returns:
         VectorSpec instance
 
     Examples:
-        >>> # Scalar currents with one collection dimension
-        >>> spec = vector_spec(grade=0, dim=3)
+        >>> # Scalar currents with lot shape (5,)
+        >>> spec = vector_spec(grade=0, dim=3, lot=(5,))
 
-        >>> # Bivector fields with one collection dimension
-        >>> spec = vector_spec(grade=2, dim=3)
+        >>> # Bivector fields with lot shape (10,)
+        >>> spec = vector_spec(grade=2, dim=3, lot=(10,))
 
-        >>> # Vector without collection dimensions
-        >>> spec = vector_spec(grade=1, dim=3, collection=0)
+        >>> # Vector without lot dimensions
+        >>> spec = vector_spec(grade=1, dim=3)
     """
-    return VectorSpec(grade=grade, collection=collection, dim=dim)
+    if lot is None and collection is None:
+        lot = ()
+    elif lot is None and collection is not None:
+        warnings.warn(
+            "vector_spec(collection=int) is deprecated. Use lot=(size,) tuple instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        lot = (1,) * collection
+    elif lot is not None and collection is not None:
+        raise ValueError("Cannot specify both lot and collection")
+
+    return VectorSpec(grade=grade, lot=lot, dim=dim)
