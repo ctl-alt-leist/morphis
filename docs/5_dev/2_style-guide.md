@@ -44,10 +44,10 @@ Use `# ===` headers sparingly to group related functions:
 # Norms
 # =============================================================================
 
-def norm_squared(b, g):
+def form(v):
     ...
 
-def norm(b, g):
+def norm(v):
     ...
 ```
 

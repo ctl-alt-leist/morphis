@@ -25,13 +25,13 @@ g.dim  # 3
 
 Morphis uses consistent variable naming throughout documentation and code:
 
-| Type | Case | Default Names | Notes |
-|------|------|---------------|-------|
-| Vectors (any grade) | lowercase | `u, v, w` | Grade-1, 2, 3, etc. all use lowercase |
-| Blades | lowercase | `b` | When emphasizing factorizability |
-| Multivectors | UPPERCASE | `M, N, R, S` | Mixed-grade elements |
-| Rotors | UPPERCASE | `R` | Even multivector with $R\tilde{R} = 1$ |
-| Metrics | lowercase | `g, h, eta` | `g` Euclidean, `h` PGA, `eta` Lorentzian |
+| Type                | Case      | Default Names | Notes                                    |
+| ------------------- | --------- | ------------- | ---------------------------------------- |
+| Vectors (any grade) | Lower | `u, v, w`     | Grade-1, 2, 3, etc. all use Lower    |
+| Blades              | Lower | `b`           | When emphasizing factorizability         |
+| Multivectors        | Upper | `M, N, R, S`  | Mixed-grade elements                     |
+| Rotors              | Upper | `R`           | Even multivector with $R\tilde{R} = 1$   |
+| Metrics             | Lower | `g, h, eta`   | `g` Euclidean, `h` PGA, `eta` Lorentzian |
 
 This convention emphasizes that a bivector is still a vector (in $\bigwedge^2 V$), not a multivector.
 
@@ -116,7 +116,7 @@ b.grade  # 2
 
 ## Storage Convention
 
-Morphis stores k-vectors using **full antisymmetric tensor storage**. A grade-$k$ element in $d$-dimensional space has shape $(*\text{collection}, d, d, \ldots, d)$ with $k$ copies of $d$.
+Morphis stores k-vectors using **full antisymmetric tensor storage**. A grade-$k$ element in $d$-dimensional space has shape $(*\text{lot}, d, d, \ldots, d)$ with $k$ copies of $d$.
 
 This redundant storage enables:
 - Direct einsum operations without index bookkeeping
@@ -162,14 +162,14 @@ The factor $\frac{1}{2}$ ensures proper normalization, while the antisymmetric c
 
 This convention allows efficient computation: we sum over ordered index combinations and let the antisymmetric symbol handle the signs, rather than explicitly storing and manipulating signed basis elements.
 
-## Collection Dimensions
+## Lot Dimensions
 
-All morphis elements support leading **collection dimensions** (also called batch dimensions). This is fundamental to efficient computation and distinguishes geometric dimensions from batch dimensions.
+All morphis elements support leading **lot dimensions** (also called batch dimensions). This is fundamental to efficient computation and distinguishes geometric dimensions from batch dimensions.
 
 ### The Storage Convention
 
-Every element has shape `(*collection, *geometric)`:
-- **Collection dimensions** come first (leftmost): arbitrary shape for batching
+Every element has shape `(*lot, *geo)`:
+- **Lot dimensions** come first (leftmost): arbitrary shape for batching
 - **Geometric dimensions** come last (rightmost): determined by grade and dimension
 
 ```python
@@ -178,20 +178,20 @@ from morphis.elements import Vector, euclidean_metric
 
 g = euclidean_metric(3)
 
-# Single vector: collection=(), geometric=(3,)
+# Single vector: lot=(), geo=(3,)
 v = Vector([1, 0, 0], grade=1, metric=g)
 v.data.shape  # (3,)
-v.collection  # ()
+v.lot  # ()
 
-# 10 vectors: collection=(10,), geometric=(3,)
-u = Vector(random.randn(10, 3), grade=1, metric=g)
+# 10 vectors: lot=(10,), geo=(3,)
+u = Vector(random.randn(10, 3), grade=1, metric=g, lot=(10,))
 u.data.shape  # (10, 3)
-u.collection  # (10,)
+u.lot  # (10,)
 
-# 5x10 grid of bivectors: collection=(5, 10), geometric=(3, 3)
-b = Vector(random.randn(5, 10, 3, 3), grade=2, metric=g)
+# 5x10 grid of bivectors: lot=(5, 10), geo=(3, 3)
+b = Vector(random.randn(5, 10, 3, 3), grade=2, metric=g, lot=(5, 10))
 b.data.shape  # (5, 10, 3, 3)
-b.collection  # (5, 10)
+b.lot  # (5, 10)
 b.grade       # 2
 ```
 
@@ -208,16 +208,16 @@ The number of geometric dimensions equals the grade:
 
 ### Broadcasting
 
-Collection dimensions broadcast according to NumPy rules:
+Lot dimensions broadcast according to NumPy rules:
 
 ```python
 # Shape (10, 3) broadcasts with shape (3,)
-u_batch = Vector(random.randn(10, 3), grade=1, metric=g)
+u_batch = Vector(random.randn(10, 3), grade=1, metric=g, lot=(10,))
 v_single = Vector([1, 0, 0], grade=1, metric=g)
 
 # Wedge product: (10, 3) ^ (3,) -> (10, 3, 3)
 b = u_batch ^ v_single
-b.collection  # (10,)
+b.lot  # (10,)
 
 # Two batches: (5, 1, 3) ^ (1, 10, 3) -> (5, 10, 3, 3)
 ```
@@ -226,7 +226,7 @@ This enables batch operations without explicit loops, providing orders of magnit
 
 ## Einsum Patterns
 
-Morphis uses NumPy's `einsum` for efficient tensor contractions. The key insight: the ellipsis `...` absorbs all collection dimensions automatically.
+Morphis uses NumPy's `einsum` for efficient tensor contractions. The key insight: the ellipsis `...` absorbs all lot dimensions automatically.
 
 ### The Core Pattern
 
@@ -235,7 +235,7 @@ All operations follow the pattern:
 einsum("fixed_indices, ...geometric1, ...geometric2 -> ...result", ...)
 ```
 
-The `...` matches any number of leading collection dimensions, and the explicit indices handle the geometric contraction.
+The `...` matches any number of leading lot dimensions, and the explicit indices handle the geometric contraction.
 
 ### Example: Dot Product
 
@@ -292,7 +292,7 @@ The signature generation is in `morphis.operations.structure`.
 The einsum-based approach provides:
 
 1. **Manifest generality**: The code is the mathematical expression
-2. **Automatic broadcasting**: Collection dimensions handled uniformly
+2. **Automatic broadcasting**: Lot dimensions handled uniformly
 3. **Efficiency**: NumPy optimizes contraction order
 4. **Clarity**: Mathematical intent is visible in the signature
 

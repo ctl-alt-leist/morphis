@@ -252,13 +252,14 @@ class TestOperatorToMatrix:
         M, N = 5, 3
 
         # Operator: scalar currents (N,) -> bivector fields (M, d, d)
-        G_data = randn(d, d, M, N)
-        G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2  # Antisymmetrize
+        # Lot-first layout: (M, N, d, d)
+        G_data = randn(M, N, d, d)
+        G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2  # Antisymmetrize geo axes
 
         G = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=g,
         )
 
@@ -276,19 +277,19 @@ class TestOperatorToMatrix:
         d = 3
         M, N = 4, 2
 
-        # Create operator
-        G_data = randn(d, d, M, N)
-        G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2
+        # Create operator (lot-first layout)
+        G_data = randn(M, N, d, d)
+        G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2  # Antisymmetrize geo axes
 
         G = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=g,
         )
 
         # Input: scalar currents
-        I = Vector(randn(N), grade=0, metric=g, collection=(N,))
+        I = Vector(randn(N), grade=0, metric=g, lot=(N,))
 
         # Apply via operator
         B_op = G.apply(I)

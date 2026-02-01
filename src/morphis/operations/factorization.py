@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from numpy import abs as np_abs, concatenate, zeros
 
 from morphis.config import TOLERANCE
-from morphis.operations.norms import norm, norm_squared, normalize
+from morphis.operations.norms import form, norm, unit
 from morphis.operations.projections import interior_left, project
 
 
@@ -75,7 +75,7 @@ def factor(b: Vector, tol: float | None = None) -> Vector:
     raw_vectors = _extract_spanning_vectors(b, tol)
 
     # Check for zero vector
-    if norm_squared(raw_vectors).max() < tol:
+    if form(raw_vectors).max() < tol:
         return raw_vectors
 
     # Orthonormalize using Gram-Schmidt
@@ -141,7 +141,7 @@ def _extract_spanning_vectors(b: Vector, tol: float) -> Vector:
         result = interior_left(e_i, b)
 
         # Check if contraction is non-trivial
-        if norm_squared(result) > tol:
+        if form(result) > tol:
             v_test = e_i
             contracted = result
             break
@@ -224,9 +224,9 @@ def _gram_schmidt(vectors: Vector, tol: float) -> Vector:
             v = v - proj
 
         # Normalize
-        v_norm = norm_squared(v)
-        if v_norm > tol:
-            v = normalize(v)
+        v_form = form(v)
+        if v_form > tol:
+            v = unit(v)
             result_data[i] = v.data
         else:
             # Degenerate case - vector became zero

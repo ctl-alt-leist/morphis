@@ -7,7 +7,8 @@ This document defines the naming conventions used throughout the morphis codebas
 1. **"Vector" means grade-k element**, not specifically grade-1
 2. **"Blade" is a property** (`.is_blade`), not a class—a blade is a simple (factorizable) Vector
 3. **Consistent terminology**: "grade-k Vector" or "k-vector"
-4. **Follow established names** from CLAUDE.md: `collection`, `grade`, `dim`, `metric`
+4. **Follow established names** from CLAUDE.md: `lot`, `grade`, `dim`, `metric`
+5. **Lot-first layout** for Operators: `(*out_lot, *in_lot, *out_geo, *in_geo)`
 
 ---
 
@@ -58,11 +59,28 @@ This document defines the naming conventions used throughout the morphis codebas
 |----------|------|-------------|
 | `.grade` | int | The k in k-vector |
 | `.dim` | int | Dimension of vector space |
-| `.collection` | tuple[int, ...] | Batch dimensions |
+| `.lot` | tuple[int, ...] | Lot (batch) dimensions |
+| `.geo` | tuple[int, ...] | Geometric dimensions (depends on grade) |
 | `.data` | NDArray | Underlying array |
 | `.is_blade` | bool | True if factorizable as $\mathbf{v}_1 \wedge \cdots \wedge \mathbf{v}_k$ |
-| `.shape` | tuple | Full data shape |
+| `.shape` | tuple | Full data shape = `(*lot, *geo)` |
 | `.metric` | Metric | Associated metric |
+| `.at` | AtAccessor | Indexing over lot dimensions: `v.at[i]` |
+| `.on` | OnAccessor | Indexing over geo dimensions: `v.on[i, j]` |
+
+### Vector Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `.form()` | NDArray | Quadratic form (v · v) |
+| `.norm()` | NDArray | Norm over geometric dimensions |
+| `.unit()` | Vector | Unit vector (norm = 1) |
+| `.sum(axis)` | Vector | Sum over specified lot axis |
+| `.mean(axis)` | Vector | Mean over specified lot axis |
+| `.reverse()` / `.rev()` | Vector | Apply reverse operation |
+| `.inverse()` / `.inv()` | Vector | Multiplicative inverse |
+| `.conjugate()` / `.conj()` | Vector | Complex conjugation |
+| `.hodge()` | Vector | Hodge dual |
 
 ### MultiVector Properties
 
@@ -79,12 +97,25 @@ This document defines the naming conventions used throughout the morphis codebas
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `.input_spec` | VectorSpec | Input structure |
-| `.output_spec` | VectorSpec | Output structure |
+| `.input_spec` | VectorSpec | Input structure specification |
+| `.output_spec` | VectorSpec | Output structure specification |
+| `.input_lot` | tuple[int, ...] | Input lot dimensions |
+| `.output_lot` | tuple[int, ...] | Output lot dimensions |
+| `.input_shape` | tuple | Full input shape = `(*in_lot, *in_geo)` |
+| `.output_shape` | tuple | Full output shape = `(*out_lot, *out_geo)` |
+| `.shape` | tuple | Data shape = `(*out_lot, *in_lot, *out_geo, *in_geo)` |
 | `.is_outermorphism` | bool | True if grade-1 to grade-1 (extendable) |
 | `.vector_map` | NDArray | The d×d grade-1 map (if outermorphism) |
 | `.H` | Operator | Adjoint (conjugate transpose) |
 | `.T` | Operator | Transpose |
+
+**Operator Data Layout (lot-first):**
+```
+Operator.data.shape = (*out_lot, *in_lot, *out_geo, *in_geo)
+
+Example: scalar→bivector operator with M outputs, N inputs, dim=3
+  shape = (M, N, 3, 3)  # lot dims first, then geo dims
+```
 
 ---
 
@@ -127,12 +158,12 @@ This document defines the naming conventions used throughout the morphis codebas
 
 | Function | Description |
 |----------|-------------|
-| `norm_squared(u)` | Squared norm (can be negative) |
-| `norm(u)` | Norm (sqrt of absolute value) |
-| `normalize(u)` | Normalize to unit norm |
-| `conjugate(u)` | Complex conjugation |
-| `hermitian_norm(u)` | Hermitian norm (for phasors) |
-| `hermitian_norm_squared(u)` | Hermitian squared norm |
+| `form(v)` | Quadratic form (v · v), can be negative |
+| `norm(v)` | Norm (sqrt of absolute value of form) |
+| `unit(v)` | Unit vector (norm = 1) |
+| `conjugate(v)` | Complex conjugation |
+| `hermitian_form(v)` | Hermitian quadratic form (for phasors) |
+| `hermitian_norm(v)` | Hermitian norm (for phasors) |
 
 ### Exponentials (`exponential.py`)
 
@@ -171,6 +202,36 @@ This document defines the naming conventions used throughout the morphis codebas
 
 ---
 
+## Tensor Contraction
+
+Two APIs for contracting Morphis tensors:
+
+### Bracket Syntax (Preferred)
+
+```python
+# String indexing creates IndexedTensor
+s = u["a"] * v["a"]           # dot product
+outer = u["a"] * v["b"]       # outer product
+w = M["ab"] * v["b"]          # matrix-vector
+b = G["mnab"] * q["n"]        # batch contraction
+```
+
+### Einsum-Style Function
+
+```python
+from morphis.algebra import contract
+
+s = contract("a, a ->", u, v)           # dot product
+w = contract("ab, b -> a", M, v)        # matrix-vector
+result = contract("mn, np, pm ->", A, B, C)  # multi-way
+```
+
+The `__getitem__` method dispatches:
+- String key → `_index()` → IndexedTensor for contraction
+- Other keys → `_slice()` → array slicing
+
+---
+
 ## Variable Naming
 
 ### Type Conventions
@@ -189,10 +250,23 @@ This document defines the naming conventions used throughout the morphis codebas
 
 | Name | Meaning |
 |------|---------|
-| `collection` | Batch/collection dimensions (not `batch_dims`) |
+| `lot` | Lot (batch) dimensions tuple, e.g. `lot=(10, 5)` |
+| `geo` | Geometric dimensions tuple (derived from grade and dim) |
 | `grade` | Grade of k-vector (not `k`) |
 | `dim` | Dimension of vector space (not `d`) |
 | `metric` | Metric tensor (not `g` or `m`) |
+
+> **Note:** `collection` is deprecated in favor of `lot`. The old syntax `collection=1` still works but emits a deprecation warning. Use `lot=(size,)` instead.
+
+### Why "Lot"?
+
+A **lot** is a group of items considered or processed as a single unit. The term captures three key semantic elements:
+
+1. **Multiplicity** — more than one item
+2. **Unity** — treated as a single entity for some purpose
+3. **Homogeneity** — items in the lot share common structure
+
+This terminology comes from manufacturing and auction contexts (production lots, auction lots), where items are grouped for batch processing—exactly what lot dimensions represent in morphis.
 
 ---
 

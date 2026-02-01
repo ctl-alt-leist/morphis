@@ -2,9 +2,13 @@
 Linear Algebra Module
 
 Provides structured linear algebra utilities for geometric algebra operators.
-Includes vector specifications, einsum pattern generation, and solvers.
+Includes vector specifications, einsum pattern generation, solvers, and contraction.
 """
 
+from morphis.algebra.contraction import (
+    IndexedTensor as IndexedTensor,
+    contract as contract,
+)
 from morphis.algebra.patterns import (
     INPUT_COLLECTION as INPUT_COLLECTION,
     INPUT_GEOMETRIC as INPUT_GEOMETRIC,

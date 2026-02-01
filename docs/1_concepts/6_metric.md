@@ -54,71 +54,71 @@ $$
 (u_1 \wedge \cdots \wedge u_k) \cdot (v_1 \wedge \cdots \wedge v_k) = \det(u_i \cdot v_j)
 $$
 
-## Norms
+## Norms and Forms
 
-### Squared Norm (Bilinear)
+### Quadratic Form
 
-For a grade-$k$ k-vector $b$:
+For a grade-$k$ k-vector $b$, the **quadratic form** is the metric inner product with itself:
 
 $$
-|b|^2 = \frac{1}{k!} \, b^{m_1 \ldots m_k} b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+\text{form}(b) = \frac{1}{k!} \, b^{m_1 \ldots m_k} b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
 $$
 
 The factorial prevents overcounting due to antisymmetry.
 
 ```python
-from morphis.operations import norm_squared, norm, normalize
+from morphis.operations import form, norm, unit
 
-# Squared norm (can be negative in non-Euclidean signatures)
-ns = norm_squared(b)
+# Quadratic form (can be negative in non-Euclidean signatures)
+f = form(b)
 
-# Norm (absolute value of squared norm, then sqrt)
+# Norm: sqrt(|form(b)|), always non-negative
 n = norm(b)
 
-# Normalized vector
-b_unit = normalize(b)
+# Unit vector (norm = 1)
+b_unit = unit(b)
 # or
-b_unit = b.normalize()
+b_unit = b.unit()
 ```
 
-### Norm Properties
+### Form Properties
 
 For Euclidean metrics:
-- $|\mathbf{e}_m|^2 = g_{mm} = 1$
-- $|v|^2 = \sum_m (v^m)^2$ (Pythagorean)
+- $\text{form}(\mathbf{e}_m) = g_{mm} = 1$
+- $\text{form}(v) = \sum_m (v^m)^2$ (Pythagorean)
 
 For non-Euclidean metrics:
-- Squared norm can be negative (spacelike/timelike in Minkowski)
-- Null vectors have $|v|^2 = 0$
+- Form can be negative (spacelike/timelike in Minkowski)
+- Null vectors have $\text{form}(v) = 0$
 
-### Hermitian Norm (for Phasors)
+### Hermitian Form (for Phasors)
 
-For complex (phasor) k-vectors, the **Hermitian norm** uses complex conjugation:
+For complex (phasor) k-vectors, the **Hermitian form** uses complex conjugation:
 
 $$
-|b|^2_H = \frac{1}{k!} \, \overline{b^{m_1 \ldots m_k}} \, b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+\text{hermitian\_form}(b) = \frac{1}{k!} \, \overline{b^{m_1 \ldots m_k}} \, b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
 $$
 
 This always returns real values for real metrics.
 
 ```python
-from morphis.operations import hermitian_norm_squared, hermitian_norm
+from morphis.operations import hermitian_form, hermitian_norm
 
 # For phasor fields
-mag_squared = hermitian_norm_squared(b)
+mag_squared = hermitian_form(b)
 mag = hermitian_norm(b)
 ```
 
-### Normalization and Zero Vectors
+### Unit Vectors and Zero Vectors
 
 $$
-\hat{b} = \frac{b}{|b|}
+\hat{b} = \frac{b}{\|b\|}
 $$
 
-Zero k-vectors normalize to zero (handled safely):
+Zero k-vectors return zero when normalized (handled safely):
 
 $$
-\text{normalize}(0) = 0
+\text{unit}(0) = 0
 $$
 
 ## Bulk and Weight (PGA)

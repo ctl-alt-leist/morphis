@@ -19,6 +19,7 @@ from numpy import asarray, broadcast_shapes, zeros
 from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
+from morphis.elements.base import IndexableMixin
 from morphis.elements.metric import Metric
 from morphis.elements.tensor import Tensor
 
@@ -133,7 +134,7 @@ class OnAccessor:
 # =============================================================================
 
 
-class Vector(Tensor):
+class Vector(IndexableMixin, Tensor):
     """
     A Vector (k-vector) in geometric algebra.
 
@@ -261,12 +262,30 @@ class Vector(Tensor):
         return OnAccessor(self)
 
     # =========================================================================
-    # Indexing
+    # Indexing (implements IndexableMixin interface)
     # =========================================================================
 
-    def __getitem__(self, index) -> "Vector":
+    def _index(self, indices: str):
         """
-        Index into the Vector, returning a new Vector.
+        Create an IndexedTensor wrapper for einsum-style contraction.
+
+        Args:
+            indices: String of index labels, one per axis (lot + geo)
+
+        Returns:
+            IndexedTensor wrapping this Vector with the given indices
+
+        Examples:
+            v = Vector(data, grade=2)  # lot=(M, N), shape=(M, N, 3, 3)
+            v["mnab"]  # IndexedTensor with indices for all 4 axes
+        """
+        from morphis.algebra.contraction import IndexedTensor
+
+        return IndexedTensor(self, indices)
+
+    def _slice(self, index) -> "Vector":
+        """
+        Slice into the Vector, returning a new Vector.
 
         Indexing follows numpy semantics but always returns a Vector.
         The index is applied positionally to the full shape (lot + geo).
@@ -278,8 +297,7 @@ class Vector(Tensor):
             v = Vector(data, grade=2, metric=m)  # lot=(M, N), geo=(3, 3)
 
             v[0]           # lot=(N,), geo=(3, 3) - index first lot axis
-            v[:, :, 0]     # lot=(M, N), geo=(3,) - index first geo axis (grade 1)
-            v[0, :, 0, :]  # lot=(N,), geo=(3,) - index lot axis 0 and geo axis 0
+            v[:, :, 0]     # lot=(M, N), geo=(3,) - index first geo axis
 
         For explicit lot-only or geo-only indexing, use v.at[...] or v.on[...].
         """
@@ -629,31 +647,43 @@ class Vector(Tensor):
             lot=self.lot,
         )
 
-    def norm(self) -> NDArray:
+    def form(self) -> NDArray:
         """
-        Compute the norm, returning array with lot shape.
+        Compute the quadratic form: v · v.
+
+        This is the metric inner product of the vector with itself.
+        Can be negative in non-Euclidean metrics.
 
         Returns:
             NDArray with shape matching self.lot
+        """
+        from morphis.operations.norms import form
 
-        Example:
-            v = Vector(data, grade=1, metric=m)  # lot=(M, N)
-            magnitudes = v.norm()  # shape (M, N)
+        return form(self)
+
+    def norm(self) -> NDArray:
+        """
+        Compute the norm: sqrt(|form(v)|).
+
+        Always returns non-negative values.
+
+        Returns:
+            NDArray with shape matching self.lot
         """
         from morphis.operations.norms import norm
 
         return norm(self)
 
-    def normalize(self) -> Vector:
+    def unit(self) -> Vector:
         """
-        Return a normalized copy (unit norm).
+        Return a unit vector (norm = 1).
 
         For bivectors, this gives the unit bivector needed for rotor construction.
         Handles zero Vectors safely by returning zero.
         """
-        from morphis.operations.norms import normalize
+        from morphis.operations.norms import unit
 
-        return normalize(self)
+        return unit(self)
 
     def conjugate(self) -> Vector:
         """

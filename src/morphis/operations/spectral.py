@@ -122,7 +122,7 @@ def bivector_eigendecomposition(b: Vector, tol: float | None = None) -> tuple[ND
         >>> # planes[0] ~ e1^e2, planes[1] ~ e3^e4
     """
     from morphis.elements.vector import Vector
-    from morphis.operations.norms import norm, normalize
+    from morphis.operations.norms import norm, unit
     from morphis.operations.products import wedge
 
     if tol is None:
@@ -201,7 +201,7 @@ def bivector_eigendecomposition(b: Vector, tol: float | None = None) -> tuple[ND
                     # Normalize the plane bivector
                     plane_norm = norm(plane)
                     if plane_norm > tol:
-                        plane = normalize(plane)
+                        plane = unit(plane)
                     planes_list.append(plane)
                     break
             else:
@@ -244,7 +244,7 @@ def bivector_eigendecomposition(b: Vector, tol: float | None = None) -> tuple[ND
 
                     plane_norm = norm(plane)
                     if plane_norm > tol:
-                        plane = normalize(plane)
+                        plane = unit(plane)
                     planes_list.append(plane)
                     break
             else:

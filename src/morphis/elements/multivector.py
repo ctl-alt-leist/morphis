@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from numpy import broadcast_shapes
+from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
 from morphis.config import TOLERANCE
@@ -481,6 +482,49 @@ class MultiVector(CompositeElement):
             raise NotImplementedError(
                 f"Power {exponent} not implemented. Only mv**(-1) for multiplicative inverse is supported."
             )
+
+    # =========================================================================
+    # Norms
+    # =========================================================================
+
+    def form(self) -> NDArray:
+        """
+        Compute the quadratic form: scalar(M * ~M).
+
+        This is the Clifford norm squared. For rotors, form(R) = 1.
+        Can be negative in non-Euclidean metrics.
+
+        Returns:
+            NDArray with shape matching self.lot
+        """
+        from morphis.operations.norms import form
+
+        return form(self)
+
+    def norm(self) -> NDArray:
+        """
+        Compute the norm: sqrt(|form(M)|).
+
+        Always returns non-negative values.
+
+        Returns:
+            NDArray with shape matching self.lot
+        """
+        from morphis.operations.norms import norm
+
+        return norm(self)
+
+    def unit(self) -> MultiVector:
+        """
+        Return a unit multivector (M * ~M = 1).
+
+        Normalizes the multivector such that the Clifford norm is 1.
+        For rotors, this enforces the versor condition.
+        Handles zero multivectors safely by returning zero.
+        """
+        from morphis.operations.norms import unit
+
+        return unit(self)
 
     # =========================================================================
     # Utility Methods

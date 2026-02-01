@@ -19,10 +19,10 @@ from morphis.operations import (
     left_complement,
     meet,
     norm,
-    normalize,
     project,
     reject,
     right_complement,
+    unit,
     wedge,
 )
 from morphis.transforms import (
@@ -252,21 +252,21 @@ def demo_array_operations() -> None:
 
     g = metric(3)
 
-    subsection("Normalize array of vectors")
+    subsection("Unit vectors from array")
     v_data = [
         [3.0, 0.0, 0.0],
         [0.0, 4.0, 0.0],
         [1.0, 1.0, 1.0],
     ]
-    v = Vector(v_data, grade=1, metric=g, collection=(3,))
-    print("v (unnormalized):")
+    v = Vector(v_data, grade=1, metric=g, lot=(3,))
+    print("v (not unit):")
     print(v)
 
-    v_norm = normalize(v)
+    v_unit = unit(v)
     print()
-    print("normalize(v):")
-    print(v_norm)
-    print(f"check |v| = {norm(v_norm)}")
+    print("unit(v):")
+    print(v_unit)
+    print(f"check |v| = {norm(v_unit)}")
 
     subsection("Project vectors onto a direction")
     axis = Vector([1.0, 1.0, 0.0], grade=1, metric=g)

@@ -25,7 +25,12 @@ from morphis.elements.metric import (
     pga_metric as pga_metric,
 )
 from morphis.elements.multivector import MultiVector
-from morphis.elements.protocols import Graded as Graded, Spanning as Spanning, Transformable as Transformable
+from morphis.elements.protocols import (
+    Graded as Graded,
+    Indexable as Indexable,
+    Spanning as Spanning,
+    Transformable as Transformable,
+)
 from morphis.elements.tensor import Tensor
 from morphis.elements.vector import (
     Vector,

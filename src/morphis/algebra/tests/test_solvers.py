@@ -15,13 +15,14 @@ class TestLeastSquares:
     def test_lstsq_exact_recovery_overdetermined(self):
         """Test exact recovery for overdetermined system (M > N)."""
         M, N, d = 20, 5, 3  # More equations than unknowns
-        G_data = np.random.randn(d, d, M, N)
-        G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2
+        # Lot-first layout: (M, N, d, d) = (*out_lot, *in_lot, *out_geo, *in_geo)
+        G_data = np.random.randn(M, N, d, d)
+        G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2  # Antisymmetrize geo
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -38,13 +39,13 @@ class TestLeastSquares:
     def test_lstsq_underdetermined(self):
         """Test minimum norm solution for underdetermined system (M < N)."""
         M, N, d = 5, 20, 3  # Fewer equations than unknowns
-        G_data = np.random.randn(d, d, M, N)
-        G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2
+        G_data = np.random.randn(M, N, d, d)
+        G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -69,14 +70,13 @@ class TestLeastSquares:
         V = np.random.randn(N, N)
         V, _ = np.linalg.qr(V)
         G_mat = U @ np.diag(s) @ V.T
-        G_data = G_mat.reshape(M, d, d, N)
-        # Reorder to (*out_geo, *out_coll, *in_coll, *in_geo)
-        G_data = G_data.transpose(1, 2, 0, 3)
+        # Reshape to lot-first: (M, N, d, d)
+        G_data = G_mat.reshape(M, d, d, N).transpose(0, 3, 1, 2)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -97,12 +97,12 @@ class TestLeastSquares:
     def test_lstsq_complex(self):
         """Test least squares with complex-valued operator."""
         M, N, d = 20, 5, 3
-        G_data = np.random.randn(d, d, M, N) + 1j * np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d) + 1j * np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -124,12 +124,12 @@ class TestSVD:
     def test_svd_reconstruction(self):
         """Test that U * diag(S) * Vt reconstructs original operator."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -151,12 +151,12 @@ class TestSVD:
     def test_svd_singular_values_sorted(self):
         """Test that singular values are sorted in descending order."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -168,12 +168,12 @@ class TestSVD:
     def test_svd_singular_values_positive(self):
         """Test that singular values are non-negative."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -184,12 +184,12 @@ class TestSVD:
     def test_svd_u_vt_specs(self):
         """Test that U and Vt have correct specs."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -208,12 +208,12 @@ class TestSVD:
     def test_svd_rank(self):
         """Test that SVD returns correct rank."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -230,12 +230,12 @@ class TestPseudoinverse:
     def test_pinv_identity_property(self):
         """Test that L * L.pinv() * L ≈ L."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -252,12 +252,12 @@ class TestPseudoinverse:
 
     def test_pinv_swaps_specs(self):
         """Test that pseudoinverse swaps input/output specs."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -272,12 +272,12 @@ class TestPseudoinverse:
 
         # Create operator with known singular values
         # Some very small (should be filtered with high r_cond)
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -293,12 +293,12 @@ class TestPseudoinverse:
     def test_solve_pinv_method(self):
         """Test solve with method='pinv'."""
         M, N, d = 20, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -315,12 +315,12 @@ class TestSolveEdgeCases:
 
     def test_solve_wrong_method_raises(self):
         """Test that unknown method raises ValueError."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -331,12 +331,12 @@ class TestSolveEdgeCases:
 
     def test_solve_wrong_grade_raises(self):
         """Test that wrong target grade raises ValueError."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 

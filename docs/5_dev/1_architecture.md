@@ -44,16 +44,16 @@ Create modules when duplication emerges, not preemptively. Let actual usage patt
 ## Class Hierarchy
 
 ```
-Element (base: metric, collection)
+Element (base: metric, lot)
 ├── Tensor (data: NDArray, contravariant: int, covariant: int)
 │   └── Vector (antisymmetric k-vector, grade = contravariant)
 ├── GradedElement (data: NDArray, grade: int)
-│   └── Frame (ordered collection of grade-1 vectors)
+│   └── Frame (ordered set of grade-1 vectors)
 └── CompositeElement (data: dict[int, Vector])
     └── MultiVector
 ```
 
-**Storage convention**: `(*collection, *geometric)` where geometric = `(dim,) * grade`
+**Storage convention**: `(*lot, *geo)` where geo = `(dim,) * grade`
 
 ## Mathematical Context
 
@@ -88,10 +88,10 @@ class Tensor(Element):
     contravariant: int  # number of "up" indices
     covariant: int      # number of "down" indices
     metric: Metric
-    collection: tuple[int, ...]
+    lot: tuple[int, ...]
 ```
 
-Storage: `(*collection, *contravariant_dims, *covariant_dims)`
+Storage: `(*lot, *contravariant_dims, *covariant_dims)`
 
 ### Vector (k-vector)
 
@@ -104,7 +104,7 @@ class Vector(Tensor):
 - Enforces antisymmetry implicitly through GA operations
 - `.is_blade` property checks if factorizable as v₁ ∧ v₂ ∧ ... ∧ vₖ
 
-Storage: `(*collection, dim, dim, ..., dim)` with `grade` copies of `dim`
+Storage: `(*lot, dim, dim, ..., dim)` with `grade` copies of `dim`
 
 ### MultiVector
 
@@ -120,12 +120,12 @@ class MultiVector(CompositeElement):
 
 ```python
 class Frame(GradedElement):
-    data: NDArray  # shape: (*collection, span, dim)
+    data: NDArray  # shape: (*lot, span, dim)
     grade: int = 1  # always grade-1 vectors
     span: int  # number of vectors
 ```
 
-- Efficient storage for ordered collections of grade-1 vectors
+- Efficient storage for ordered sets of grade-1 vectors
 - `frame[i]` returns a grade-1 Vector
 - Not in Tensor hierarchy (different storage pattern)
 
@@ -153,7 +153,7 @@ class Frame(GradedElement):
 | `products.py` | `geometric()`, `wedge()`, `antiwedge()`, `reverse()`, `inverse()` |
 | `projections.py` | `interior_left()`, `interior_right()`, `project()`, `reject()`, `dot()` |
 | `duality.py` | `hodge_dual()`, `right_complement()`, `left_complement()` |
-| `norms.py` | `norm()`, `normalize()`, `conjugate()` |
+| `norms.py` | `form()`, `norm()`, `unit()`, `conjugate()` |
 | `exponential.py` | `exp_vector()`, `log_versor()`, `slerp()` |
 | `factorization.py` | `factor()`, `spanning_vectors()` |
 | `outermorphism.py` | `apply_exterior_power()`, `apply_outermorphism()` |
@@ -207,8 +207,8 @@ The `Operator` class lives in `operations/` rather than `elements/` because it r
 ### 4. Sparse MultiVector
 `MultiVector` uses a dictionary `{grade: Vector}` rather than a dense array over all grades. This is efficient for typical use cases (rotors have grades {0, 2}, motors have grades {0, 2}).
 
-### 5. Collection dimensions
-All objects support leading "collection" dimensions for batch processing. Operations use `...` in einsum patterns and `[..., idx]` for slicing to handle arbitrary batch shapes.
+### 5. Lot dimensions
+All objects support leading "lot" dimensions for batch processing. Operations use `...` in einsum patterns and `[..., idx]` for slicing to handle arbitrary batch shapes. The storage convention is `(*lot, *geo)` for all elements.
 
 ### 6. Metric as parameter
 Metric-dependent operations take an optional metric parameter rather than relying on global state:
@@ -236,10 +236,13 @@ The four core elements (Vector, Frame, MultiVector, Operator) have well-defined 
 ## Naming Conventions
 
 ### Variable Names
-- `collection` — not `collection_dims`, `coll_dims`, `batch_dims`
+- `lot` — not `collection`, `collection_dims`, `batch_dims`
+- `geo` — not `geometric`, `geometric_shape`
 - `grade` — not `k`, `blade_grade`
 - `dim` — not `d`, `dimension`, `ndim`
 - `metric` — not `g`, `m`
+
+> **Note:** `collection` is deprecated in favor of `lot`. The old parameter still works but emits a deprecation warning.
 
 ### Type Hints
 - Vector variables: lowercase (`u, v, w, b`)

@@ -13,6 +13,7 @@ from numpy.typing import NDArray
 
 from morphis.algebra.patterns import adjoint_signature, forward_signature
 from morphis.algebra.specs import VectorSpec
+from morphis.elements.base import IndexableMixin
 from morphis.elements.metric import Metric
 from morphis.elements.vector import Vector
 
@@ -21,44 +22,44 @@ if TYPE_CHECKING:
     from morphis.elements.frame import Frame
 
 
-class Operator:
+class Operator(IndexableMixin):
     """
     Linear map between geometric algebra spaces.
 
-    Represents L: V -> W where V and W are spaces of Vectors with collection
+    Represents L: V -> W where V and W are spaces of Vectors with lot (collection)
     dimensions. Uses structured einsum operations to maintain geometric index
     structure throughout all operations.
 
-    Storage convention for data:
-        (*output_geometric, *output_collection, *input_collection, *input_geometric)
+    Storage convention for data (lot-first, matching Vector layout):
+        (*out_lot, *in_lot, *out_geo, *in_geo)
 
-    This matches the index ordering in G^{WX...}_{KL...np...ab...} where:
-        - WX... are output geometric indices
-        - KL... are output collection indices
-        - np... are input collection indices
-        - ab... are input geometric indices
+    This matches the index ordering in G^{ab}_{mn} where:
+        - m is output lot index (e.g., sensor index)
+        - n is input lot index (e.g., source index)
+        - a, b are output geometric indices
+        - (no input geometric indices for scalar input)
 
     Attributes:
         data: The tensor representing the linear map
-        input_spec: Specification of input vector structure
-        output_spec: Specification of output vector structure
-        metric: Geometric context for the vectors
+        input_spec: Specification of input Vector structure
+        output_spec: Specification of output Vector structure
+        metric: Geometric context for the Vectors
 
     Examples:
         >>> from morphis.elements import euclidean_metric
         >>> from morphis.algebra import VectorSpec
         >>> import numpy as np
         >>>
-        >>> # Create transfer operator G^{WX}_{Kn} for B = G * I
+        >>> # Create transfer operator G^{ab}_{mn} for B = G * I
         >>> # Maps scalar currents (N,) to bivector fields (M, 3, 3)
         >>> M, N, d = 10, 5, 3
-        >>> G_data = np.random.randn(d, d, M, N)
-        >>> G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2  # Antisymmetrize
+        >>> G_data = np.random.randn(M, N, d, d)  # lot-first: (out_lot, in_lot, out_geo)
+        >>> G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2  # Antisymmetrize geo
         >>>
         >>> G = Operator(
         ...     data=G_data,
-        ...     input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        ...     output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        ...     input_spec=VectorSpec(grade=0, lot=(N,), dim=d),
+        ...     output_spec=VectorSpec(grade=2, lot=(M,), dim=d),
         ...     metric=euclidean_metric(d),
         ... )
         >>>
@@ -81,9 +82,9 @@ class Operator:
 
         Args:
             data: Tensor representing the linear map with shape
-                  (*output_geometric, *output_collection, *input_collection, *input_geometric)
-            input_spec: Structure of input vector space
-            output_spec: Structure of output vector space
+                  (*out_lot, *in_lot, *out_geo, *in_geo)
+            input_spec: Structure of input Vector space
+            output_spec: Structure of output Vector space
             metric: Geometric context
 
         Raises:
@@ -103,15 +104,16 @@ class Operator:
 
     def _validate(self) -> None:
         """Validate that data shape matches specs."""
+        # Layout: (*out_lot, *in_lot, *out_geo, *in_geo)
         expected_ndim = (
-            self.output_spec.grade + self.output_spec.collection + self.input_spec.collection + self.input_spec.grade
+            self.output_spec.collection + self.input_spec.collection + self.output_spec.grade + self.input_spec.grade
         )
 
         if self.data.ndim != expected_ndim:
             raise ValueError(
                 f"Data has {self.data.ndim} dimensions, but specs require {expected_ndim}: "
-                f"output_grade={self.output_spec.grade} + output_coll={self.output_spec.collection} + "
-                f"input_coll={self.input_spec.collection} + input_grade={self.input_spec.grade}"
+                f"out_lot={self.output_spec.collection} + in_lot={self.input_spec.collection} + "
+                f"out_geo={self.output_spec.grade} + in_geo={self.input_spec.grade}"
             )
 
         # Validate geometric dimensions match dim
@@ -119,18 +121,19 @@ class Operator:
         if self.input_spec.dim != dim:
             raise ValueError(f"Input dim {self.input_spec.dim} doesn't match output dim {dim}")
 
-        # Check output geometric axes
+        # Check output geometric axes (after lot dims)
+        geo_start = self.output_spec.collection + self.input_spec.collection
         for k in range(self.output_spec.grade):
-            if self.data.shape[k] != dim:
-                raise ValueError(f"Output geometric axis {k} has size {self.data.shape[k]}, expected {dim}")
+            axis = geo_start + k
+            if self.data.shape[axis] != dim:
+                raise ValueError(f"Output geometric axis {axis} has size {self.data.shape[axis]}, expected {dim}")
 
-        # Check input geometric axes
-        offset = self.output_spec.grade + self.output_spec.collection + self.input_spec.collection
+        # Check input geometric axes (at end)
+        in_geo_start = geo_start + self.output_spec.grade
         for k in range(self.input_spec.grade):
-            if self.data.shape[offset + k] != dim:
-                raise ValueError(
-                    f"Input geometric axis {offset + k} has size {self.data.shape[offset + k]}, expected {dim}"
-                )
+            axis = in_geo_start + k
+            if self.data.shape[axis] != dim:
+                raise ValueError(f"Input geometric axis {axis} has size {self.data.shape[axis]}, expected {dim}")
 
     # =========================================================================
     # Properties
@@ -142,28 +145,38 @@ class Operator:
         return self.data.shape
 
     @property
-    def input_collection(self) -> tuple[int, ...]:
-        """Shape of input collection dimensions."""
-        start = self.output_spec.grade + self.output_spec.collection
+    def output_lot(self) -> tuple[int, ...]:
+        """Shape of output lot dimensions."""
+        end = self.output_spec.collection
+        return self.data.shape[:end]
+
+    @property
+    def input_lot(self) -> tuple[int, ...]:
+        """Shape of input lot dimensions."""
+        start = self.output_spec.collection
         end = start + self.input_spec.collection
         return self.data.shape[start:end]
 
+    # Backwards compatibility aliases
+    @property
+    def input_collection(self) -> tuple[int, ...]:
+        """Alias for input_lot (backwards compatibility)."""
+        return self.input_lot
+
     @property
     def output_collection(self) -> tuple[int, ...]:
-        """Shape of output collection dimensions."""
-        start = self.output_spec.grade
-        end = start + self.output_spec.collection
-        return self.data.shape[start:end]
+        """Alias for output_lot (backwards compatibility)."""
+        return self.output_lot
 
     @property
     def input_shape(self) -> tuple[int, ...]:
-        """Expected shape of input vector data."""
-        return self.input_collection + self.input_spec.geometric_shape
+        """Expected shape of input Vector data."""
+        return self.input_lot + self.input_spec.geo
 
     @property
     def output_shape(self) -> tuple[int, ...]:
-        """Expected shape of output vector data."""
-        return self.output_collection + self.output_spec.geometric_shape
+        """Expected shape of output Vector data."""
+        return self.output_lot + self.output_spec.geo
 
     @property
     def dim(self) -> int:
@@ -215,6 +228,40 @@ class Operator:
 
         # For grade-1 → grade-1 without collections, shape is (d, d)
         return self.data
+
+    # =========================================================================
+    # Indexing (implements IndexableMixin interface)
+    # =========================================================================
+
+    def _index(self, indices: str):
+        """
+        Create an IndexedTensor wrapper for einsum-style contraction.
+
+        Args:
+            indices: String of index labels, one per axis of the operator data
+
+        Returns:
+            IndexedTensor wrapping this Operator with the given indices
+
+        Examples:
+            G = Operator(...)  # shape (M, N, 3, 3) for lot-first layout
+            G["mnab"]          # IndexedTensor with indices for all 4 axes
+        """
+        from morphis.algebra.contraction import IndexedTensor
+
+        return IndexedTensor(self, indices)
+
+    def _slice(self, key):
+        """
+        Slice into the Operator's data array.
+
+        Args:
+            key: Standard numpy indexing key (int, slice, tuple, etc.)
+
+        Returns:
+            Sliced data array (not an Operator - use for inspection)
+        """
+        return self.data[key]
 
     # =========================================================================
     # Forward Application
@@ -443,17 +490,18 @@ class Operator:
 
     def _transposed_data(self) -> NDArray:
         """Compute transposed data (shared by adjoint and transpose)."""
-        # Original: (*out_geo, *out_coll, *in_coll, *in_geo)
-        # Transposed: (*in_geo, *in_coll, *out_coll, *out_geo)
-        out_geo_axes = list(range(self.output_spec.grade))
-        out_coll_start = self.output_spec.grade
-        out_coll_axes = list(range(out_coll_start, out_coll_start + self.output_spec.collection))
-        in_coll_start = out_coll_start + self.output_spec.collection
-        in_coll_axes = list(range(in_coll_start, in_coll_start + self.input_spec.collection))
-        in_geo_start = in_coll_start + self.input_spec.collection
+        # Lot-first layout:
+        # Original: (*out_lot, *in_lot, *out_geo, *in_geo)
+        # Transposed: (*in_lot, *out_lot, *in_geo, *out_geo)
+        out_lot_axes = list(range(self.output_spec.collection))
+        in_lot_start = self.output_spec.collection
+        in_lot_axes = list(range(in_lot_start, in_lot_start + self.input_spec.collection))
+        out_geo_start = in_lot_start + self.input_spec.collection
+        out_geo_axes = list(range(out_geo_start, out_geo_start + self.output_spec.grade))
+        in_geo_start = out_geo_start + self.output_spec.grade
         in_geo_axes = list(range(in_geo_start, in_geo_start + self.input_spec.grade))
 
-        perm = in_geo_axes + in_coll_axes + out_coll_axes + out_geo_axes
+        perm = in_lot_axes + out_lot_axes + in_geo_axes + out_geo_axes
         return self.data.transpose(perm)
 
     # =========================================================================

@@ -64,7 +64,7 @@ g = euclidean_metric(3)
 e1, e2, e3 = basis_vectors(g)
 
 # Rotation by 90 degrees in the xy-plane
-b = (e1 ^ e2).normalize()
+b = (e1 ^ e2).unit()
 R = rotor(b, pi/2)
 
 # Apply
@@ -104,7 +104,7 @@ e1, e2, e3, e4 = basis_vectors(g)
 # Rotation in two planes simultaneously
 b1 = e1 ^ e2
 b2 = e3 ^ e4
-R = rotor(b1.normalize(), theta1) * rotor(b2.normalize(), theta2)
+R = rotor(b1.unit(), theta1) * rotor(b2.unit(), theta2)
 ```
 
 ## Translators (PGA)

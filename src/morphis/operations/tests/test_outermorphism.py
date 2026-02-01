@@ -68,8 +68,8 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -92,8 +92,8 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -121,8 +121,8 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -152,8 +152,8 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -172,8 +172,8 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -202,8 +202,8 @@ class TestApplyExteriorPower:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -222,8 +222,8 @@ class TestApplyExteriorPower:
         d = 3
         A = Operator(
             data=np.eye(d),
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -235,10 +235,11 @@ class TestApplyExteriorPower:
     def test_exterior_power_non_outermorphism_raises(self):
         """Test that non-outermorphism operator raises ValueError."""
         d = 3
+        # Lot-first layout: (out_lot, in_lot, out_geo, in_geo) = (5, 3, d, d)
         L = Operator(
-            data=np.random.randn(d, d, 5, 3),
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            data=np.random.randn(5, 3, d, d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -262,8 +263,8 @@ class TestApplyOutermorphism:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -300,8 +301,8 @@ class TestApplyOutermorphism:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -325,10 +326,11 @@ class TestApplyOutermorphism:
     def test_outermorphism_non_outermorphism_raises(self):
         """Test that non-outermorphism operator raises TypeError."""
         d = 3
+        # Lot-first layout: (5, 3, d, d)
         L = Operator(
-            data=np.random.randn(d, d, 5, 3),
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            data=np.random.randn(5, 3, d, d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -347,8 +349,8 @@ class TestOperatorOutermorphismIntegration:
         d = 3
         A = Operator(
             data=np.eye(d),
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
         assert A.is_outermorphism is True
@@ -356,10 +358,11 @@ class TestOperatorOutermorphismIntegration:
     def test_is_outermorphism_false(self):
         """Test is_outermorphism returns False for other grades."""
         d = 3
+        # Lot-first layout: (5, 3, d, d)
         L = Operator(
-            data=np.random.randn(d, d, 5, 3),
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            data=np.random.randn(5, 3, d, d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
         assert L.is_outermorphism is False
@@ -371,8 +374,8 @@ class TestOperatorOutermorphismIntegration:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -381,10 +384,11 @@ class TestOperatorOutermorphismIntegration:
     def test_vector_map_non_outermorphism_raises(self):
         """Test vector_map raises for non-outermorphism."""
         d = 3
+        # Lot-first layout: (5, 3, d, d)
         L = Operator(
-            data=np.random.randn(d, d, 5, 3),
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            data=np.random.randn(5, 3, d, d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -400,8 +404,8 @@ class TestOperatorOutermorphismIntegration:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -425,8 +429,8 @@ class TestOperatorOutermorphismIntegration:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -444,10 +448,11 @@ class TestOperatorOutermorphismIntegration:
     def test_mul_multivector_non_outermorphism_raises(self):
         """Test L * M raises for non-outermorphism operator."""
         d = 3
+        # Lot-first layout: (5, 3, d, d)
         L = Operator(
-            data=np.random.randn(d, d, 5, 3),
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            data=np.random.randn(5, 3, d, d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -471,15 +476,15 @@ class TestOutermorphismComposition:
 
         A = Operator(
             data=A_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 
         B_op = Operator(
             data=B_data,
-            input_spec=VectorSpec(grade=1, collection=0, dim=d),
-            output_spec=VectorSpec(grade=1, collection=0, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(), dim=d),
             metric=euclidean_metric(d),
         )
 

@@ -571,10 +571,10 @@ class TestVectorNorm:
         assert result.shape == (2,)
         assert_array_equal(result, array([5.0, 1.0]))
 
-    def test_normalize_single_vector(self):
+    def test_unit_single_vector(self):
         g = euclidean_metric(3)
         v = Vector(array([3.0, 4.0, 0.0]), grade=1, metric=g)
-        result = v.normalize()
+        result = v.unit()
         assert isinstance(result, Vector)
         from numpy import allclose
 

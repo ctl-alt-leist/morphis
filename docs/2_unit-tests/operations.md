@@ -227,7 +227,7 @@ satisfies $|\hat{\mathbf{B}}| = 1$.
 ### Zero and Degenerate Cases
 
 $$
-|\mathbf{0}| = 0, \quad \text{normalize}(\mathbf{0}) = \mathbf{0}
+|\mathbf{0}| = 0, \quad \text{unit}(\mathbf{0}) = \mathbf{0}
 $$
 
 PGA ideal basis:

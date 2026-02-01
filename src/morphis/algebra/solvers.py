@@ -30,7 +30,7 @@ def _to_matrix(op: "Operator") -> NDArray:
     """
     Flatten operator to matrix form for linear algebra operations.
 
-    Reshapes from (*out_geo, *out_coll, *in_coll, *in_geo) to (out_flat, in_flat).
+    Reshapes from (*out_lot, *in_lot, *out_geo, *in_geo) to (out_flat, in_flat).
 
     Args:
         op: Operator to flatten
@@ -41,22 +41,20 @@ def _to_matrix(op: "Operator") -> NDArray:
     out_flat = int(prod(op.output_shape))
     in_flat = int(prod(op.input_shape))
 
-    # We need to reorder axes to group output together and input together
-    # Current: (*out_geo, *out_coll, *in_coll, *in_geo)
-    # Target for reshape: (*out_coll, *out_geo, *in_coll, *in_geo)
-    # But we want blade order: (*coll, *geo), so:
-    # Target: (*out_coll, *out_geo, *in_coll, *in_geo)
+    # Current lot-first layout: (*out_lot, *in_lot, *out_geo, *in_geo)
+    # Target for reshape: (*out_lot, *out_geo, *in_lot, *in_geo)
+    # This groups output dims together (lot, geo) and input dims together (lot, geo)
 
-    out_geo_axes = list(range(op.output_spec.grade))
-    out_coll_start = op.output_spec.grade
-    out_coll_axes = list(range(out_coll_start, out_coll_start + op.output_spec.collection))
-    in_coll_start = out_coll_start + op.output_spec.collection
-    in_coll_axes = list(range(in_coll_start, in_coll_start + op.input_spec.collection))
-    in_geo_start = in_coll_start + op.input_spec.collection
+    out_lot_axes = list(range(op.output_spec.collection))
+    in_lot_start = op.output_spec.collection
+    in_lot_axes = list(range(in_lot_start, in_lot_start + op.input_spec.collection))
+    out_geo_start = in_lot_start + op.input_spec.collection
+    out_geo_axes = list(range(out_geo_start, out_geo_start + op.output_spec.grade))
+    in_geo_start = out_geo_start + op.output_spec.grade
     in_geo_axes = list(range(in_geo_start, in_geo_start + op.input_spec.grade))
 
-    # Reorder to: (*out_coll, *out_geo, *in_coll, *in_geo)
-    perm = out_coll_axes + out_geo_axes + in_coll_axes + in_geo_axes
+    # Reorder to: (*out_lot, *out_geo, *in_lot, *in_geo)
+    perm = out_lot_axes + out_geo_axes + in_lot_axes + in_geo_axes
     reordered = op.data.transpose(perm)
 
     return reordered.reshape(out_flat, in_flat)
@@ -86,22 +84,22 @@ def _from_matrix(
     """
     from morphis.operations.operator import Operator
 
-    # Reshape from (out_flat, in_flat) to (*out_coll, *out_geo, *in_coll, *in_geo)
+    # Reshape from (out_flat, in_flat) to (*out_lot, *out_geo, *in_lot, *in_geo)
     intermediate_shape = output_collection + output_spec.geometric_shape + input_collection + input_spec.geometric_shape
     tensor = matrix.reshape(intermediate_shape)
 
-    # Reorder from (*out_coll, *out_geo, *in_coll, *in_geo)
-    # to (*out_geo, *out_coll, *in_coll, *in_geo)
-    out_coll_axes = list(range(output_spec.collection))
+    # Reorder from (*out_lot, *out_geo, *in_lot, *in_geo)
+    # to (*out_lot, *in_lot, *out_geo, *in_geo)
+    out_lot_axes = list(range(output_spec.collection))
     out_geo_start = output_spec.collection
     out_geo_axes = list(range(out_geo_start, out_geo_start + output_spec.grade))
-    in_coll_start = out_geo_start + output_spec.grade
-    in_coll_axes = list(range(in_coll_start, in_coll_start + input_spec.collection))
-    in_geo_start = in_coll_start + input_spec.collection
+    in_lot_start = out_geo_start + output_spec.grade
+    in_lot_axes = list(range(in_lot_start, in_lot_start + input_spec.collection))
+    in_geo_start = in_lot_start + input_spec.collection
     in_geo_axes = list(range(in_geo_start, in_geo_start + input_spec.grade))
 
-    # Target order: (*out_geo, *out_coll, *in_coll, *in_geo)
-    perm = out_geo_axes + out_coll_axes + in_coll_axes + in_geo_axes
+    # Target order: (*out_lot, *in_lot, *out_geo, *in_geo)
+    perm = out_lot_axes + in_lot_axes + out_geo_axes + in_geo_axes
     data = tensor.transpose(perm)
 
     return Operator(
@@ -266,24 +264,25 @@ def structured_svd(
     dim = op.output_spec.dim
 
     # U maps from reduced space (r,) to output space
-    u_input_spec = VectorSpec(grade=0, collection=1, dim=dim)
+    u_input_spec = VectorSpec(grade=0, lot=(1,), dim=dim)
 
     # Vt maps from input space to reduced space (r,)
-    vt_output_spec = VectorSpec(grade=0, collection=1, dim=dim)
+    vt_output_spec = VectorSpec(grade=0, lot=(1,), dim=dim)
 
     # Wrap U as Operator
     # U_mat has shape (out_flat, r)
-    # Need to reshape to (*out_coll, *out_geo, r)
-    # Then reorder to (*out_geo, *out_coll, r)
+    # Reshape to (*out_lot, *out_geo, r) then reorder to lot-first: (*out_lot, r, *out_geo)
+    # out_flat = prod(out_lot) * prod(out_geo), input is (r,) which is just lot dims
     U_intermediate = U_mat.reshape(op.output_collection + op.output_spec.geometric_shape + (r,))
 
-    out_coll_axes = list(range(op.output_spec.collection))
+    out_lot_axes = list(range(op.output_spec.collection))
     out_geo_start = op.output_spec.collection
     out_geo_axes = list(range(out_geo_start, out_geo_start + op.output_spec.grade))
     r_axis = [out_geo_start + op.output_spec.grade]
 
-    # Target: (*out_geo, *out_coll, r)
-    U_perm = out_geo_axes + out_coll_axes + r_axis
+    # Target lot-first: (*out_lot, r, *out_geo, no_in_geo)
+    # Since in_spec is grade=0, no in_geo axes
+    U_perm = out_lot_axes + r_axis + out_geo_axes
     U_data = U_intermediate.transpose(U_perm)
 
     U_op = Operator(
@@ -295,13 +294,13 @@ def structured_svd(
 
     # Wrap Vt as Operator
     # Vt_mat has shape (r, in_flat)
-    # Need to reshape to (r, *in_coll, *in_geo)
+    # Reshape to (r, *in_lot, *in_geo)
     Vt_intermediate = Vt_mat.reshape((r,) + op.input_collection + op.input_spec.geometric_shape)
 
-    # Current order: (r, *in_coll, *in_geo)
-    # Target order for operator data: (*out_geo, *out_coll, *in_coll, *in_geo)
-    # For Vt, out is reduced (grade=0, coll_dims=1) so no out_geo, out_coll = (r,)
-    # So target: (r, *in_coll, *in_geo) which is already correct!
+    # Current order: (r, *in_lot, *in_geo)
+    # Target lot-first: (*out_lot, *in_lot, *out_geo, *in_geo)
+    # For Vt, out is (r,) so out_lot=(r,) and out_geo=() since grade=0
+    # So target: (r, *in_lot, *in_geo) which is already correct!
     Vt_data = Vt_intermediate
 
     Vt_op = Operator(

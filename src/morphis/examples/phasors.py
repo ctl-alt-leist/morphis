@@ -16,9 +16,9 @@ from numpy import array, exp, pi, real
 from morphis.elements import Vector, metric
 from morphis.operations import (
     conjugate,
-    hermitian_norm_squared,
+    form,
+    hermitian_form,
     hodge_dual,
-    norm_squared,
     wedge,
 )
 from morphis.utils.pretty import section, subsection
@@ -113,12 +113,12 @@ def demo_norms() -> None:
 
     g = metric(3)
 
-    subsection("Real blade: both norms agree")
+    subsection("Real blade: both forms agree")
     v_real = Vector([3.0, 4.0, 0.0], grade=1, metric=g)
     print("v (real):")
     print(v_real)
-    print(f"  norm_squared(v) = {norm_squared(v_real)}")
-    print(f"  hermitian_norm_squared(v) = {hermitian_norm_squared(v_real)}")
+    print(f"  form(v) = {form(v_real)}")
+    print(f"  hermitian_form(v) = {hermitian_form(v_real)}")
     print("  -> Identical for real blades")
 
     subsection("Pure phasor: bilinear gives complex, Hermitian gives real")
@@ -127,13 +127,13 @@ def demo_norms() -> None:
     print("v_phasor = [3,4,0] * exp(i*pi/4):")
     print(v_phasor)
 
-    ns = norm_squared(v_phasor)
-    hns = hermitian_norm_squared(v_phasor)
+    f = form(v_phasor)
+    hf = hermitian_form(v_phasor)
     print()
-    print(f"  norm_squared(v_phasor) = {ns}")
+    print(f"  form(v_phasor) = {f}")
     print("    -> Complex! Phase doubled: exp(i*pi/2) = i")
     print()
-    print(f"  hermitian_norm_squared(v_phasor) = {hns}")
+    print(f"  hermitian_form(v_phasor) = {hf}")
     print("    -> Real! |amplitude|^2 = 25")
 
     subsection("Mixed-phase blade: the critical case")
@@ -141,18 +141,18 @@ def demo_norms() -> None:
     print("v_mixed = [1, i, 0]:")
     print(v_mixed)
 
-    ns = norm_squared(v_mixed)
-    hns = hermitian_norm_squared(v_mixed)
+    f = form(v_mixed)
+    hf = hermitian_form(v_mixed)
     print()
-    print(f"  norm_squared(v_mixed) = {ns}")
+    print(f"  form(v_mixed) = {f}")
     print("    -> Bilinear: 1^2 + i^2 = 1 - 1 = 0 (cancellation!)")
     print()
-    print(f"  hermitian_norm_squared(v_mixed) = {hns}")
+    print(f"  hermitian_form(v_mixed) = {hf}")
     print("    -> Hermitian: |1|^2 + |i|^2 = 1 + 1 = 2 (correct)")
 
-    subsection("Summary: use Hermitian norm for physical amplitudes")
-    print("  norm_squared      -> algebraic (GA inner product)")
-    print("  hermitian_norm_squared -> physical (RMS amplitude)")
+    subsection("Summary: use Hermitian form for physical amplitudes")
+    print("  form          -> algebraic (GA inner product)")
+    print("  hermitian_form -> physical (RMS amplitude)")
 
 
 # =============================================================================
@@ -243,11 +243,11 @@ def demo_em_phasors() -> None:
 
     subsection("Field energy density")
     print("  u = (1/2) * (epsilon * |E|^2 + (1/mu) * |B|^2)")
-    E_mag_sq = hermitian_norm_squared(E_tilde)
-    B_mag_sq = hermitian_norm_squared(B_tilde)
+    E_mag_sq = hermitian_form(E_tilde)
+    B_mag_sq = hermitian_form(B_tilde)
     print(f"  |E|^2 = {E_mag_sq}")
     print(f"  |B|^2 = {B_mag_sq}")
-    print("  -> Hermitian norm gives real amplitudes for energy")
+    print("  -> Hermitian form gives real amplitudes for energy")
 
 
 # =============================================================================
