@@ -82,7 +82,7 @@ from morphis.transforms import rotor
 from numpy import pi
 
 # Create rotor for 90-degree rotation in xy-plane
-b = (e1 ^ e2).normalize()  # Unit bivector
+b = (e1 ^ e2).unit()  # Unit bivector
 R = rotor(b, pi/2)         # Angle in radians
 
 # R has grades {0, 2}

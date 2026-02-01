@@ -15,67 +15,69 @@ class TestOperatorConstruction:
     def test_basic_construction(self):
         """Test basic operator construction."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        # Lot-first layout: (M, N, d, d) = (*out_lot, *in_lot, *out_geo, *in_geo)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
-        assert op.shape == (d, d, M, N)
+        assert op.shape == (M, N, d, d)
         assert op.input_shape == (N,)
         assert op.output_shape == (M, d, d)
 
     def test_vector_to_vector_construction(self):
         """Test vector->vector operator (like rotation matrix)."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, M, N, d)
+        # Lot-first layout: (M, N, d, d) = (*out_lot, *in_lot, *out_geo, *in_geo)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=1, collection=1, dim=d),
-            output_spec=VectorSpec(grade=1, collection=1, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
-        assert op.shape == (d, M, N, d)
+        assert op.shape == (M, N, d, d)
         assert op.input_shape == (N, d)
         assert op.output_shape == (M, d)
 
     def test_wrong_ndim_raises(self):
         """Test that wrong number of dimensions raises."""
-        G_data = np.random.randn(3, 3, 10)  # Missing input collection dim
+        G_data = np.random.randn(10, 3, 3)  # Missing input lot dim
 
         with pytest.raises(ValueError, match="Data has 3 dimensions"):
             Operator(
                 data=G_data,
-                input_spec=VectorSpec(grade=0, collection=1, dim=3),
-                output_spec=VectorSpec(grade=2, collection=1, dim=3),
+                input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+                output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
                 metric=euclidean_metric(3),
             )
 
     def test_mismatched_dims_raises(self):
         """Test that mismatched input/output dims raise."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         with pytest.raises(ValueError, match="Input dim 4 doesn't match output dim 3"):
             Operator(
                 data=G_data,
-                input_spec=VectorSpec(grade=0, collection=1, dim=4),  # Wrong dim
-                output_spec=VectorSpec(grade=2, collection=1, dim=3),
+                input_spec=VectorSpec(grade=0, lot=(1,), dim=4),  # Wrong dim
+                output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
                 metric=euclidean_metric(3),
             )
 
     def test_complex_data_preserved(self):
         """Test that complex data is preserved."""
-        G_data = np.random.randn(3, 3, 10, 5) + 1j * np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3) + 1j * np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -88,13 +90,14 @@ class TestOperatorApply:
     def test_forward_scalar_to_bivector(self):
         """Test forward application: scalar -> bivector."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
-        G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2  # Antisymmetrize
+        # Lot-first layout: (M, N, d, d)
+        G_data = np.random.randn(M, N, d, d)
+        G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2  # Antisymmetrize geo axes
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -108,13 +111,13 @@ class TestOperatorApply:
     def test_forward_preserves_antisymmetry(self):
         """Test that bivector output is antisymmetric."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
-        G_data = (G_data - G_data.transpose(1, 0, 2, 3)) / 2
+        G_data = np.random.randn(M, N, d, d)
+        G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2  # Antisymmetrize geo axes
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -127,12 +130,13 @@ class TestOperatorApply:
     def test_forward_vector_to_vector(self):
         """Test forward application: vector -> vector (rotation-like)."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, M, N, d)
+        # Lot-first layout: (M, N, d, d) = (*out_lot, *in_lot, *out_geo, *in_geo)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=1, collection=1, dim=d),
-            output_spec=VectorSpec(grade=1, collection=1, dim=d),
+            input_spec=VectorSpec(grade=1, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=1, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -145,12 +149,12 @@ class TestOperatorApply:
     def test_mul_operator(self):
         """Test L * x syntax."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -163,12 +167,12 @@ class TestOperatorApply:
     def test_call_operator(self):
         """Test L(x) syntax."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -180,12 +184,12 @@ class TestOperatorApply:
 
     def test_wrong_grade_raises(self):
         """Test that wrong input grade raises."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -196,12 +200,12 @@ class TestOperatorApply:
 
     def test_wrong_shape_raises(self):
         """Test that wrong input shape raises."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -213,12 +217,12 @@ class TestOperatorApply:
     def test_complex_operator_application(self):
         """Test applying complex-valued operator."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N) + 1j * np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d) + 1j * np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -238,12 +242,12 @@ class TestOperatorAdjoint:
 
     def test_adjoint_swaps_specs(self):
         """Test that adjoint swaps input/output specs."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -254,12 +258,12 @@ class TestOperatorAdjoint:
 
     def test_adjoint_involution(self):
         """Test that adjoint of adjoint equals original."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -269,12 +273,12 @@ class TestOperatorAdjoint:
 
     def test_adjoint_complex_conjugates(self):
         """Test that adjoint conjugates complex data."""
-        G_data = np.random.randn(3, 3, 10, 5) + 1j * np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3) + 1j * np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -286,12 +290,12 @@ class TestOperatorAdjoint:
 
     def test_H_property(self):
         """Test .H property is alias for adjoint."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
@@ -300,12 +304,12 @@ class TestOperatorAdjoint:
     def test_adjoint_inner_product_property(self):
         """Test that <Lx, y> = <x, L^H y> (in flattened sense)."""
         M, N, d = 10, 5, 3
-        G_data = np.random.randn(d, d, M, N)
+        G_data = np.random.randn(M, N, d, d)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=d),
-            output_spec=VectorSpec(grade=2, collection=1, dim=d),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
             metric=euclidean_metric(d),
         )
 
@@ -328,51 +332,55 @@ class TestOperatorProperties:
 
     def test_dim_property(self):
         """Test dim property."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
         assert op.dim == 3
 
-    def test_input_collection(self):
-        """Test input_collection property."""
-        G_data = np.random.randn(3, 3, 10, 5)
+    def test_input_lot(self):
+        """Test input_lot property."""
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
+        assert op.input_lot == (5,)
+        # Backward compatibility alias
         assert op.input_collection == (5,)
 
-    def test_output_collection(self):
-        """Test output_collection property."""
-        G_data = np.random.randn(3, 3, 10, 5)
+    def test_output_lot(self):
+        """Test output_lot property."""
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 
+        assert op.output_lot == (10,)
+        # Backward compatibility alias
         assert op.output_collection == (10,)
 
     def test_repr(self):
         """Test __repr__ method."""
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
 
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=euclidean_metric(3),
         )
 

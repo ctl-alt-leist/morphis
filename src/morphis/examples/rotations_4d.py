@@ -13,7 +13,7 @@ import argparse
 from numpy import diff, pi
 
 from morphis.elements import Frame, basis_vectors, euclidean_metric
-from morphis.operations import normalize
+from morphis.operations import unit
 from morphis.transforms import rotor
 from morphis.utils.easing import ease_in_out_cubic
 from morphis.visuals import RED, Animation
@@ -44,8 +44,8 @@ def create_animation():
     e1, e2, e3, e4 = basis_vectors(g)
 
     # Rotation bivectors
-    b1 = normalize((e1 ^ e3) + (e2 ^ e3))
-    b2 = normalize((e1 ^ e4) + (e2 ^ e4) + (e3 ^ e4))
+    b1 = unit((e1 ^ e3) + (e2 ^ e3))
+    b2 = unit((e1 ^ e4) + (e2 ^ e4) + (e3 ^ e4))
 
     # The ONE frame we animate
     F = Frame(e1, e2, e3, e4)

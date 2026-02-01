@@ -15,9 +15,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numpy import broadcast_shapes, zeros
+from numpy import asarray, broadcast_shapes, zeros
+from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
+from morphis.elements.base import IndexableMixin
 from morphis.elements.metric import Metric
 from morphis.elements.tensor import Tensor
 
@@ -132,7 +134,7 @@ class OnAccessor:
 # =============================================================================
 
 
-class Vector(Tensor):
+class Vector(IndexableMixin, Tensor):
     """
     A Vector (k-vector) in geometric algebra.
 
@@ -260,12 +262,30 @@ class Vector(Tensor):
         return OnAccessor(self)
 
     # =========================================================================
-    # Indexing
+    # Indexing (implements IndexableMixin interface)
     # =========================================================================
 
-    def __getitem__(self, index) -> "Vector":
+    def _index(self, indices: str):
         """
-        Index into the Vector, returning a new Vector.
+        Create an IndexedTensor wrapper for einsum-style contraction.
+
+        Args:
+            indices: String of index labels, one per axis (lot + geo)
+
+        Returns:
+            IndexedTensor wrapping this Vector with the given indices
+
+        Examples:
+            v = Vector(data, grade=2)  # lot=(M, N), shape=(M, N, 3, 3)
+            v["mnab"]  # IndexedTensor with indices for all 4 axes
+        """
+        from morphis.algebra.contraction import IndexedTensor
+
+        return IndexedTensor(self, indices)
+
+    def _slice(self, index) -> "Vector":
+        """
+        Slice into the Vector, returning a new Vector.
 
         Indexing follows numpy semantics but always returns a Vector.
         The index is applied positionally to the full shape (lot + geo).
@@ -277,8 +297,7 @@ class Vector(Tensor):
             v = Vector(data, grade=2, metric=m)  # lot=(M, N), geo=(3, 3)
 
             v[0]           # lot=(N,), geo=(3, 3) - index first lot axis
-            v[:, :, 0]     # lot=(M, N), geo=(3,) - index first geo axis (grade 1)
-            v[0, :, 0, :]  # lot=(N,), geo=(3,) - index lot axis 0 and geo axis 0
+            v[:, :, 0]     # lot=(M, N), geo=(3,) - index first geo axis
 
         For explicit lot-only or geo-only indexing, use v.at[...] or v.on[...].
         """
@@ -398,12 +417,18 @@ class Vector(Tensor):
             # - other grades: returns geometric product (MultiVector)
             return NotImplemented
         else:
-            # Scalar multiplication
+            # Scalar or array multiplication
+            other = asarray(other)
+
+            # Broadcast over geometric axes if needed
+            if other.ndim > 0 and other.ndim < self.data.ndim:
+                for _ in range(self.grade):
+                    other = other[..., None]
+
             return Vector(
                 data=self.data * other,
                 grade=self.grade,
                 metric=self.metric,
-                lot=self.lot,
             )
 
     def __rmul__(self, other) -> Vector | MultiVector:
@@ -419,21 +444,43 @@ class Vector(Tensor):
 
             return _geometric_mv_v(other, self)
         else:
-            # Scalar multiplication (commutative)
+            # Scalar or array multiplication (commutative)
+            other = asarray(other)
+
+            # Broadcast over geometric axes if needed
+            if other.ndim > 0 and other.ndim < self.data.ndim:
+                for _ in range(self.grade):
+                    other = other[..., None]
+
             return Vector(
                 data=self.data * other,
                 grade=self.grade,
                 metric=self.metric,
-                lot=self.lot,
             )
 
-    def __truediv__(self, scalar) -> Vector:
-        """Scalar division."""
+    def __truediv__(self, other) -> Vector:
+        """
+        Scalar or array division.
+
+        If other is an array with shape matching lot dimensions, it broadcasts
+        over the geometric axes automatically.
+
+        Examples:
+            v / 2.0           # scalar division
+            v / magnitudes    # magnitudes.shape == v.lot, broadcasts over geo
+        """
+        other = asarray(other)
+
+        # Broadcast over geometric axes if needed
+        if other.ndim > 0 and other.ndim < self.data.ndim:
+            # Add trailing dimensions for geo axes
+            for _ in range(self.grade):
+                other = other[..., None]
+
         return Vector(
-            data=self.data / scalar,
+            data=self.data / other,
             grade=self.grade,
             metric=self.metric,
-            lot=self.lot,
         )
 
     def __neg__(self) -> Vector:
@@ -600,16 +647,43 @@ class Vector(Tensor):
             lot=self.lot,
         )
 
-    def normalize(self) -> Vector:
+    def form(self) -> NDArray:
         """
-        Return a normalized copy (unit norm).
+        Compute the quadratic form: v · v.
+
+        This is the metric inner product of the vector with itself.
+        Can be negative in non-Euclidean metrics.
+
+        Returns:
+            NDArray with shape matching self.lot
+        """
+        from morphis.operations.norms import form
+
+        return form(self)
+
+    def norm(self) -> NDArray:
+        """
+        Compute the norm: sqrt(|form(v)|).
+
+        Always returns non-negative values.
+
+        Returns:
+            NDArray with shape matching self.lot
+        """
+        from morphis.operations.norms import norm
+
+        return norm(self)
+
+    def unit(self) -> Vector:
+        """
+        Return a unit vector (norm = 1).
 
         For bivectors, this gives the unit bivector needed for rotor construction.
         Handles zero Vectors safely by returning zero.
         """
-        from morphis.operations.norms import normalize
+        from morphis.operations.norms import unit
 
-        return normalize(self)
+        return unit(self)
 
     def conjugate(self) -> Vector:
         """
@@ -639,6 +713,100 @@ class Vector(Tensor):
         from morphis.operations.duality import hodge_dual
 
         return hodge_dual(self)
+
+    # =========================================================================
+    # Lot Reductions
+    # =========================================================================
+
+    def sum(self, axis: int | tuple[int, ...] | None = None) -> Vector:
+        """
+        Sum over lot axis/axes, returning a Vector with reduced lot.
+
+        Args:
+            axis: Lot axis or axes to sum over. If None, sums over all lot axes.
+                  Negative indices count from the end of lot dimensions (not full).
+
+        Returns:
+            Vector with summed lot dimensions removed
+
+        Example:
+            v = Vector(data, grade=1)  # lot=(M, N, K)
+            v.sum(axis=2)              # lot=(M, N), summed over K
+            v.sum(axis=(0, 2))         # lot=(N,), summed over M and K
+            v.sum()                    # lot=(), summed over all lot axes
+        """
+        n_lot = len(self.lot)
+
+        if axis is None:
+            # Sum over all lot axes
+            axes = tuple(range(n_lot))
+        elif isinstance(axis, int):
+            # Normalize negative index relative to lot dimensions
+            if axis < 0:
+                axis = n_lot + axis
+            if not (0 <= axis < n_lot):
+                raise IndexError(f"Lot axis {axis} out of range for {n_lot} lot dimensions")
+            axes = (axis,)
+        else:
+            # Tuple of axes - normalize each
+            axes = []
+            for ax in axis:
+                if ax < 0:
+                    ax = n_lot + ax
+                if not (0 <= ax < n_lot):
+                    raise IndexError(f"Lot axis {ax} out of range for {n_lot} lot dimensions")
+                axes.append(ax)
+            axes = tuple(axes)
+
+        # Sum over the specified lot axes
+        new_data = self.data.sum(axis=axes)
+
+        return Vector(data=new_data, grade=self.grade, metric=self.metric)
+
+    def mean(self, axis: int | tuple[int, ...] | None = None) -> Vector:
+        """
+        Mean over lot axis/axes, returning a Vector with reduced lot.
+
+        Args:
+            axis: Lot axis or axes to average over. If None, averages over all lot axes.
+                  Negative indices count from the end of lot dimensions (not full).
+
+        Returns:
+            Vector with averaged lot dimensions removed
+
+        Example:
+            v = Vector(data, grade=1)  # lot=(M, N, K)
+            v.mean(axis=2)             # lot=(M, N), averaged over K
+            v.mean(axis=(0, 2))        # lot=(N,), averaged over M and K
+            v.mean()                   # lot=(), averaged over all lot axes
+        """
+        n_lot = len(self.lot)
+
+        if axis is None:
+            # Mean over all lot axes
+            axes = tuple(range(n_lot))
+        elif isinstance(axis, int):
+            # Normalize negative index relative to lot dimensions
+            if axis < 0:
+                axis = n_lot + axis
+            if not (0 <= axis < n_lot):
+                raise IndexError(f"Lot axis {axis} out of range for {n_lot} lot dimensions")
+            axes = (axis,)
+        else:
+            # Tuple of axes - normalize each
+            axes = []
+            for ax in axis:
+                if ax < 0:
+                    ax = n_lot + ax
+                if not (0 <= ax < n_lot):
+                    raise IndexError(f"Lot axis {ax} out of range for {n_lot} lot dimensions")
+                axes.append(ax)
+            axes = tuple(axes)
+
+        # Mean over the specified lot axes
+        new_data = self.data.mean(axis=axes)
+
+        return Vector(data=new_data, grade=self.grade, metric=self.metric)
 
     def span(self) -> tuple[Vector, ...]:
         """

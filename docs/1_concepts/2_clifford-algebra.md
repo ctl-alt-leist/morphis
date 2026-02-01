@@ -55,7 +55,7 @@ g = euclidean_metric(3)
 e1, e2, e3 = basis_vectors(g)
 
 # Geometric product of orthogonal vectors
-product = e1 * e2  # MultiVector with grades {2}
+V = e1 * e2  # MultiVector with grades {2}
 
 # Geometric product of parallel vectors
 e1 * e1  # MultiVector with grade {0}, value 1.0 (the metric)

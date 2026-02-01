@@ -479,6 +479,155 @@ class TestEdgeCases:
 # =============================================================================
 
 
+class TestVectorReductions:
+    def test_sum_single_axis(self):
+        g = euclidean_metric(3)
+        data = ones((4, 5, 3))
+        v = Vector(data, grade=1, metric=g, lot=(4, 5))
+        result = v.sum(axis=0)
+        assert isinstance(result, Vector)
+        assert result.lot == (5,)
+        assert result.shape == (5, 3)
+        assert_array_equal(result.data, ones((5, 3)) * 4)
+
+    def test_sum_last_lot_axis(self):
+        g = euclidean_metric(3)
+        data = ones((4, 5, 3))
+        v = Vector(data, grade=1, metric=g, lot=(4, 5))
+        result = v.sum(axis=1)
+        assert result.lot == (4,)
+        assert result.shape == (4, 3)
+        assert_array_equal(result.data, ones((4, 3)) * 5)
+
+    def test_sum_negative_axis(self):
+        g = euclidean_metric(3)
+        data = ones((4, 5, 3))
+        v = Vector(data, grade=1, metric=g, lot=(4, 5))
+        result = v.sum(axis=-1)
+        assert result.lot == (4,)
+        assert result.shape == (4, 3)
+
+    def test_sum_multiple_axes(self):
+        g = euclidean_metric(3)
+        data = ones((2, 3, 4, 3))
+        v = Vector(data, grade=1, metric=g, lot=(2, 3, 4))
+        result = v.sum(axis=(0, 2))
+        assert result.lot == (3,)
+        assert result.shape == (3, 3)
+        assert_array_equal(result.data, ones((3, 3)) * 8)
+
+    def test_sum_all_axes(self):
+        g = euclidean_metric(3)
+        data = ones((2, 3, 3))
+        v = Vector(data, grade=1, metric=g, lot=(2, 3))
+        result = v.sum()
+        assert result.lot == ()
+        assert result.shape == (3,)
+        assert_array_equal(result.data, ones(3) * 6)
+
+    def test_sum_invalid_axis_raises(self):
+        g = euclidean_metric(3)
+        v = Vector(ones((2, 3)), grade=1, metric=g, lot=(2,))
+        with pytest.raises(IndexError, match="Lot axis"):
+            v.sum(axis=2)
+
+    def test_mean_single_axis(self):
+        g = euclidean_metric(3)
+        data = ones((4, 5, 3)) * 2
+        v = Vector(data, grade=1, metric=g, lot=(4, 5))
+        result = v.mean(axis=0)
+        assert isinstance(result, Vector)
+        assert result.lot == (5,)
+        assert_array_equal(result.data, ones((5, 3)) * 2)
+
+    def test_mean_all_axes(self):
+        g = euclidean_metric(3)
+        data = ones((2, 3, 3)) * 6
+        v = Vector(data, grade=1, metric=g, lot=(2, 3))
+        result = v.mean()
+        assert result.lot == ()
+        assert_array_equal(result.data, ones(3) * 6)
+
+    def test_mean_invalid_axis_raises(self):
+        g = euclidean_metric(3)
+        v = Vector(ones((2, 3)), grade=1, metric=g, lot=(2,))
+        with pytest.raises(IndexError, match="Lot axis"):
+            v.mean(axis=5)
+
+
+class TestVectorNorm:
+    def test_norm_single_vector(self):
+        g = euclidean_metric(3)
+        v = Vector(array([3.0, 4.0, 0.0]), grade=1, metric=g)
+        result = v.norm()
+        assert result.shape == ()
+        assert result == 5.0
+
+    def test_norm_batch(self):
+        g = euclidean_metric(3)
+        data = array([[3.0, 4.0, 0.0], [1.0, 0.0, 0.0]])
+        v = Vector(data, grade=1, metric=g, lot=(2,))
+        result = v.norm()
+        assert result.shape == (2,)
+        assert_array_equal(result, array([5.0, 1.0]))
+
+    def test_unit_single_vector(self):
+        g = euclidean_metric(3)
+        v = Vector(array([3.0, 4.0, 0.0]), grade=1, metric=g)
+        result = v.unit()
+        assert isinstance(result, Vector)
+        from numpy import allclose
+
+        assert allclose(result.norm(), 1.0)
+
+
+class TestScalarArrayBroadcast:
+    def test_division_by_scalar_array(self):
+        g = euclidean_metric(3)
+        data = ones((4, 3)) * 6
+        v = Vector(data, grade=1, metric=g, lot=(4,))
+        divisors = array([1.0, 2.0, 3.0, 6.0])
+        result = v / divisors
+        assert isinstance(result, Vector)
+        assert result.shape == (4, 3)
+        assert_array_equal(result.data[0], ones(3) * 6)
+        assert_array_equal(result.data[1], ones(3) * 3)
+        assert_array_equal(result.data[2], ones(3) * 2)
+        assert_array_equal(result.data[3], ones(3) * 1)
+
+    def test_multiplication_by_scalar_array(self):
+        g = euclidean_metric(3)
+        data = ones((4, 3))
+        v = Vector(data, grade=1, metric=g, lot=(4,))
+        multipliers = array([1.0, 2.0, 3.0, 4.0])
+        result = v * multipliers
+        assert isinstance(result, Vector)
+        assert result.shape == (4, 3)
+        assert_array_equal(result.data[0], ones(3))
+        assert_array_equal(result.data[1], ones(3) * 2)
+
+    def test_rmul_by_scalar_array(self):
+        g = euclidean_metric(3)
+        data = ones((4, 3))
+        v = Vector(data, grade=1, metric=g, lot=(4,))
+        multipliers = array([1.0, 2.0, 3.0, 4.0])
+        result = multipliers * v
+        assert isinstance(result, Vector)
+        assert result.shape == (4, 3)
+        assert_array_equal(result.data[3], ones(3) * 4)
+
+    def test_division_bivector_by_scalar_array(self):
+        g = euclidean_metric(3)
+        data = ones((2, 3, 3, 3)) * 12
+        v = Vector(data, grade=2, metric=g, lot=(2, 3))
+        divisors = array([[1.0, 2.0, 3.0], [4.0, 6.0, 12.0]])
+        result = v / divisors
+        assert isinstance(result, Vector)
+        assert result.shape == (2, 3, 3, 3)
+        assert_array_equal(result.data[0, 0], ones((3, 3)) * 12)
+        assert_array_equal(result.data[1, 2], ones((3, 3)) * 1)
+
+
 class TestIntegration:
     def test_blade_roundtrip(self):
         g = euclidean_metric(4)

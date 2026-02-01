@@ -19,92 +19,93 @@ class TestForwardSignature:
 
     def test_scalar_to_bivector(self):
         """Test pattern for scalar currents to bivector fields."""
-        input_spec = VectorSpec(grade=0, collection=1, dim=3)
-        output_spec = VectorSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(1,), dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
-        # Operator: WXKn (out_geo=WX, out_coll=K, in_coll=n, in_geo=none)
-        # Input: n (in_coll=n, in_geo=none)
-        # Output: KWX (out_coll=K, out_geo=WX)
-        assert sig == "WXKn,n->KWX"
+        # Layout: (*out_lot, *in_lot, *out_geo, *in_geo)
+        # Operator: KnWX (out_lot=K, in_lot=n, out_geo=WX, in_geo=none)
+        # Input: n (in_lot=n, in_geo=none)
+        # Output: KWX (out_lot=K, out_geo=WX)
+        assert sig == "KnWX,n->KWX"
 
     def test_vector_to_bivector(self):
         """Test pattern for vector to bivector."""
-        input_spec = VectorSpec(grade=1, collection=1, dim=3)
-        output_spec = VectorSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(1,), dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
-        # Operator: WXKna
+        # Operator: KnWXa (out_lot=K, in_lot=n, out_geo=WX, in_geo=a)
         # Input: na
         # Output: KWX
-        assert sig == "WXKna,na->KWX"
+        assert sig == "KnWXa,na->KWX"
 
     def test_scalar_to_scalar(self):
         """Test pattern for scalar to scalar."""
-        input_spec = VectorSpec(grade=0, collection=1, dim=3)
-        output_spec = VectorSpec(grade=0, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=0, lot=(1,), dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
-        # Operator: Kn
+        # Operator: Kn (out_lot=K, in_lot=n)
         # Input: n
         # Output: K
         assert sig == "Kn,n->K"
 
     def test_vector_to_vector(self):
         """Test pattern for vector to vector (rotation matrix)."""
-        input_spec = VectorSpec(grade=1, collection=1, dim=3)
-        output_spec = VectorSpec(grade=1, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=1, lot=(1,), dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
-        # Operator: WKna
+        # Operator: KnWa (out_lot=K, in_lot=n, out_geo=W, in_geo=a)
         # Input: na
         # Output: KW
-        assert sig == "WKna,na->KW"
+        assert sig == "KnWa,na->KW"
 
     def test_bivector_to_scalar(self):
         """Test pattern for bivector to scalar."""
-        input_spec = VectorSpec(grade=2, collection=1, dim=3)
-        output_spec = VectorSpec(grade=0, collection=1, dim=3)
+        input_spec = VectorSpec(grade=2, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=0, lot=(1,), dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
-        # Operator: Knab
+        # Operator: Knab (out_lot=K, in_lot=n, out_geo=none, in_geo=ab)
         # Input: nab
         # Output: K
         assert sig == "Knab,nab->K"
 
-    def test_no_collection(self):
-        """Test pattern without collection dimensions."""
-        input_spec = VectorSpec(grade=1, collection=0, dim=3)
-        output_spec = VectorSpec(grade=2, collection=0, dim=3)
+    def test_no_lot(self):
+        """Test pattern without lot dimensions."""
+        input_spec = VectorSpec(grade=1, lot=(), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(), dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
-        # Operator: WXa
+        # Operator: WXa (no lot, out_geo=WX, in_geo=a)
         # Input: a
         # Output: WX
         assert sig == "WXa,a->WX"
 
-    def test_multiple_collection(self):
-        """Test pattern with multiple collection dimensions."""
-        input_spec = VectorSpec(grade=0, collection=2, dim=3)
-        output_spec = VectorSpec(grade=1, collection=2, dim=3)
+    def test_multiple_lot(self):
+        """Test pattern with multiple lot dimensions."""
+        input_spec = VectorSpec(grade=0, lot=(1, 1), dim=3)
+        output_spec = VectorSpec(grade=1, lot=(1, 1), dim=3)
 
         sig = forward_signature(input_spec, output_spec)
 
-        # Operator: WKLno
+        # Operator: KLnoW (out_lot=KL, in_lot=no, out_geo=W, in_geo=none)
         # Input: no
         # Output: KLW
-        assert sig == "WKLno,no->KLW"
+        assert sig == "KLnoW,no->KLW"
 
     def test_caching(self):
         """Test that signatures are cached."""
-        input_spec = VectorSpec(grade=0, collection=1, dim=3)
-        output_spec = VectorSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(1,), dim=3)
 
         sig1 = forward_signature(input_spec, output_spec)
         sig2 = forward_signature(input_spec, output_spec)
@@ -117,27 +118,27 @@ class TestAdjointSignature:
 
     def test_scalar_to_bivector_adjoint(self):
         """Test adjoint pattern for scalar->bivector (becomes bivector->scalar)."""
-        input_spec = VectorSpec(grade=0, collection=1, dim=3)
-        output_spec = VectorSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(1,), dim=3)
 
         sig = adjoint_signature(input_spec, output_spec)
 
-        # Operator: WXKn (same as forward)
+        # Operator: KnWX (same as forward, lot-first)
         # Adjoint input (original output): KWX
         # Adjoint output (original input): n
-        assert sig == "WXKn,KWX->n"
+        assert sig == "KnWX,KWX->n"
 
     def test_vector_to_vector_adjoint(self):
         """Test adjoint pattern for vector->vector."""
-        input_spec = VectorSpec(grade=1, collection=1, dim=3)
-        output_spec = VectorSpec(grade=1, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=1, lot=(1,), dim=3)
 
         sig = adjoint_signature(input_spec, output_spec)
 
-        # Operator: WKna
+        # Operator: KnWa (lot-first)
         # Adjoint input: KW
         # Adjoint output: na
-        assert sig == "WKna,KW->na"
+        assert sig == "KnWa,KW->na"
 
 
 class TestOperatorShape:
@@ -145,59 +146,59 @@ class TestOperatorShape:
 
     def test_scalar_to_bivector_shape(self):
         """Test operator shape for scalar->bivector case."""
-        input_spec = VectorSpec(grade=0, collection=1, dim=3)
-        output_spec = VectorSpec(grade=2, collection=1, dim=3)
+        input_spec = VectorSpec(grade=0, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(1,), dim=3)
 
         shape = operator_shape(
             input_spec,
             output_spec,
-            input_collection=(5,),
-            output_collection=(10,),
+            input_lot=(5,),
+            output_lot=(10,),
         )
 
-        # Shape: (*out_geo, *out_coll, *in_coll, *in_geo)
-        # = (3, 3, 10, 5)
-        assert shape == (3, 3, 10, 5)
+        # Shape: (*out_lot, *in_lot, *out_geo, *in_geo)
+        # = (10, 5, 3, 3)
+        assert shape == (10, 5, 3, 3)
 
     def test_vector_to_vector_shape(self):
         """Test operator shape for vector->vector case."""
-        input_spec = VectorSpec(grade=1, collection=1, dim=3)
-        output_spec = VectorSpec(grade=1, collection=1, dim=3)
+        input_spec = VectorSpec(grade=1, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=1, lot=(1,), dim=3)
 
         shape = operator_shape(
             input_spec,
             output_spec,
-            input_collection=(5,),
-            output_collection=(10,),
+            input_lot=(5,),
+            output_lot=(10,),
         )
 
-        # Shape: (3, 10, 5, 3)
-        assert shape == (3, 10, 5, 3)
+        # Shape: (10, 5, 3, 3)
+        assert shape == (10, 5, 3, 3)
 
-    def test_wrong_input_collection_raises(self):
-        """Test that wrong input collection shape raises."""
-        input_spec = VectorSpec(grade=0, collection=1, dim=3)
-        output_spec = VectorSpec(grade=2, collection=1, dim=3)
+    def test_wrong_input_lot_raises(self):
+        """Test that wrong input lot shape raises."""
+        input_spec = VectorSpec(grade=0, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(1,), dim=3)
 
-        with pytest.raises(ValueError, match="input_collection has 2 dims"):
+        with pytest.raises(ValueError, match="input_lot has 2 dims"):
             operator_shape(
                 input_spec,
                 output_spec,
-                input_collection=(5, 3),  # Wrong: should be 1 dim
-                output_collection=(10,),
+                input_lot=(5, 3),  # Wrong: should be 1 dim
+                output_lot=(10,),
             )
 
-    def test_wrong_output_collection_raises(self):
-        """Test that wrong output collection shape raises."""
-        input_spec = VectorSpec(grade=0, collection=1, dim=3)
-        output_spec = VectorSpec(grade=2, collection=1, dim=3)
+    def test_wrong_output_lot_raises(self):
+        """Test that wrong output lot shape raises."""
+        input_spec = VectorSpec(grade=0, lot=(1,), dim=3)
+        output_spec = VectorSpec(grade=2, lot=(1,), dim=3)
 
-        with pytest.raises(ValueError, match="output_collection has 0 dims"):
+        with pytest.raises(ValueError, match="output_lot has 0 dims"):
             operator_shape(
                 input_spec,
                 output_spec,
-                input_collection=(5,),
-                output_collection=(),  # Wrong: should be 1 dim
+                input_lot=(5,),
+                output_lot=(),  # Wrong: should be 1 dim
             )
 
 
@@ -215,6 +216,6 @@ class TestIndexPools:
     def test_pool_sizes(self):
         """Test that index pools have expected sizes."""
         assert len(OUTPUT_GEOMETRIC) >= 4, "Need at least grade-4 support"
-        assert len(OUTPUT_COLLECTION) >= 4, "Need at least 4 collection dims"
-        assert len(INPUT_COLLECTION) >= 4, "Need at least 4 collection dims"
+        assert len(OUTPUT_COLLECTION) >= 4, "Need at least 4 lot dims"
+        assert len(INPUT_COLLECTION) >= 4, "Need at least 4 lot dims"
         assert len(INPUT_GEOMETRIC) >= 4, "Need at least grade-4 support"

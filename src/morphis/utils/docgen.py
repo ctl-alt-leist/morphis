@@ -346,6 +346,7 @@ MODULE_GROUPS = {
         "modules": [
             "morphis.algebra.specs",
             "morphis.algebra.patterns",
+            "morphis.algebra.contraction",
             "morphis.algebra.solvers",
         ],
     },

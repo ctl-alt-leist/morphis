@@ -545,11 +545,12 @@ class TestOperatorScalarMultiplication:
         from morphis.operations import Operator
 
         g = euclidean_metric(3)
-        G_data = np.random.randn(3, 3, 10, 5)
+        # Lot-first layout: (M, N, d, d)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -565,11 +566,11 @@ class TestOperatorScalarMultiplication:
         from morphis.operations import Operator
 
         g = euclidean_metric(3)
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -583,11 +584,11 @@ class TestOperatorScalarMultiplication:
         from morphis.operations import Operator
 
         g = euclidean_metric(3)
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
         s = Vector(2.5, grade=0, metric=g)
@@ -602,11 +603,11 @@ class TestOperatorScalarMultiplication:
         from morphis.operations import Operator
 
         g = euclidean_metric(3)
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
         s = Vector(0.5, grade=0, metric=g)
@@ -634,11 +635,12 @@ class TestOperatorApplyFrame:
         span = 2
 
         # Create vector→vector operator with matching span
-        G_data = np.random.randn(3, 10, span, 3)
+        # Lot-first layout: (out_lot, in_lot, out_geo, in_geo) = (10, span, 3, 3)
+        G_data = np.random.randn(10, span, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=1, collection=1, dim=3),
-            output_spec=VectorSpec(grade=1, collection=1, dim=3),
+            input_spec=VectorSpec(grade=1, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=1, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -656,11 +658,12 @@ class TestOperatorApplyFrame:
 
         g = euclidean_metric(3)
         # Scalar→bivector operator (grade 0 input)
-        G_data = np.random.randn(3, 3, 10, 5)
+        # Lot-first: (M, N, d, d)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -677,11 +680,12 @@ class TestOperatorApplyFrame:
 
         g = euclidean_metric(3)
         # Vector→bivector operator (grade 2 output)
-        G_data = np.random.randn(3, 3, 10, 2, 3)
+        # Lot-first: (out_lot, in_lot, out_geo, in_geo) = (10, 2, 3, 3, 3)
+        G_data = np.random.randn(10, 2, 3, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=1, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=1, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -706,11 +710,11 @@ class TestNotCurrentlySupported:
 
         g = euclidean_metric(3)
         v = Vector([1, 0, 0], grade=1, metric=g)
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -725,11 +729,11 @@ class TestNotCurrentlySupported:
         g = euclidean_metric(3)
         v = Vector([1, 0, 0], grade=1, metric=g)
         M = MultiVector(v)
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -744,11 +748,11 @@ class TestNotCurrentlySupported:
 
         g = euclidean_metric(3)
         f = Frame([[1, 0, 0], [0, 1, 0]], metric=g)
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 
@@ -763,11 +767,11 @@ class TestNotCurrentlySupported:
         g = euclidean_metric(3)
         v = Vector([1, 0, 0], grade=1, metric=g)
         M = MultiVector(v)
-        G_data = np.random.randn(3, 3, 10, 5)
+        G_data = np.random.randn(10, 5, 3, 3)
         op = Operator(
             data=G_data,
-            input_spec=VectorSpec(grade=0, collection=1, dim=3),
-            output_spec=VectorSpec(grade=2, collection=1, dim=3),
+            input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
             metric=g,
         )
 

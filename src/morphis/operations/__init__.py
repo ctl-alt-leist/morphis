@@ -40,11 +40,11 @@ from morphis.operations.matrix_rep import (
 # Norms
 from morphis.operations.norms import (
     conjugate as conjugate,
+    form as form,
+    hermitian_form as hermitian_form,
     hermitian_norm as hermitian_norm,
-    hermitian_norm_squared as hermitian_norm_squared,
     norm as norm,
-    norm_squared as norm_squared,
-    normalize as normalize,
+    unit as unit,
 )
 
 # Operator (linear maps between vector spaces)

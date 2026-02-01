@@ -331,9 +331,9 @@ class Frame(GradedElement):
     # Utility Methods
     # =========================================================================
 
-    def normalize(self) -> Frame:
+    def unit(self) -> Frame:
         """
-        Return a new frame with each vector normalized to unit length.
+        Return a new frame with each vector as a unit vector.
 
         This creates an orthonormal frame if the vectors were originally
         orthogonal.

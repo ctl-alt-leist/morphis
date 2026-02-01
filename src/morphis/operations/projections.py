@@ -17,7 +17,7 @@ from numpy.typing import NDArray
 
 from morphis.config import TOLERANCE
 from morphis.operations._helpers import broadcast_collection_shape, get_common_dim
-from morphis.operations.norms import norm_squared
+from morphis.operations.norms import form
 from morphis.operations.structure import interior_left_signature, interior_right_signature
 
 
@@ -153,9 +153,9 @@ def project(u: Vector, v: Vector) -> Vector:
 
     contraction = interior_left(u, v)
     result = interior_left(contraction, v)
-    v_norm_sq = norm_squared(v)
+    v_form = form(v)
 
-    n_expanded = v_norm_sq
+    n_expanded = v_form
     for _ in range(result.grade):
         n_expanded = n_expanded[..., newaxis]
 

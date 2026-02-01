@@ -172,7 +172,7 @@ e1, e2, e3 = basis_vectors(g)
 b = e1 ^ e2
 
 # Create rotor for 90-degree rotation
-R = rotor(b.normalize(), pi/2)
+R = rotor(b.unit(), pi/2)
 
 # Check rotor properties
 R.is_even   # True (only grades 0, 2)

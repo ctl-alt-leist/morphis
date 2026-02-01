@@ -61,19 +61,20 @@ $$
 
 Shape: $(d, d, d)$ with full antisymmetry.
 
-### Collection Dimensions
+### Lot Dimensions
 
-Batch processing uses leading collection dimensions:
+Batch processing uses leading lot dimensions:
 
 $$
-\text{shape} = (*\text{batch}, *\text{geometric})
+\text{shape} = (*\text{lot}, *\text{geo})
 $$
 
 where:
-- $\text{cdim}$ = number of leading batch dimensions
-- $\text{ndim} = \text{cdim} + \text{grade}$
+- lot dimensions = leading batch dimensions
+- geo dimensions = trailing geometric dimensions (determined by grade)
+- $\text{ndim} = \text{len(lot)} + \text{grade}$
 
-For batch shape $(N,)$ with vectors in $\mathbb{R}^d$: storage is $(N, d)$ with $\text{cdim} = 1$.
+For lot shape $(N,)$ with vectors in $\mathbb{R}^d$: storage is $(N, d)$.
 
 ### Constraints
 
@@ -165,36 +166,36 @@ $$
 
 An Operator represents a structured linear map $L: V \to W$ between blade spaces.
 
-### BladeSpec
+### VectorSpec
 
-A `BladeSpec` defines the structure of a blade space:
+A `VectorSpec` defines the structure of a vector space:
 
 $$
-\text{BladeSpec} = (\text{grade}, \text{collection\_dims}, \text{dim})
+\text{VectorSpec} = (\text{grade}, \text{lot}, \text{dim})
 $$
 
-- $\text{grade}$: The grade of blades (0=scalar, 1=vector, 2=bivector, etc.)
-- $\text{collection\_dims}$: Number of batch dimensions
+- $\text{grade}$: The grade of vectors (0=scalar, 1=vector, 2=bivector, etc.)
+- $\text{lot}$: Shape of batch/lot dimensions
 - $\text{dim}$: Dimension of the underlying vector space
 
-### Operator Storage
+### Operator Storage (Lot-First Layout)
 
-Operator data is stored with shape:
+Operator data is stored with lot-first layout:
 
 $$
-\text{shape} = (*\text{output\_geometric}, *\text{output\_collection}, *\text{input\_collection}, *\text{input\_geometric})
+\text{shape} = (*\text{output\_lot}, *\text{input\_lot}, *\text{output\_geo}, *\text{input\_geo})
 $$
 
-For example, an operator mapping scalar currents $(N,)$ to bivector fields $(M, d, d)$ has data shape $(d, d, M, N)$.
+For example, an operator mapping scalar currents $(N,)$ to bivector fields $(M, d, d)$ has data shape $(M, N, d, d)$.
 
 ### Operator Properties
 
 | Property | Description |
 |----------|-------------|
-| `input_collection` | Shape of input collection dimensions |
-| `output_collection` | Shape of output collection dimensions |
-| `input_shape` | Full expected shape for input blade data |
-| `output_shape` | Full shape of output blade data |
+| `input_lot` | Shape of input lot dimensions |
+| `output_lot` | Shape of output lot dimensions |
+| `input_shape` | Full expected shape for input vector data |
+| `output_shape` | Full shape of output vector data |
 
 ### Operator Methods
 

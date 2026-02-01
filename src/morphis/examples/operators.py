@@ -42,19 +42,19 @@ def demo_operator_construction() -> None:
     print("    collection: number of batch dimensions")
     print("    dim: underlying vector space dimension")
 
-    input_spec = VectorSpec(grade=0, collection=1, dim=d)
-    output_spec = VectorSpec(grade=2, collection=1, dim=d)
+    input_spec = VectorSpec(grade=0, lot=(1,), dim=d)
+    output_spec = VectorSpec(grade=2, lot=(1,), dim=d)
     print()
     print(f"  input_spec  = {input_spec}")
     print(f"  output_spec = {output_spec}")
 
     subsection("Create transfer operator L^{ab}_{mn}")
-    # Operator data layout: (*out_geo, *out_coll, *in_coll, *in_geo)
-    # For scalar->bivector: (d, d, M, N)
+    # Operator data layout (lot-first): (*out_lot, *in_lot, *out_geo, *in_geo)
+    # For scalar->bivector: (M, N, d, d)
     np.random.seed(42)
-    L_data = np.random.randn(d, d, M, N)
+    L_data = np.random.randn(M, N, d, d)
     # Antisymmetrize for valid bivector output
-    L_data = (L_data - L_data.transpose(1, 0, 2, 3)) / 2
+    L_data = (L_data - L_data.transpose(0, 1, 3, 2)) / 2
 
     L = Operator(
         data=L_data,
@@ -83,13 +83,14 @@ def demo_forward_application() -> None:
 
     d, M, N = 3, 4, 5
     np.random.seed(42)
-    L_data = np.random.randn(d, d, M, N)
-    L_data = (L_data - L_data.transpose(1, 0, 2, 3)) / 2
+    # Lot-first layout: (M, N, d, d)
+    L_data = np.random.randn(M, N, d, d)
+    L_data = (L_data - L_data.transpose(0, 1, 3, 2)) / 2
 
     L = Operator(
         data=L_data,
-        input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
 
@@ -130,12 +131,13 @@ def demo_adjoint() -> None:
 
     d, M, N = 3, 4, 5
     np.random.seed(42)
-    L_data = np.random.randn(d, d, M, N)
+    # Lot-first layout: (M, N, d, d)
+    L_data = np.random.randn(M, N, d, d)
 
     L = Operator(
         data=L_data,
-        input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
 
@@ -180,13 +182,14 @@ def demo_least_squares() -> None:
 
     d, M, N = 3, 20, 5  # Overdetermined: more measurements than sources
     np.random.seed(42)
-    L_data = np.random.randn(d, d, M, N)
-    L_data = (L_data - L_data.transpose(1, 0, 2, 3)) / 2
+    # Lot-first layout: (M, N, d, d)
+    L_data = np.random.randn(M, N, d, d)
+    L_data = (L_data - L_data.transpose(0, 1, 3, 2)) / 2
 
     L = Operator(
         data=L_data,
-        input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
 
@@ -232,12 +235,13 @@ def demo_svd() -> None:
 
     d, M, N = 3, 10, 5
     np.random.seed(42)
-    L_data = np.random.randn(d, d, M, N)
+    # Lot-first layout: (M, N, d, d)
+    L_data = np.random.randn(M, N, d, d)
 
     L = Operator(
         data=L_data,
-        input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
 
@@ -281,12 +285,13 @@ def demo_pseudoinverse() -> None:
 
     d, M, N = 3, 10, 5
     np.random.seed(42)
-    L_data = np.random.randn(d, d, M, N)
+    # Lot-first layout: (M, N, d, d)
+    L_data = np.random.randn(M, N, d, d)
 
     L = Operator(
         data=L_data,
-        input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
 
@@ -330,15 +335,15 @@ def demo_complex_operators() -> None:
     np.random.seed(42)
 
     subsection("Create complex transfer operator")
-    # Complex operator with magnitude and phase
-    L_mag = np.random.randn(d, d, M, N)
-    L_phase = np.random.randn(d, d, M, N) * 0.5
+    # Complex operator with magnitude and phase (lot-first layout)
+    L_mag = np.random.randn(M, N, d, d)
+    L_phase = np.random.randn(M, N, d, d) * 0.5
     L_data = L_mag * exp(1j * L_phase)
 
     L = Operator(
         data=L_data,
-        input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
     print(f"  L.data.dtype = {L.data.dtype}")
@@ -378,13 +383,13 @@ def demo_vector_operator() -> None:
     np.random.seed(42)
 
     subsection("Create vector-to-vector operator")
-    # Shape: (*out_geo, *out_coll, *in_coll, *in_geo) = (d, M, N, d)
-    T_data = np.random.randn(d, M, N, d)
+    # Lot-first layout: (*out_lot, *in_lot, *out_geo, *in_geo) = (M, N, d, d)
+    T_data = np.random.randn(M, N, d, d)
 
     T = Operator(
         data=T_data,
-        input_spec=VectorSpec(grade=1, collection=1, dim=d),
-        output_spec=VectorSpec(grade=1, collection=1, dim=d),
+        input_spec=VectorSpec(grade=1, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=1, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
     print(f"  T.shape = {T.shape}")
@@ -431,8 +436,8 @@ def demo_outermorphism() -> None:
 
     R = Operator(
         data=R_data,
-        input_spec=VectorSpec(grade=1, collection=0, dim=d),
-        output_spec=VectorSpec(grade=1, collection=0, dim=d),
+        input_spec=VectorSpec(grade=1, lot=(), dim=d),
+        output_spec=VectorSpec(grade=1, lot=(), dim=d),
         metric=euclidean_metric(d),
     )
     print(f"  R.is_outermorphism = {R.is_outermorphism}")
@@ -510,8 +515,8 @@ def demo_outermorphism() -> None:
     )
     A = Operator(
         data=A_data,
-        input_spec=VectorSpec(grade=1, collection=0, dim=d),
-        output_spec=VectorSpec(grade=1, collection=0, dim=d),
+        input_spec=VectorSpec(grade=1, lot=(), dim=d),
+        output_spec=VectorSpec(grade=1, lot=(), dim=d),
         metric=euclidean_metric(d),
     )
 
@@ -528,10 +533,11 @@ def demo_outermorphism() -> None:
 
     subsection("Non-outermorphism operators cannot extend")
     print("  Operators that don't map grade-1 → grade-1 cannot act on multivectors:")
+    # Lot-first layout: (5, 3, d, d)
     L = Operator(
-        data=np.random.randn(d, d, 5, 3),
-        input_spec=VectorSpec(grade=0, collection=1, dim=d),
-        output_spec=VectorSpec(grade=2, collection=1, dim=d),
+        data=np.random.randn(5, 3, d, d),
+        input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
+        output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),
     )
     print(f"  L maps scalar -> bivector: L.is_outermorphism = {L.is_outermorphism}")

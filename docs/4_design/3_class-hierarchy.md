@@ -5,16 +5,16 @@ This document describes the architectural relationship between Tensor, Vector, a
 ## Current Architecture
 
 ```
-Element (base: metric, collection)
+Element (base: metric, lot)
 ├── Tensor (data: NDArray, contravariant: int, covariant: int)
 │   └── Vector (antisymmetric k-vector, grade = contravariant)
 ├── GradedElement (data: NDArray, grade: int)
-│   └── Frame (ordered collection of grade-1 vectors)
+│   └── Frame (ordered set of grade-1 vectors)
 └── CompositeElement (data: dict[int, Vector])
     └── MultiVector
 ```
 
-**Storage convention**: `(*collection, *geometric)` where geometric = `(dim,) * grade`
+**Storage convention**: `(*lot, *geo)` where geo = `(dim,) * grade`
 
 ---
 
@@ -53,10 +53,10 @@ class Tensor(Element):
     contravariant: int  # number of "up" indices
     covariant: int      # number of "down" indices
     metric: Metric
-    collection: tuple[int, ...]
+    lot: tuple[int, ...]
 ```
 
-Storage: `(*collection, *contravariant_dims, *covariant_dims)`
+Storage: `(*lot, *contravariant_dims, *covariant_dims)`
 
 ### Vector (k-vector)
 
@@ -69,7 +69,7 @@ class Vector(Tensor):
 - Enforces antisymmetry implicitly through GA operations
 - `.is_blade` property checks if factorizable as v₁ ∧ v₂ ∧ ... ∧ vₖ
 
-Storage: `(*collection, dim, dim, ..., dim)` with `grade` copies of `dim`
+Storage: `(*lot, dim, dim, ..., dim)` with `grade` copies of `dim`
 
 ### MultiVector
 
@@ -85,12 +85,12 @@ class MultiVector(CompositeElement):
 
 ```python
 class Frame(GradedElement):
-    data: NDArray  # shape: (*collection, span, dim)
+    data: NDArray  # shape: (*lot, span, dim)
     grade: int = 1  # always grade-1 vectors
     span: int  # number of vectors
 ```
 
-- Efficient storage for ordered collections of grade-1 vectors
+- Efficient storage for ordered sets of grade-1 vectors
 - `frame[i]` returns a grade-1 Vector
 - Not in Tensor hierarchy (different storage pattern)
 
@@ -99,7 +99,7 @@ class Frame(GradedElement):
 ## Why This Architecture
 
 1. **Mathematical fidelity**: k-vectors ARE antisymmetric (k,0)-tensors
-2. **Storage compatibility**: Both use `(*collection, *geometric)` pattern
+2. **Storage compatibility**: Both use `(*lot, *geo)` pattern
 3. **Minimal overhead**: Tensor base class is thin
 4. **Future extensibility**: Can add symmetric tensors, (p,q)-tensors, Forms later
 5. **Backward compatibility**: `Blade = Vector` alias maintained
@@ -112,7 +112,10 @@ class Frame(GradedElement):
 - `.is_blade` - True if factorizable as product of grade-1 vectors
 - `.grade` - The k in k-vector
 - `.dim` - Dimension of underlying vector space
-- `.collection` - Batch/collection dimensions
+- `.lot` - Batch/lot dimensions
+- `.geo` - Geometric dimensions `(dim,) * grade`
+- `.at` - Indexing over lot dimensions
+- `.on` - Indexing over geometric dimensions
 
 ### MultiVector Properties
 - `.is_even` - True if only even grades (0, 2, 4, ...)

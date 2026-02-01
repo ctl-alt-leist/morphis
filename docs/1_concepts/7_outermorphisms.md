@@ -59,8 +59,8 @@ R = array([
 # Create operator from matrix
 L = Operator(
     data=R,
-    input_spec=VectorSpec(grade=1, collection=0, dim=3),
-    output_spec=VectorSpec(grade=1, collection=0, dim=3),
+    input_spec=VectorSpec(grade=1, lot=(), dim=3),
+    output_spec=VectorSpec(grade=1, lot=(), dim=3),
     metric=g,
 )
 
@@ -146,8 +146,8 @@ Not all Operators are outermorphisms. For example:
 # Maps scalars to bivectors: NOT an outermorphism
 G = Operator(
     data=G_data,
-    input_spec=VectorSpec(grade=0, collection=1, dim=3),
-    output_spec=VectorSpec(grade=2, collection=1, dim=3),
+    input_spec=VectorSpec(grade=0, lot=(1,), dim=3),
+    output_spec=VectorSpec(grade=2, lot=(1,), dim=3),
     metric=g,
 )
 

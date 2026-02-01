@@ -44,7 +44,7 @@ A grade-$k$ Vector in $d$-dimensional space has components $B^{m_1 \ldots m_k}$ 
 
 $$B^{\ldots m \ldots n \ldots} = -B^{\ldots n \ldots m \ldots}$$
 
-The storage shape follows as $(*\text{collection}, d, d, \ldots, d)$ with $k$ trailing geometric dimensions.
+The storage shape follows as $(*\text{lot}, d, d, \ldots, d)$ with $k$ trailing geometric dimensions.
 
 **Grade-Specific Construction**
 
@@ -68,7 +68,7 @@ stored as shape $(d, d, d)$ with full antisymmetry over all indices.
 
 **Collection Dimensions**
 
-Batch processing via collection dimensions allows shape $(*\text{batch}, *\text{geometric})$ where:
+Batch processing via lot dimensions allows shape $(*\text{lot}, *\text{geo})$ where:
 
 $$\text{cdim} = \text{number of leading batch dimensions}$$
 
@@ -417,9 +417,9 @@ $$|\mathbf{B}|^2 > 0$$
 
 reflecting positive-definite area.
 
-**Normalization**
+**Unit Vectors**
 
-The normalized Vector:
+The unit vector:
 
 $$\hat{\mathbf{B}} = \frac{\mathbf{B}}{|\mathbf{B}|}$$
 
@@ -431,7 +431,7 @@ For zero Vector:
 
 $$|\mathbf{0}| = 0$$
 
-$$\text{normalize}(\mathbf{0}) = \mathbf{0}$$
+$$\text{unit}(\mathbf{0}) = \mathbf{0}$$
 
 **PGA Metric Degeneracy**
 
@@ -833,7 +833,7 @@ Zero Vectors satisfy:
 
 $$|\mathbf{0}| = 0$$
 
-$$\text{normalize}(\mathbf{0}) = \mathbf{0}$$
+$$\text{unit}(\mathbf{0}) = \mathbf{0}$$
 
 ### Complex Dtype Support
 

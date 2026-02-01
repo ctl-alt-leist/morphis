@@ -25,7 +25,7 @@ src/morphis/
 │   ├── products.py             # geometric, wedge, antiwedge, reverse, inverse
 │   ├── projections.py          # interior products, project, reject, dot
 │   ├── duality.py              # Hodge dual, complements
-│   ├── norms.py                # norm, normalize, conjugate
+│   ├── norms.py                # form, norm, unit, conjugate
 │   ├── exponential.py          # exp_vector, log_versor, slerp
 │   ├── factorization.py        # factor, spanning_vectors
 │   ├── outermorphism.py        # outermorphism application
@@ -40,6 +40,7 @@ src/morphis/
 │   ├── __init__.py
 │   ├── specs.py                # VectorSpec
 │   ├── patterns.py             # Einsum pattern generation
+│   ├── contraction.py          # IndexedTensor, contract()
 │   ├── solvers.py              # Linear algebra solvers
 │   └── tests/
 │
@@ -103,7 +104,7 @@ src/morphis/
 | `products.py` | `geometric()`, `wedge()`, `antiwedge()`, `reverse()`, `inverse()` |
 | `projections.py` | `interior_left()`, `interior_right()`, `project()`, `reject()`, `dot()`, `interior()` |
 | `duality.py` | `hodge_dual()`, `right_complement()`, `left_complement()` |
-| `norms.py` | `norm()`, `norm_squared()`, `normalize()`, `conjugate()`, `hermitian_norm()` |
+| `norms.py` | `form()`, `norm()`, `unit()`, `conjugate()`, `hermitian_form()`, `hermitian_norm()` |
 | `exponential.py` | `exp_vector()`, `log_versor()`, `slerp()` |
 | `factorization.py` | `factor()`, `spanning_vectors()` |
 | `outermorphism.py` | `apply_exterior_power()`, `apply_outermorphism()` |
@@ -118,7 +119,8 @@ src/morphis/
 | File | Contents |
 |------|----------|
 | `specs.py` | `VectorSpec`, `vector_spec()` |
-| `patterns.py` | `operator_shape()` |
+| `patterns.py` | `forward_signature()`, `adjoint_signature()`, `operator_shape()` |
+| `contraction.py` | `IndexedTensor`, `contract()` for tensor contraction |
 | `solvers.py` | `structured_lstsq()`, `structured_pinv_solve()`, `structured_pinv()`, `structured_svd()` |
 
 ### `transforms/`
@@ -171,9 +173,9 @@ from morphis.operations import (
     hodge_dual,
     right_complement,
     left_complement,
+    form,
     norm,
-    norm_squared,
-    normalize,
+    unit,
     conjugate,
     exp_vector,
     log_versor,

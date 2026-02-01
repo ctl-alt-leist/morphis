@@ -12,11 +12,14 @@ Hierarchy:
     │   └── Frame (+ span: int)
     └── CompositeElement (+ data: dict[int, Vector])
         └── MultiVector
+
+Mixins:
+    IndexableMixin: Provides __getitem__ dispatch for _index/_slice
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from numpy import asarray
 from numpy.typing import NDArray
@@ -26,7 +29,63 @@ from morphis.elements.metric import Metric
 
 
 if TYPE_CHECKING:
+    from morphis.algebra.contraction import IndexedTensor
     from morphis.elements.vector import Vector
+
+
+# =============================================================================
+# Mixins
+# =============================================================================
+
+
+class IndexableMixin:
+    """
+    Mixin providing index notation dispatch for tensor contraction.
+
+    Classes using this mixin must implement:
+    - _index(indices: str) -> IndexedTensor
+    - _slice(key) -> appropriate return type
+    - data: NDArray attribute
+
+    Provides:
+    - __getitem__ that dispatches based on key type (str vs other)
+
+    Usage:
+        class MyTensor(IndexableMixin, SomeBase):
+            def _index(self, indices: str) -> IndexedTensor:
+                ...
+            def _slice(self, key):
+                ...
+    """
+
+    def __getitem__(self, key: str | Any):
+        """
+        Index into the object or create an indexed tensor for contraction.
+
+        If key is a string, returns an IndexedTensor for einsum-style contraction:
+            obj["ab"] * other["bc"]  # contracts on index 'b'
+
+        Otherwise, performs standard slicing:
+            obj[0, :, 1]  # slice into data
+
+        Args:
+            key: Either a string of index labels or a standard indexing key
+
+        Returns:
+            IndexedTensor if key is str, otherwise result of _slice()
+        """
+        if isinstance(key, str):
+            return self._index(key)
+        else:
+            return self._slice(key)
+
+    def _index(self, indices: str) -> "IndexedTensor":
+        """Create IndexedTensor wrapper. Subclasses must implement."""
+        raise NotImplementedError("Subclasses must implement _index()")
+
+    def _slice(self, key: Any):
+        """Slice into data. Subclasses must implement."""
+        raise NotImplementedError("Subclasses must implement _slice()")
 
 
 class Element(BaseModel):
