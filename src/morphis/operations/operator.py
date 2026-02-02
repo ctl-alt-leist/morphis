@@ -249,7 +249,13 @@ class Operator(IndexableMixin):
         """
         from morphis.algebra.contraction import IndexedTensor
 
-        return IndexedTensor(self, indices)
+        # Operator layout: (*out_lot, *in_lot, *out_geo, *in_geo)
+        # Output geometric indices start after lot dimensions
+        lot_end = self.output_spec.collection + self.input_spec.collection
+        out_geo_end = lot_end + self.output_spec.grade
+        output_geo_indices = indices[lot_end:out_geo_end]
+
+        return IndexedTensor(self, indices, output_geo_indices=output_geo_indices)
 
     def _slice(self, key):
         """

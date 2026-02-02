@@ -375,9 +375,11 @@ class Vector(IndexableMixin, Tensor):
             return LotIndexed(self, indices)
         elif len(indices) == n_total:
             # Full indexing -> IndexedTensor
+            # All geometric indices (after lot) are "output geometric" for Vectors
             from morphis.algebra.contraction import IndexedTensor
 
-            return IndexedTensor(self, indices)
+            output_geo_indices = indices[n_lot:]
+            return IndexedTensor(self, indices, output_geo_indices=output_geo_indices)
         else:
             raise ValueError(
                 f"Index string '{indices}' has {len(indices)} indices, but expected "

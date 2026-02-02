@@ -1,11 +1,14 @@
 """Tests for tensor contraction with both bracket and einsum-style APIs."""
 
+import numpy as np
 import pytest
 from numpy import array, ones
 from numpy.testing import assert_allclose, assert_array_equal
 
 from morphis.algebra.contraction import IndexedTensor, contract
+from morphis.algebra.specs import VectorSpec
 from morphis.elements import Vector, euclidean_metric
+from morphis.operations.operator import Operator
 
 
 # =============================================================================
@@ -222,3 +225,84 @@ class TestSlicingStillWorks:
 
         assert isinstance(result, Vector)
         assert result.shape == (5, 3)
+
+
+# =============================================================================
+# Operator Indexed Contraction
+# =============================================================================
+
+
+class TestOperatorIndexedContraction:
+    """Tests for indexed contraction between Operators and Vectors."""
+
+    def test_operator_vector_contraction_preserves_output_grade(self):
+        """
+        Operator contraction should preserve output_spec.grade in result.
+
+        This is the key regression test: when an Operator with output_spec.grade=2
+        contracts with a Vector, the result must have grade=2, not grade=0.
+        """
+        g = euclidean_metric(3)
+
+        # Operator: maps grade-0 lot (N,) to grade-2 lot (M,)
+        M, N = 2, 3
+        O = Operator(
+            data=np.random.randn(M, N, 3, 3),  # shape (M, N, 3, 3)
+            input_spec=VectorSpec(grade=0, lot=(N,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(M,), dim=3),
+            metric=g,
+        )
+
+        # Input: grade-0 with lot (N,)
+        v = Vector(np.random.randn(N), grade=0, metric=g)
+
+        # Contract on "n" (the input lot index)
+        result = O["mnab"] * v["n"]
+
+        # Result should have: grade=2, lot=(M,)
+        assert result.grade == 2, f"Expected grade=2, got grade={result.grade}"
+        assert result.lot == (M,), f"Expected lot=(2,), got lot={result.lot}"
+        assert result.shape == (M, 3, 3)
+
+    def test_operator_lot_indexed_vector_contraction(self):
+        """Operator contraction via LotIndexed syntax also preserves grade."""
+        g = euclidean_metric(3)
+
+        M, N = 4, 5
+        O = Operator(
+            data=np.ones((M, N, 3, 3)),
+            input_spec=VectorSpec(grade=0, lot=(N,), dim=3),
+            output_spec=VectorSpec(grade=2, lot=(M,), dim=3),
+            metric=g,
+        )
+
+        # Input as grade-0 vector with lot
+        v = Vector(np.ones(N), grade=0, metric=g)
+
+        result = O["mnab"] * v["n"]
+
+        assert result.grade == 2
+        assert result.lot == (M,)
+        # Each element should be sum over N: N * 1 = 5
+        assert_allclose(result.data, np.ones((M, 3, 3)) * N)
+
+    def test_operator_vector_to_vector_contraction(self):
+        """Operator mapping grade-1 to grade-1 preserves grade in contraction."""
+        g = euclidean_metric(3)
+
+        M, N = 2, 3
+        # grade-1 -> grade-1 operator (outermorphism)
+        O = Operator(
+            data=np.eye(3).reshape(1, 1, 3, 3) * np.ones((M, N, 1, 1)),
+            input_spec=VectorSpec(grade=1, lot=(N,), dim=3),
+            output_spec=VectorSpec(grade=1, lot=(M,), dim=3),
+            metric=g,
+        )
+
+        v = Vector(np.ones((N, 3)), grade=1, metric=g)
+
+        result = O["mnab"] * v["nb"]
+
+        assert result.grade == 1
+        assert result.lot == (M,)
+        assert result.shape == (M, 3)

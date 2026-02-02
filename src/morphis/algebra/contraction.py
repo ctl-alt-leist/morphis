@@ -37,6 +37,8 @@ class IndexedTensor:
     Attributes:
         tensor: The underlying Vector or Operator (reference, not copy)
         indices: String of index labels (e.g., "mnab")
+        output_geo_indices: Indices that represent output geometric dimensions.
+            These determine the result grade when present in contraction output.
 
     Examples:
         >>> G = Operator(...)  # lot=(M, N), grade=2 output
@@ -44,18 +46,21 @@ class IndexedTensor:
         >>> b = G["mnab"] * q["n"]  # contracts on 'n', result has indices "mab"
     """
 
-    __slots__ = ("tensor", "indices")
+    __slots__ = ("tensor", "indices", "output_geo_indices")
 
-    def __init__(self, tensor: "Vector | Operator", indices: str):
+    def __init__(self, tensor: "Vector | Operator", indices: str, output_geo_indices: str = ""):
         """
         Create an indexed tensor wrapper.
 
         Args:
             tensor: The underlying Vector or Operator
             indices: String of index labels, one per axis of tensor.data
+            output_geo_indices: Subset of indices representing output geometric
+                dimensions. If empty, will be inferred during contraction (legacy).
         """
         self.tensor = tensor
         self.indices = indices
+        self.output_geo_indices = output_geo_indices
 
         # Validate index count matches tensor dimensions
         expected_ndim = tensor.data.ndim
@@ -78,9 +83,14 @@ class IndexedTensor:
 
         if isinstance(other, LotIndexed):
             # Convert LotIndexed to IndexedTensor by adding geo indices
+            # All of a Vector's geometric indices are "output geometric"
             n_geo = other.vector.grade
             geo_labels = "".join(chr(ord("A") + i) for i in range(n_geo))
-            other = IndexedTensor(other.vector, other.indices + geo_labels)
+            other = IndexedTensor(
+                other.vector,
+                other.indices + geo_labels,
+                output_geo_indices=geo_labels,
+            )
 
         if not isinstance(other, IndexedTensor):
             return NotImplemented
@@ -152,23 +162,20 @@ def _contract_indexed(*indexed_tensors: IndexedTensor) -> "Vector":
 
 
 def _infer_grade_from_indexed(indexed_tensors: tuple[IndexedTensor, ...], output_indices: str) -> int:
-    """Infer grade for IndexedTensor contraction result."""
-    from morphis.elements.vector import Vector
+    """
+    Infer grade for IndexedTensor contraction result.
 
-    # Track which indices are geometric (vs lot)
-    geo_indices = set()
-
+    The result grade equals the number of output geometric indices that appear
+    in the result. Each IndexedTensor carries its output_geo_indices, which
+    identify which indices represent geometric (grade-contributing) dimensions.
+    """
+    # Collect output geometric indices from all tensors
+    all_output_geo = set()
     for it in indexed_tensors:
-        if isinstance(it.tensor, Vector):
-            n_lot = len(it.tensor.lot)
-            n_geo = it.tensor.grade
-            # Geometric indices are the last 'grade' indices
-            geo_part = it.indices[n_lot : n_lot + n_geo]
-            geo_indices.update(geo_part)
+        all_output_geo.update(it.output_geo_indices)
 
-    # Count geometric indices in output
-    result_grade = sum(1 for idx in output_indices if idx in geo_indices)
-    return result_grade
+    # Result grade = count of output geometric indices in the result
+    return sum(1 for idx in output_indices if idx in all_output_geo)
 
 
 # =============================================================================
