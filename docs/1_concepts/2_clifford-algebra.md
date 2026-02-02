@@ -95,7 +95,7 @@ $$\mathbb{1} = \mathbf{e}_1 \wedge \mathbf{e}_2 \wedge \cdots \wedge \mathbf{e}_
 
 Its square depends on dimension and signature:
 
-$$\mathbb{1}^2 = (-1)^{d(d-1)/2} \cdot \text{sgn}(g)$$
+$$\mathbb{1}^2 = (-1)^{d(d - 1)/2} \cdot \text{sgn}(g)$$
 
 For Euclidean signatures:
 - 2D, 3D: $\mathbb{1}^2 = -1$
@@ -144,7 +144,7 @@ $$\widetilde{\mathbf{v}_1 \cdots \mathbf{v}_k} = \mathbf{v}_k \cdots \mathbf{v}_
 On a grade-$k$ element $u$:
 
 $$
-\widetilde{u} = (-1)^{k(k-1)/2} \, u
+\widetilde{u} = (-1)^{k(k - 1)/2} \, u
 $$
 
 Sign pattern by grade:

@@ -35,10 +35,10 @@ This document defines the naming conventions used throughout the morphis codebas
 | Function | Returns | Description |
 |----------|---------|-------------|
 | `basis_vector(index, metric)` | Vector | Single basis vector $\mathbf{e}_i$ |
-| `basis_vectors(metric)` | tuple[Vector, ...] | All basis vectors $(\mathbf{e}_0, \ldots, \mathbf{e}_{d-1})$ |
+| `basis_vectors(metric)` | tuple[Vector, ...] | All basis vectors $(\mathbf{e}_0, \ldots, \mathbf{e}_{d - 1})$ |
 | `basis_element(indices, metric)` | Vector | Basis k-vector $\mathbf{e}_{i_1} \wedge \cdots \wedge \mathbf{e}_{i_k}$ |
 | `geometric_basis(metric)` | dict[int, tuple] | Complete basis by grade |
-| `pseudoscalar(metric)` | Vector | Highest grade basis element $\mathbf{e}_{01\ldots(d-1)}$ |
+| `pseudoscalar(metric)` | Vector | Highest grade basis element $\mathbf{e}_{01\ldots(d - 1)}$ |
 
 ### Metric Constructors
 

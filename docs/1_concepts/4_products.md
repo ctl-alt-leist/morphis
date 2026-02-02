@@ -8,10 +8,10 @@ The **wedge product** (exterior product) constructs higher-grade Vectors by comb
 
 ### Definition
 
-For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$, the wedge product $u \wedge v$ is a grade-$(j+k)$ k-vector:
+For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$, the wedge product $u \wedge v$ is a grade-$(j + k)$ k-vector:
 
 $$
-(u \wedge v)^{m_1 \ldots m_{j+k}} = \frac{1}{j! \, k!} \, u^{[m_1 \ldots m_j} v^{m_{j+1} \ldots m_{j+k}]}
+(u \wedge v)^{m_1 \ldots m_{j + k}} = \frac{1}{j! \, k!} \, u^{[m_1 \ldots m_j} v^{m_{j + 1} \ldots m_{j + k}]}
 $$
 
 where brackets denote antisymmetrization.
@@ -74,7 +74,7 @@ The **interior product** (contraction) reduces grade by contracting indices usin
 For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$ with $j \leq k$:
 
 $$
-(u \lrcorner v)^{n_1 \ldots n_{k-j}} = u^{m_1 \ldots m_j} v_{m_1 \ldots m_j}^{\ \ \ \ \ \ \ \ n_1 \ldots n_{k-j}}
+(u \lrcorner v)^{n_1 \ldots n_{k - j}} = u^{m_1 \ldots m_j} v_{m_1 \ldots m_j}^{\ \ \ \ \ \ \ \ n_1 \ldots n_{k - j}}
 $$
 
 Result grade: $k - j$
@@ -84,7 +84,7 @@ When $j > k$: $u \lrcorner v = 0$
 ### Right Contraction
 
 $$
-(u \llcorner v)^{m_1 \ldots m_{j-k}} = u_{n_1 \ldots n_k}^{m_1 \ldots m_{j-k}} v^{n_1 \ldots n_k}
+(u \llcorner v)^{m_1 \ldots m_{j - k}} = u_{n_1 \ldots n_k}^{m_1 \ldots m_{j - k}} v^{n_1 \ldots n_k}
 $$
 
 Result grade: $j - k$

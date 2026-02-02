@@ -29,13 +29,13 @@ Specifications for k-vector structure, used when defining Operators:
 ```python
 from morphis.algebra import VectorSpec
 
-# Scalar with batch of 10
+# Scalar with lot of 10
 VectorSpec(grade=0, lot=(10,), dim=3)
 
 # Single bivector
 VectorSpec(grade=2, lot=(), dim=3)
 
-# Batch of vectors: shape (M, N, 3)
+# Lot of vectors: shape (M, N, 3)
 VectorSpec(grade=1, lot=(M, N), dim=3)
 ```
 
@@ -148,13 +148,13 @@ b.hodge()      # grade-2 → grade-1 in 3D
 ### Vector Reductions
 
 ```python
-# Batch of 100 vectors
-v_batch = Vector(data, grade=1, metric=g, lot=(100,))
+# Lot of 100 vectors
+v_lot = Vector(data, grade=1, metric=g, lot=(100,))
 
 # Reduce over lot dimensions
-v_batch.sum()           # sum all → lot=()
-v_batch.mean()          # average → lot=()
-v_batch.sum(axis=0)     # sum along first lot axis
+v_lot.sum()           # sum all → lot=()
+v_lot.mean()          # average → lot=()
+v_lot.sum(axis=0)     # sum along first lot axis
 ```
 
 ### Operator Methods
@@ -219,7 +219,7 @@ outer = u["a"] * v["b"]  # shape (3, 3)
 M = Vector(matrix_data, grade=2, metric=g)  # shape (3, 3)
 w = M["ab"] * v["b"]  # contracts on 'b', result has index "a"
 
-# Batch contraction
+# Lot contraction
 G = Vector(data, grade=2, metric=g, lot=(M, N))  # shape (M, N, 3, 3)
 q = Vector(data, grade=0, metric=g, lot=(N,))    # shape (N,)
 b = G["mnab"] * q["n"]  # contracts on 'n', result shape (M, 3, 3)
@@ -236,7 +236,7 @@ from morphis.algebra import contract
 s = contract("a, a ->", u, v)           # dot product
 outer = contract("a, b -> ab", u, v)    # outer product
 w = contract("ab, b -> a", M, v)        # matrix-vector
-b = contract("mnab, n -> mab", G, q)    # batch contraction
+b = contract("mnab, n -> mab", G, q)    # lot contraction
 
 # Multi-way contraction
 result = contract("mn, np, pm ->", A, B, C)  # all indices contracted
@@ -378,8 +378,8 @@ g = euclidean_metric(3)
 # From data
 v = Vector([1, 2, 3], grade=1, metric=g)
 
-# Batched vectors
-v_batch = Vector(data, grade=1, metric=g, lot=(100,))
+# Btached (lot) vectors
+v_lot = Vector(data, grade=1, metric=g, lot=(100,))
 
 # Basis vectors
 e1, e2, e3 = basis_vectors(g)
