@@ -216,6 +216,12 @@ class Vector(IndexableMixin, Tensor):
     def on(self): ...
 
     @property
+    def real(self): ...
+
+    @property
+    def imag(self): ...
+
+    @property
     def collection(self): ...
 
     @property
@@ -247,6 +253,10 @@ class Vector(IndexableMixin, Tensor):
 
     def __init__(self, data=None, /, **kwargs)
         """Allow positional argument for data: Vector(arr, grade=1, metric=m)."""
+
+    @classmethod
+    def stack(cls, vectors: 'Sequence[Vector]', axis: 'int' = 0) -> 'Vector'
+        """Stack Vectors along a new lot axis."""
 
     def reverse(self) -> 'Vector'
         """Reverse operator."""
@@ -372,6 +382,44 @@ class MultiVector(CompositeElement):
 
     def with_metric(self, metric: 'Metric') -> 'MultiVector'
         """Return a new MultiVector with the specified metric context."""
+```
+
+
+### `morphis.elements.lot_indexed`
+
+*Geometric Algebra - Lot Indexed Vectors*
+
+```python
+class LotIndexed:
+    """Lightweight wrapper pairing a Vector with lot index labels."""
+
+    def __init__(self, vector: 'Vector', indices: 'str')
+        """Create a lot-indexed wrapper for broadcasting."""
+
+    def norm(self) -> 'LotIndexed'
+        """Compute norm, preserving lot indices."""
+
+    def sum(self, axis: 'int | None' = None) -> 'LotIndexed'
+        """Sum over lot axis, removing that index."""
+```
+
+LotIndexed enables explicit broadcasting over lot dimensions using index labels:
+
+```python
+x = Vector(...)  # lot (M,)
+y = Vector(...)  # lot (N, K)
+
+# Outer product on lot dimensions
+r = y["nk"] - x["m"]                 # lot (N, K, M)
+
+# Reorder to desired lot order
+r = (y["nk"] - x["m"])["mnk"]        # lot (M, N, K)
+
+# Contraction with *
+b = G["mn"] * q["n"]                 # n contracts -> lot (M,)
+
+# Hadamard (element-wise multiply) with &
+c = A["mn"] & B["mn"]                # lot (M, N)
 ```
 
 
