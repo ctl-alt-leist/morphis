@@ -10,6 +10,7 @@ from morphis.elements.base import (
     GradedElement as GradedElement,
 )
 from morphis.elements.frame import Frame
+from morphis.elements.lot_indexed import LotIndexed as LotIndexed
 from morphis.elements.metric import (
     PGA as PGA,
     STA as STA,

@@ -13,9 +13,9 @@ Every Vector requires a Metric which defines the complete geometric context.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
-from numpy import asarray, broadcast_shapes, zeros
+from numpy import asarray, broadcast_shapes, stack, zeros
 from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
@@ -189,6 +189,42 @@ class Vector(IndexableMixin, Tensor):
 
         super().__init__(**kwargs)
 
+    @classmethod
+    def stack(cls, vectors: Sequence["Vector"], axis: int = 0) -> "Vector":
+        """
+        Stack Vectors along a new lot axis.
+
+        Args:
+            vectors: Sequence of Vectors with same grade and metric
+            axis: Lot axis for stacking (default 0, prepends new dimension)
+
+        Returns:
+            Vector with new lot dimension at specified axis
+
+        Examples:
+            >>> from morphis.elements import Vector, euclidean_metric
+            >>> import numpy as np
+            >>> g = euclidean_metric(3)
+            >>> vectors = [Vector(np.random.randn(3), grade=1, metric=g) for _ in range(10)]
+            >>> stacked = Vector.stack(vectors, axis=0)
+            >>> stacked.lot
+            (10,)
+        """
+        if not vectors:
+            raise ValueError("Cannot stack empty sequence")
+
+        first = vectors[0]
+        grade = first.grade
+        metric = first.metric
+
+        for v in vectors[1:]:
+            if v.grade != grade:
+                raise ValueError(f"Grade mismatch: {v.grade} != {grade}")
+            metric = Metric.merge(metric, v.metric)
+
+        data = stack([v.data for v in vectors], axis=axis)
+        return cls(data, grade=grade, metric=metric)
+
     # =========================================================================
     # Validators
     # =========================================================================
@@ -261,27 +297,92 @@ class Vector(IndexableMixin, Tensor):
         """
         return OnAccessor(self)
 
+    @property
+    def real(self) -> "Vector":
+        """
+        Return Vector with real part of coefficients.
+
+        For real Vectors, returns a copy.
+        For complex Vectors (phasors), extracts real part.
+
+        Returns:
+            Vector with real-valued coefficients
+
+        Examples:
+            >>> v = Vector([1 + 2j, 3 - 4j, 5j], grade=1, metric=g)
+            >>> v.real.data
+            array([1., 3., 0.])
+        """
+        return Vector(
+            data=self.data.real.copy(),
+            grade=self.grade,
+            metric=self.metric,
+        )
+
+    @property
+    def imag(self) -> "Vector":
+        """
+        Return Vector with imaginary part of coefficients.
+
+        For real Vectors, returns zero Vector.
+        For complex Vectors (phasors), extracts imaginary part.
+
+        Returns:
+            Vector with imaginary coefficients as real values
+
+        Examples:
+            >>> v = Vector([1 + 2j, 3 - 4j, 5j], grade=1, metric=g)
+            >>> v.imag.data
+            array([2., -4., 5.])
+        """
+        return Vector(
+            data=self.data.imag.copy(),
+            grade=self.grade,
+            metric=self.metric,
+        )
+
     # =========================================================================
     # Indexing (implements IndexableMixin interface)
     # =========================================================================
 
     def _index(self, indices: str):
         """
-        Create an IndexedTensor wrapper for einsum-style contraction.
+        Create an indexed wrapper for einsum-style operations.
+
+        If indices match lot dimensions only, returns LotIndexed for
+        lot-level broadcasting. If indices match all dimensions (lot + geo),
+        returns IndexedTensor for full tensor contraction.
 
         Args:
-            indices: String of index labels, one per axis (lot + geo)
+            indices: String of index labels
 
         Returns:
-            IndexedTensor wrapping this Vector with the given indices
+            LotIndexed if len(indices) == len(lot)
+            IndexedTensor if len(indices) == len(lot) + grade
 
         Examples:
             v = Vector(data, grade=2)  # lot=(M, N), shape=(M, N, 3, 3)
-            v["mnab"]  # IndexedTensor with indices for all 4 axes
+            v["mn"]    # LotIndexed for lot broadcasting
+            v["mnab"]  # IndexedTensor for full tensor contraction
         """
-        from morphis.algebra.contraction import IndexedTensor
+        n_lot = len(self.lot)
+        n_total = self.data.ndim
 
-        return IndexedTensor(self, indices)
+        if len(indices) == n_lot:
+            # Lot-only indexing -> LotIndexed
+            from morphis.elements.lot_indexed import LotIndexed
+
+            return LotIndexed(self, indices)
+        elif len(indices) == n_total:
+            # Full indexing -> IndexedTensor
+            from morphis.algebra.contraction import IndexedTensor
+
+            return IndexedTensor(self, indices)
+        else:
+            raise ValueError(
+                f"Index string '{indices}' has {len(indices)} indices, but expected "
+                f"{n_lot} (lot only) or {n_total} (lot + geo)"
+            )
 
     def _slice(self, index) -> "Vector":
         """

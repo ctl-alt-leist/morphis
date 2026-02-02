@@ -69,11 +69,19 @@ class IndexedTensor:
         Contract two indexed tensors on matching indices.
 
         Args:
-            other: Another IndexedTensor to contract with
+            other: Another IndexedTensor or LotIndexed to contract with
 
         Returns:
             Vector with the contracted result
         """
+        from morphis.elements.lot_indexed import LotIndexed
+
+        if isinstance(other, LotIndexed):
+            # Convert LotIndexed to IndexedTensor by adding geo indices
+            n_geo = other.vector.grade
+            geo_labels = "".join(chr(ord("A") + i) for i in range(n_geo))
+            other = IndexedTensor(other.vector, other.indices + geo_labels)
+
         if not isinstance(other, IndexedTensor):
             return NotImplemented
 
