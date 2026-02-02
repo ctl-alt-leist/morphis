@@ -130,13 +130,13 @@ This approach:
 
 ## Properties Summary
 
-| Property | Statement |
-|----------|-----------|
-| Wedge preservation | $f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})$ |
-| Determined by grade-1 | Know $A|_{V}$ $\Rightarrow$ know $f$ on all grades |
-| Scalar invariance | $f(s) = s$ |
-| Determinant property | $f(\mathbb{1}) = \det(A) \cdot \mathbb{1}$ |
-| Composition | $(f \circ g)_k = \bigwedge^k(AB)$ |
+| Property              | Statement                                                              |
+| --------------------- | ---------------------------------------------------------------------- |
+| Wedge preservation    | $f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})$ |
+| Determined by grade-1 | $A_{V} \, \Rightarrow \, f$ on all grades                              |
+| Scalar invariance     | $f(s) = s$                                                             |
+| Determinant property  | $f(\mathbb{1}) = \det(A) \cdot \mathbb{1}$                             |
+| Composition           | $(f \circ g)_k = \bigwedge^k(AB)$                                      |
 
 ## Non-Outermorphism Operators
 

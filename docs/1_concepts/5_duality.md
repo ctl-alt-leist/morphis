@@ -20,20 +20,20 @@ I.grade  # 3 (equals dim)
 
 ## Complement Operations
 
-Complements map between grades $k$ and $(d-k)$ using only the **Levi-Civita symbol**—they are metric-independent.
+Complements map between grades $k$ and $(d - k)$ using only the **Levi-Civita symbol**—they are metric-independent.
 
 ### Right Complement
 
 For a grade-$k$ k-vector $b$:
 
 $$
-\bar{b}^{m_{k+1} \ldots m_d} = b^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
+\bar{b}^{m_{k + 1} \ldots m_d} = b^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
 $$
 
 ### Left Complement
 
 $$
-\underline{b}^{m_1 \ldots m_{d-k}} = \varepsilon_{m_1 \ldots m_d} \, b^{m_{d-k+1} \ldots m_d}
+\underline{b}^{m_1 \ldots m_{d - k}} = \varepsilon_{m_1 \ldots m_d} \, b^{m_{d - k + 1} \ldots m_d}
 $$
 
 ### Orthogonality
@@ -104,7 +104,7 @@ where $G$ applies the metric to raise/lower indices.
 In components:
 
 $$
-(\star v)^{m_{k+1} \ldots m_d} = \frac{1}{k!} \, g^{m_{k+1} n_{k+1}} \cdots g^{m_d n_d} \, v^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
+(\star v)^{m_{k + 1} \ldots m_d} = \frac{1}{k!} \, g^{m_{k + 1} n_{k + 1}} \cdots g^{m_d n_d} \, v^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
 $$
 
 The key distinction:
@@ -130,7 +130,7 @@ $$
 ### Double Hodge Dual
 
 $$
-\star \star v = (-1)^{k(d-k)} \, \text{sgn}(g) \, v
+\star \star v = (-1)^{k(d - k)} \, \text{sgn}(g) \, v
 $$
 
 where $\text{sgn}(g)$ is the sign of the metric determinant:
@@ -211,7 +211,7 @@ In electromagnetism, the electric field $\mathbf{E}$ and magnetic field $\mathbf
 
 Duality operations enable computing in whichever grade is more convenient:
 
-- Finding intersection of $(d-1)$-dimensional hyperplanes: work with their 1-dimensional normal vectors
+- Finding intersection of $(d - 1)$-dimensional hyperplanes: work with their 1-dimensional normal vectors
 - Testing incidence: work in the simpler dual space
 
 The involution property $\overline{\overline{u}} = u$ ensures all such transformations are reversible.

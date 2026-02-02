@@ -356,7 +356,7 @@ $$
 
 ### Component Counts
 
-Motor components: $1 + \binom{d+1}{2}$
+Motor components: $1 + \binom{d + 1}{2}$
 
 - 3D: $1 + 6 = 7$
 - 4D: $1 + 10 = 11$

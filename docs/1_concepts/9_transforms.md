@@ -147,9 +147,9 @@ $$M = RT$$
 
 or via line exponential:
 
-$$M = e^{-L\theta/2}$$
+$$M = e^{-\ell\,θ/2}$$
 
-where $L$ is a line (bivector in PGA).
+where $\ell$ is a line (bivector in PGA).
 
 ```python
 from morphis.transforms import rotation_about_point
@@ -172,7 +172,7 @@ $$RT \neq TR$$
 
 ## Projective Geometric Algebra (PGA)
 
-PGA embeds $d$-dimensional Euclidean space in a $(d+1)$-dimensional Clifford algebra with degenerate metric.
+PGA embeds $d$-dimensional Euclidean space in a $(d + 1)$-dimensional Clifford algebra with degenerate metric.
 
 ### Metric Structure
 
@@ -225,8 +225,8 @@ $$\pi = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}$$
 ```python
 from morphis.transforms import line, plane
 
-L = line(p1, p2)
-P = plane(p1, p2, p3)
+l = line(p1, p2)
+p = plane(p1, p2, p3)
 ```
 
 ### Incidence Predicates
@@ -241,7 +241,7 @@ $$\mathbf{p} \wedge \ell = 0$$
 from morphis.transforms import are_collinear, point_on_line
 
 are_collinear(p, q, r)
-point_on_line(p, L)
+point_on_line(p, l)
 ```
 
 ### Distance Functions
@@ -256,7 +256,7 @@ $$d(\mathbf{p}, \ell) = |\mathbf{p} \wedge \ell| / |\ell|$$
 from morphis.transforms import distance_point_to_point, distance_point_to_line
 
 d = distance_point_to_point(p1, p2)
-d = distance_point_to_line(p, L)
+d = distance_point_to_line(p, l)
 ```
 
 ## Geometric Invariants
@@ -271,10 +271,10 @@ These are the defining properties of rigid motions (Euclidean isometries).
 
 ## Summary Table
 
-| Transform | Generator | Versor | Action |
-|-----------|-----------|--------|--------|
-| Reflection | Unit vector $n$ | Odd | $-nxn$ |
-| Rotation | Bivector $b$ | Even (rotor) | $Rx\tilde{R}$ |
-| Translation | Degenerate bivector | Even (translator) | $Tx\tilde{T}$ |
-| Rigid motion | Line $L$ | Even (motor) | $Mx\tilde{M}$ |
-| Boost | Timelike bivector | Even | $Bx\tilde{B}$ |
+| Transform    | Generator           | Versor            | Action        |
+| ------------ | ------------------- | ----------------- | ------------- |
+| Reflection   | Unit vector $n$     | Odd               | $-nxn$        |
+| Rotation     | Bivector $b$        | Even (rotor)      | $Rx\tilde{R}$ |
+| Translation  | Degenerate bivector | Even (translator) | $Tx\tilde{T}$ |
+| Rigid motion | Line $\ell$         | Even (motor)      | $Mx\tilde{M}$ |
+| Boost        | Timelike bivector   | Even              | $Bx\tilde{B}$ |

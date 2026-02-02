@@ -184,9 +184,9 @@ $$M = RT$$
 
 or equivalently via the exponential of a line:
 
-$$M = e^{-L\theta/2}$$
+$$M = e^{-\ell\,θ/2}$$
 
-where $L$ is a PGA line (bivector + bivector).
+where $\ell$ is a PGA line (bivector + bivector).
 
 ```python
 from morphis.transforms import rotor, translator, rotation_about_point

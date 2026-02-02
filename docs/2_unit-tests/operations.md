@@ -11,7 +11,7 @@ The wedge (exterior) product constructs higher-grade blades.
 For grade-$j$ blade $\mathbf{A}$ and grade-$k$ blade $\mathbf{B}$:
 
 $$
-(\mathbf{A} \wedge \mathbf{B})^{m_1 \ldots m_{j+k}} = \frac{1}{j! \, k!} A^{m_1 \ldots m_j} B^{m_{j+1} \ldots m_{j+k}} \times \text{antisymmetrize}
+(\mathbf{A} \wedge \mathbf{B})^{m_1 \ldots m_{j + k}} = \frac{1}{j! \, k!} A^{m_1 \ldots m_j} B^{m_{j + 1} \ldots m_{j + k}} \times \text{antisymmetrize}
 $$
 
 Result has grade $(j + k)$.
@@ -63,13 +63,13 @@ The interior product (left contraction) contracts indices using the metric.
 For grade-$j$ blade $\mathbf{A}$ and grade-$k$ blade $\mathbf{B}$ with $j \leq k$:
 
 $$
-(\mathbf{A} \lrcorner \mathbf{B})^{n_1 \ldots n_{k-j}} = A^{m_1 \ldots m_j} B_{m_1 \ldots m_j}^{n_1 \ldots n_{k-j}}
+(\mathbf{A} \lrcorner \mathbf{B})^{n_1 \ldots n_{k - j}} = A^{m_1 \ldots m_j} B_{m_1 \ldots m_j}^{n_1 \ldots n_{k - j}}
 $$
 
 Indices lowered via metric:
 
 $$
-B_{m_1 \ldots m_j}^{n_1 \ldots n_{k-j}} = g_{m_1 p_1} \cdots g_{m_j p_j} B^{p_1 \ldots p_j n_1 \ldots n_{k-j}}
+B_{m_1 \ldots m_j}^{n_1 \ldots n_{k - j}} = g_{m_1 p_1} \cdots g_{m_j p_j} B^{p_1 \ldots p_j n_1 \ldots n_{k - j}}
 $$
 
 ### Grade Reduction
@@ -109,13 +109,13 @@ Complement operations map between dual grades using the Levi-Civita symbol.
 For grade-$k$ blade in $d$ dimensions:
 
 $$
-\overline{\mathbf{B}}^{m_{k+1} \ldots m_d} = B^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
+\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
 $$
 
 ### Left Complement
 
 $$
-\underline{\mathbf{B}}^{m_1 \ldots m_{d-k}} = \varepsilon_{m_1 \ldots m_d} B^{m_{d-k+1} \ldots m_d}
+\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = \varepsilon_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
 $$
 
 ### Grade Mapping
@@ -135,7 +135,7 @@ $$
 The Hodge dual incorporates metric structure:
 
 $$
-(\star \mathbf{B})^{m_{k+1} \ldots m_d} = \frac{1}{k!} B^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} \varepsilon^{m_1 \ldots m_d}
+(\star \mathbf{B})^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} \varepsilon^{m_1 \ldots m_d}
 $$
 
 ### Grade Mapping
@@ -365,7 +365,7 @@ $$
 ### Pseudoscalar Squares
 
 $$
-\mathbb{1}^2 = (-1)^{d(d-1)/2}
+\mathbb{1}^2 = (-1)^{d(d - 1)/2}
 $$
 
 - 2D, 3D: $\mathbb{1}^2 = -1$
@@ -376,7 +376,7 @@ $$
 For grade-$k$ blade:
 
 $$
-\widetilde{\mathbf{A}} = (-1)^{k(k-1)/2} \mathbf{A}
+\widetilde{\mathbf{A}} = (-1)^{k(k - 1)/2} \mathbf{A}
 $$
 
 Sign pattern:
