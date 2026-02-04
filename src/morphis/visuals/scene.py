@@ -785,25 +785,60 @@ class Scene:
 
         self._snapshots.sort(key=lambda s: s.t)
 
+        # Create off-screen plotter for export
+        from pyvista import Plotter
+
+        from morphis.visuals.drawing.vectors import draw_coordinate_basis
+
+        plotter = Plotter(off_screen=True)
+        plotter.set_background(self._theme.background)
+        plotter.window_size = self._size
+
+        # Draw coordinate basis if enabled
+        if self._show_basis:
+            draw_coordinate_basis(plotter, color=self._theme.axis_color)
+
+        # Add all tracked elements with initial state
+        element_actors: dict[str, dict] = {}  # element_id -> {actors, tracked}
+
+        first_snapshot = self._snapshots[0]
+        for element_id, tracked in self._elements.items():
+            state = first_snapshot.states.get(element_id, {})
+            opacity = state.get("opacity", 1.0) * tracked.opacity
+
+            actors = self._add_element_to_plotter(plotter, tracked, opacity)
+            element_actors[element_id] = {"actors": actors, "tracked": tracked}
+
         # Capture frames
         frames = []
         for snapshot in self._snapshots:
-            # Apply state
+            # Update each element's state and opacity
             for element_id, state in snapshot.states.items():
-                if element_id not in self._elements:
+                if element_id not in element_actors:
                     continue
 
                 tracked = self._elements[element_id]
                 element = tracked.element
+                actors = element_actors[element_id]["actors"]
 
+                # Apply data to element
                 if "vertices" in state:
                     element.vertices.data[:] = state["vertices"]
                 elif "data" in state:
                     element.data[:] = state["data"]
 
-            self._sync_visuals()
-            frame = self._backend.capture_frame()
+                # Compute opacity
+                opacity = state.get("opacity", 1.0) * tracked.opacity
+
+                # Update geometry and opacity
+                self._update_element_in_plotter(plotter, tracked, actors, opacity)
+
+            # Render and capture
+            plotter.render()
+            frame = plotter.screenshot(return_img=True)
             frames.append(frame)
+
+        plotter.close()
 
         # Save
         import imageio.v3 as iio
@@ -821,6 +856,129 @@ class Scene:
             iio.imwrite(path, frames, fps=self._frame_rate)
 
         print(f"Saved to {path}")
+
+    def _add_element_to_plotter(self, plotter, tracked: TrackedElement, opacity: float) -> dict:
+        """Add an element to an off-screen plotter for export."""
+        from morphis.elements.surface import Surface
+        from morphis.visuals.drawing.vectors import (
+            _create_arrow_mesh,
+            create_frame_mesh,
+        )
+
+        element = tracked.element
+        actors = {"edges": None, "faces": None, "origin": None}
+
+        if isinstance(element, Surface):
+            # Surface mesh
+            from pyvista import PolyData
+
+            vertices = element.vertices.data
+            faces = element.faces
+            mesh = PolyData(vertices, faces)
+            actors["edges"] = plotter.add_mesh(
+                mesh,
+                color=tracked.color,
+                opacity=opacity,
+                smooth_shading=True,
+            )
+
+        elif isinstance(element, Frame):
+            # Frame: multiple arrows from origin with optional faces
+            origin = tracked.extra.get("origin", zeros(3))
+            origin_3d = self._project_point(origin)
+            vecs_3d = self._project_vectors(element.data)
+
+            edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
+                origin_3d,
+                vecs_3d,
+                projection_axes=None,  # Already projected
+                filled=tracked.extra.get("filled", False),
+            )
+
+            if edges_mesh is not None:
+                actors["edges"] = plotter.add_mesh(
+                    edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
+                )
+
+            if faces_mesh is not None:
+                actors["faces"] = plotter.add_mesh(
+                    faces_mesh, color=tracked.color, opacity=opacity * 0.3, smooth_shading=True
+                )
+
+            if origin_mesh is not None:
+                actors["origin"] = plotter.add_mesh(
+                    origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
+                )
+
+        elif isinstance(element, Vector) and element.grade == 1:
+            # Single vector or collection
+            origin = tracked.extra.get("origin", zeros(3))
+            origin_3d = self._project_point(origin)
+
+            if element.lot and element.lot != ():
+                # Collection of vectors
+                vecs_3d = self._project_vectors(element.data)
+                origins = tracked.extra.get("origins", zeros((len(element.data), 3)))
+                origins_3d = self._project_vectors(origins)
+
+                from pyvista import merge
+
+                arrow_meshes = []
+                for o, d in zip(origins_3d, vecs_3d, strict=False):
+                    mesh = _create_arrow_mesh(o, d)
+                    if mesh is not None:
+                        arrow_meshes.append(mesh)
+
+                if arrow_meshes:
+                    combined = merge(arrow_meshes)
+                    actors["edges"] = plotter.add_mesh(
+                        combined, color=tracked.color, opacity=opacity, smooth_shading=True
+                    )
+            else:
+                # Single vector
+                vec_3d = self._project_point(element.data)
+                mesh = _create_arrow_mesh(origin_3d, vec_3d)
+                if mesh is not None:
+                    actors["edges"] = plotter.add_mesh(mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
+
+        return actors
+
+    def _update_element_in_plotter(self, plotter, tracked: TrackedElement, actors: dict, opacity: float) -> None:
+        """Update an element's geometry and opacity in the plotter."""
+        from morphis.elements.surface import Surface
+        from morphis.visuals.drawing.vectors import create_frame_mesh
+
+        element = tracked.element
+
+        if isinstance(element, Surface):
+            # Update mesh vertices
+            if actors["edges"] is not None:
+                actors["edges"].mapper.GetInput().points = element.vertices.data
+                actors["edges"].GetProperty().SetOpacity(opacity)
+
+        elif isinstance(element, Frame):
+            # Update frame geometry
+            origin = tracked.extra.get("origin", zeros(3))
+            origin_3d = self._project_point(origin)
+            vecs_3d = self._project_vectors(element.data)
+
+            edges_mesh, faces_mesh, _ = create_frame_mesh(
+                origin_3d,
+                vecs_3d,
+                projection_axes=None,
+                filled=tracked.extra.get("filled", False),
+            )
+
+            if actors["edges"] is not None and edges_mesh is not None:
+                actors["edges"].mapper.SetInputData(edges_mesh)
+                actors["edges"].GetProperty().SetOpacity(opacity)
+
+            if actors["faces"] is not None and faces_mesh is not None:
+                actors["faces"].mapper.SetInputData(faces_mesh)
+                actors["faces"].GetProperty().SetOpacity(opacity * 0.3)
+
+            if actors["origin"] is not None:
+                actors["origin"].GetProperty().SetOpacity(opacity)
 
     # =========================================================================
     # Display
