@@ -798,6 +798,12 @@ class Scene:
         if self._show_basis:
             draw_coordinate_basis(plotter, color=self._theme.axis_color)
 
+        # Compute auto camera position based on geometry extent
+        camera_pos, camera_focal = self._compute_auto_camera()
+        if camera_pos is not None:
+            plotter.camera.position = camera_pos
+            plotter.camera.focal_point = camera_focal
+
         # Add all tracked elements with initial state
         element_actors: dict[str, dict] = {}  # element_id -> {actors, tracked}
 
@@ -902,7 +908,7 @@ class Scene:
 
             if faces_mesh is not None:
                 actors["faces"] = plotter.add_mesh(
-                    faces_mesh, color=tracked.color, opacity=opacity * 0.3, smooth_shading=True
+                    faces_mesh, color=tracked.color, opacity=opacity * 0.2, smooth_shading=True
                 )
 
             if origin_mesh is not None:
@@ -975,10 +981,90 @@ class Scene:
 
             if actors["faces"] is not None and faces_mesh is not None:
                 actors["faces"].mapper.SetInputData(faces_mesh)
-                actors["faces"].GetProperty().SetOpacity(opacity * 0.3)
+                actors["faces"].GetProperty().SetOpacity(opacity * 0.2)
 
             if actors["origin"] is not None:
                 actors["origin"].GetProperty().SetOpacity(opacity)
+
+    def _compute_auto_camera(self) -> tuple[tuple | None, tuple | None]:
+        """
+        Compute reasonable camera position based on tracked elements' extent.
+
+        Strategy:
+        - Compute bounding box of all tracked objects across all snapshots
+        - Position camera to see entire scene with margin
+        - Default viewing angle: isometric-ish (positive x, negative y, positive z)
+
+        Returns:
+            (camera_position, focal_point) or (None, None) if no data
+        """
+        from numpy import array, max as np_max, min as np_min
+        from numpy.linalg import norm
+
+        if not self._snapshots:
+            return (4.0, -3.0, 3.5), (0.0, 0.0, 0.0)
+
+        # Collect all vertex positions across all snapshots
+        all_points = []
+
+        for snapshot in self._snapshots:
+            for element_id, state in snapshot.states.items():
+                if element_id not in self._elements:
+                    continue
+
+                tracked = self._elements[element_id]
+                element = tracked.element
+
+                # Get the data from the element
+                if hasattr(element, "vertices"):
+                    data = state.get("vertices", element.vertices.data)
+                elif hasattr(element, "data"):
+                    data = state.get("data", element.data)
+                else:
+                    continue
+
+                origin = tracked.extra.get("origin", zeros(3))
+                origin_3d = self._project_point(origin)
+                all_points.append(origin_3d)
+
+                # Add extent from data
+                if isinstance(element, Frame):
+                    vecs_3d = self._project_vectors(data)
+                    for vec in vecs_3d:
+                        all_points.append(origin_3d + vec)
+                elif hasattr(data, "ndim") and data.ndim >= 1:
+                    if data.ndim == 1:
+                        # Single point/vector
+                        pt = self._project_point(data)
+                        all_points.append(origin_3d + pt)
+                    else:
+                        # Multiple points
+                        for row in data:
+                            pt = self._project_point(row)
+                            all_points.append(pt)
+
+        if not all_points:
+            return (4.0, -3.0, 3.5), (0.0, 0.0, 0.0)
+
+        points = array(all_points)
+
+        # Bounding box
+        min_pt = np_min(points, axis=0)
+        max_pt = np_max(points, axis=0)
+        center = (min_pt + max_pt) / 2
+        extent = np_max(max_pt - min_pt)
+
+        # Camera distance based on extent (with margin)
+        distance = extent * 4
+
+        # Isometric-like viewing angle: (1, -0.6, 0.8) normalized
+        direction = array([1.0, -0.6, 0.8])
+        direction = direction / norm(direction)
+
+        camera_position = tuple(center + direction * distance)
+        camera_focal = tuple(center)
+
+        return camera_position, camera_focal
 
     # =========================================================================
     # Display
