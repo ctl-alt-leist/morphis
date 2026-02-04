@@ -10,11 +10,19 @@ cycling through colors as objects are added. Colors can also be specified
 explicitly for full control.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from numpy import array, cross, ndarray
 from numpy.linalg import norm as np_norm
 from pydantic import BaseModel, ConfigDict
 
 from morphis.visuals.theme import DEFAULT_THEME, Color, Palette, Theme, get_theme
+
+
+if TYPE_CHECKING:
+    from morphis.visuals.model import VisualModel
 
 
 # =============================================================================
@@ -41,6 +49,17 @@ class CurveStyle(BaseModel):
     radius: float = 0.008
     resolution: int = 24
     spline_factor: int = 3
+
+
+class ModelStyle(BaseModel):
+    """Configuration for 3D model rendering."""
+
+    model_config = ConfigDict(frozen=True)
+
+    smooth_shading: bool = True
+    show_edges: bool = False
+    edge_color: Color | None = None
+    lighting: bool = True
 
 
 # =============================================================================
@@ -71,7 +90,7 @@ class Canvas:
         show_basis: bool = True,
         basis_axes: tuple[int, int, int] = (0, 1, 2),
     ):
-        import pyvista as pv
+        from pyvista import Plotter
 
         if isinstance(theme, str):
             theme = get_theme(theme)
@@ -85,7 +104,7 @@ class Canvas:
         self.arrow_style = ArrowStyle()
         self.curve_style = CurveStyle()
 
-        self.plotter = pv.Plotter(off_screen=False)
+        self.plotter = Plotter(off_screen=False)
         self.plotter.set_background(theme.background)
         self.plotter.window_size = size
 
@@ -172,7 +191,7 @@ class Canvas:
         shaft_radius: float | None = None,
     ):
         """Internal: add arrow mesh to plotter."""
-        import pyvista as pv
+        from pyvista import Cone, Cylinder
 
         start = array(start, dtype=float)
         direction = array(direction, dtype=float)
@@ -190,7 +209,7 @@ class Canvas:
         direction_norm = direction / length
         shaft_end = start + direction_norm * shaft_length
 
-        shaft = pv.Cylinder(
+        shaft = Cylinder(
             center=(start + shaft_end) / 2,
             direction=direction_norm,
             radius=shaft_radius,
@@ -200,7 +219,7 @@ class Canvas:
         )
         self.plotter.add_mesh(shaft, color=color, smooth_shading=True)
 
-        tip = pv.Cone(
+        tip = Cone(
             center=shaft_end + direction_norm * (tip_length / 2),
             direction=direction_norm,
             height=tip_length,
@@ -293,7 +312,7 @@ class Canvas:
             radius: Tube radius. If None, uses default.
             closed: Whether to close the curve into a loop.
         """
-        import pyvista as pv
+        from pyvista import Spline
 
         color = self._resolve_color(color)
         style = self.curve_style
@@ -303,10 +322,10 @@ class Canvas:
         n_spline = len(points) * style.spline_factor
 
         if closed:
-            spline = pv.Spline(points, n_points=n_spline)
+            spline = Spline(points, n_points=n_spline)
             spline = spline.compute_arc_length()
         else:
-            spline = pv.Spline(points, n_points=n_spline)
+            spline = Spline(points, n_points=n_spline)
 
         tube = spline.tube(radius=radius, n_sides=style.resolution)
         self.plotter.add_mesh(tube, color=color, smooth_shading=True)
@@ -361,10 +380,10 @@ class Canvas:
             color: RGB tuple (0-1). If None, uses next palette color.
             radius: Sphere radius
         """
-        import pyvista as pv
+        from pyvista import Sphere
 
         color = self._resolve_color(color)
-        sphere = pv.Sphere(radius=radius, center=position)
+        sphere = Sphere(radius=radius, center=position)
         self.plotter.add_mesh(sphere, color=color, smooth_shading=True)
 
     def points(
@@ -422,7 +441,7 @@ class Canvas:
             color: RGB tuple (0-1). If None, uses next palette color.
             opacity: Transparency (0=invisible, 1=opaque)
         """
-        import pyvista as pv
+        from pyvista import Quadrilateral
 
         color = self._resolve_color(color)
         center = array(center, dtype=float)
@@ -445,12 +464,65 @@ class Canvas:
             center - half * u + half * v,
         ])
 
-        plane_mesh = pv.Quadrilateral(corners)
+        plane_mesh = Quadrilateral(corners)
         self.plotter.add_mesh(
             plane_mesh,
             color=color,
             opacity=opacity,
             smooth_shading=True,
+        )
+
+    # -------------------------------------------------------------------------
+    # 3D Models
+    # -------------------------------------------------------------------------
+
+    def model(
+        self,
+        visual: "VisualModel",
+        color: Color | None = None,
+        opacity: float = 1.0,
+        style: ModelStyle | None = None,
+    ):
+        """
+        Add a 3D model to the scene.
+
+        The model's mesh is synced automatically before rendering.
+
+        Args:
+            visual: VisualModel containing vertices and faces
+            color: RGB tuple (0-1). If None, uses next palette color.
+            opacity: Transparency (0=invisible, 1=opaque)
+            style: Optional ModelStyle for rendering configuration
+
+        Examples:
+            model = VisualModel.from_file("bunny.obj")
+            canvas.model(model)  # Uses next palette color
+            canvas.model(model, color=(1, 0, 0), opacity=0.8)
+        """
+        from morphis.visuals.model import VisualModel
+
+        if not isinstance(visual, VisualModel):
+            raise TypeError(f"Expected VisualModel, got {type(visual)}")
+
+        color = self._resolve_color(color)
+        style = style or ModelStyle()
+
+        # Ensure mesh is synced with current vertex positions
+        visual.sync_mesh()
+
+        # Determine edge color
+        edge_color = style.edge_color
+        if style.show_edges and edge_color is None:
+            edge_color = self.theme.muted
+
+        self.plotter.add_mesh(
+            visual.mesh,
+            color=color,
+            opacity=opacity,
+            smooth_shading=style.smooth_shading,
+            show_edges=style.show_edges,
+            edge_color=edge_color,
+            lighting=style.lighting,
         )
 
     # -------------------------------------------------------------------------
@@ -497,10 +569,25 @@ class Canvas:
                 color=self.theme.label,
             )
 
+        _bring_window_to_front()
         if block:
             self.plotter.show()
         else:
             self.plotter.show(interactive_update=True, auto_close=False)
+
+
+def _bring_window_to_front():
+    """Bring the current application window to front (macOS only)."""
+    import sys
+
+    if sys.platform == "darwin":
+        try:
+            from AppKit import NSApp, NSApplication
+
+            NSApplication.sharedApplication()
+            NSApp.activateIgnoringOtherApps_(True)
+        except ImportError:
+            pass
 
     def screenshot(self, filename: str, scale: int = 2):
         """

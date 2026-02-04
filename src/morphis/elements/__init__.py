@@ -1,7 +1,7 @@
 """
 Geometric Algebra - Elements
 
-Core geometric algebra objects: Vectors, MultiVectors, Frames, and Metrics.
+Core geometric algebra objects: Vectors, MultiVectors, Frames, Surfaces, and Metrics.
 """
 
 from morphis.elements.base import (
@@ -9,6 +9,7 @@ from morphis.elements.base import (
     Element as Element,
     GradedElement as GradedElement,
 )
+from morphis.elements.field import Field
 from morphis.elements.frame import Frame
 from morphis.elements.lot_indexed import LotIndexed as LotIndexed
 from morphis.elements.metric import (
@@ -32,6 +33,7 @@ from morphis.elements.protocols import (
     Spanning as Spanning,
     Transformable as Transformable,
 )
+from morphis.elements.surface import Surface
 from morphis.elements.tensor import Tensor
 from morphis.elements.vector import (
     Vector,
@@ -48,3 +50,5 @@ Vector.model_rebuild()
 MultiVector.model_rebuild()
 Frame.model_rebuild()
 Tensor.model_rebuild()
+Surface.model_rebuild()
+Field.model_rebuild()

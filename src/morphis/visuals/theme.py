@@ -99,6 +99,8 @@ class Theme(BaseModel):
         axis_color: Axis lines (medium contrast)
         grid_color: Grid lines (subtle, low contrast)
         text_color: Text and tick labels (high contrast)
+
+    Use from_background() to create themes with auto-derived colors.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -124,6 +126,12 @@ class Theme(BaseModel):
         # Use standard luminance formula (ITU-R BT.601)
         return 0.299 * r + 0.587 * g + 0.114 * b > 0.5
 
+    @staticmethod
+    def _luminance(color: Color) -> float:
+        """Calculate luminance of a color."""
+        r, g, b = color
+        return 0.299 * r + 0.587 * g + 0.114 * b
+
     def _contrast_color(self, strength: float) -> Color:
         """
         Generate a color that contrasts with background.
@@ -141,6 +149,14 @@ class Theme(BaseModel):
             # Light grays for dark backgrounds
             v = 0.6 + strength * 0.3
         return (v, v, v)
+
+    @property
+    def foreground(self) -> Color:
+        """Auto-derived foreground: white on dark, black on light."""
+        if self.is_light():
+            return (0.1, 0.1, 0.1)
+        else:
+            return (0.95, 0.95, 0.95)
 
     @property
     def axis_color(self) -> Color:
@@ -161,6 +177,102 @@ class Theme(BaseModel):
     def edge_color(self) -> Color:
         """Color for edges and outlines (medium-high contrast)."""
         return self._contrast_color(strength=0.7)
+
+    @classmethod
+    def from_background(
+        cls,
+        name: str,
+        background: Color,
+        palette: Palette | list[Color] | None = None,
+        e1: Color | None = None,
+        e2: Color | None = None,
+        e3: Color | None = None,
+        accent: Color | None = None,
+    ) -> "Theme":
+        """
+        Create a theme with auto-derived colors from background.
+
+        Only background is required. All other colors are intelligently
+        derived based on background luminance.
+
+        Args:
+            name: Theme name
+            background: Background color (the only required color)
+            palette: Optional custom palette (default: warm/cool cycling)
+            e1, e2, e3: Optional custom basis colors
+            accent: Optional accent color
+
+        Returns:
+            Theme with appropriate colors for the background
+        """
+        lum = cls._luminance(background)
+        is_light = lum > 0.5
+
+        # Foreground: white on dark, black on light
+        if is_light:
+            fg = (0.15, 0.15, 0.18)
+            muted = (0.55, 0.55, 0.58)
+        else:
+            fg = (0.90, 0.90, 0.92)
+            muted = (0.45, 0.47, 0.50)
+
+        # Basis colors: adjusted saturation based on background
+        if is_light:
+            # Deeper colors for light backgrounds
+            default_e1 = e1 or (0.75, 0.22, 0.18)
+            default_e2 = e2 or (0.18, 0.55, 0.25)
+            default_e3 = e3 or (0.15, 0.30, 0.70)
+        else:
+            # Brighter colors for dark backgrounds
+            default_e1 = e1 or (0.85, 0.35, 0.30)
+            default_e2 = e2 or (0.40, 0.75, 0.45)
+            default_e3 = e3 or (0.35, 0.50, 0.90)
+
+        # Default palette if not provided
+        if palette is None:
+            if is_light:
+                palette = Palette(
+                    colors=(
+                        (0.70, 0.25, 0.20),  # Rust
+                        (0.15, 0.50, 0.55),  # Teal
+                        (0.80, 0.55, 0.15),  # Ochre
+                        (0.35, 0.35, 0.65),  # Slate blue
+                        (0.65, 0.30, 0.50),  # Plum
+                        (0.20, 0.55, 0.45),  # Viridian
+                    )
+                )
+            else:
+                palette = Palette(
+                    colors=(
+                        (0.95, 0.55, 0.45),  # Coral
+                        (0.55, 0.80, 0.70),  # Seafoam
+                        (0.90, 0.75, 0.40),  # Amber
+                        (0.50, 0.65, 0.90),  # Periwinkle
+                        (0.85, 0.50, 0.70),  # Rose
+                        (0.45, 0.80, 0.85),  # Cyan
+                    )
+                )
+        elif isinstance(palette, list):
+            palette = Palette(colors=tuple(palette))
+
+        # Accent: complementary to background
+        if accent is None:
+            if is_light:
+                accent = (0.85, 0.45, 0.15)  # Warm orange
+            else:
+                accent = (0.95, 0.85, 0.40)  # Golden yellow
+
+        return cls(
+            name=name,
+            background=background,
+            e1=default_e1,
+            e2=default_e2,
+            e3=default_e3,
+            palette=palette,
+            accent=accent,
+            muted=muted,
+            label=fg,
+        )
 
 
 # =============================================================================

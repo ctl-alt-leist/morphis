@@ -11,8 +11,9 @@ Demonstrates structured linear maps between blade spaces:
 Run: uv run python -m morphis.examples.operators
 """
 
-import numpy as np
-from numpy import exp, pi
+from numpy import argmax, array, cos, exp, pi, sin, unravel_index
+from numpy.linalg import det, norm
+from numpy.random import randn, seed
 
 from morphis.algebra import VectorSpec
 from morphis.elements import MultiVector, Vector, euclidean_metric
@@ -51,8 +52,8 @@ def demo_operator_construction() -> None:
     subsection("Create transfer operator L^{ab}_{mn}")
     # Operator data layout (lot-first): (*out_lot, *in_lot, *out_geo, *in_geo)
     # For scalar->bivector: (M, N, d, d)
-    np.random.seed(42)
-    L_data = np.random.randn(M, N, d, d)
+    seed(42)
+    L_data = randn(M, N, d, d)
     # Antisymmetrize for valid bivector output
     L_data = (L_data - L_data.transpose(0, 1, 3, 2)) / 2
 
@@ -82,9 +83,9 @@ def demo_forward_application() -> None:
     section("2. FORWARD APPLICATION")
 
     d, M, N = 3, 4, 5
-    np.random.seed(42)
+    seed(42)
     # Lot-first layout: (M, N, d, d)
-    L_data = np.random.randn(M, N, d, d)
+    L_data = randn(M, N, d, d)
     L_data = (L_data - L_data.transpose(0, 1, 3, 2)) / 2
 
     L = Operator(
@@ -95,7 +96,7 @@ def demo_forward_application() -> None:
     )
 
     subsection("Create source distribution q")
-    q = Vector(np.array([1.0, 0.5, -0.3, 0.8, -0.2]), grade=0, metric=euclidean_metric(d))
+    q = Vector(array([1.0, 0.5, -0.3, 0.8, -0.2]), grade=0, metric=euclidean_metric(d))
     print("q (scalar sources):")
     print(q)
     print(f"  shape: {q.shape}")
@@ -112,11 +113,11 @@ def demo_forward_application() -> None:
     P2 = L * q
     P3 = L(q)
     print("  L.apply(q), L * q, L(q) all produce the same result")
-    print(f"  Max difference: {np.max(np.abs(P1.data - P2.data) + np.abs(P2.data - P3.data)):.2e}")
+    print(f"  Max difference: {(abs(P1.data - P2.data) + abs(P2.data - P3.data)).max():.2e}")
 
     subsection("Verify antisymmetry of bivector output")
     # P^{ab} = -P^{ba}
-    antisym_error = np.max(np.abs(P.data + P.data.transpose(0, 2, 1)))
+    antisym_error = abs(P.data + P.data.transpose(0, 2, 1)).max()
     print(f"  P + P^T = {antisym_error:.2e} (should be ~0)")
 
 
@@ -130,9 +131,9 @@ def demo_adjoint() -> None:
     section("3. ADJOINT OPERATOR")
 
     d, M, N = 3, 4, 5
-    np.random.seed(42)
+    seed(42)
     # Lot-first layout: (M, N, d, d)
-    L_data = np.random.randn(M, N, d, d)
+    L_data = randn(M, N, d, d)
 
     L = Operator(
         data=L_data,
@@ -150,21 +151,21 @@ def demo_adjoint() -> None:
 
     subsection("Alternative syntax: L.H")
     print("  L.H is shorthand for L.adjoint()")
-    print(f"  Max diff: {np.max(np.abs(L.H.data - L.adjoint().data)):.2e}")
+    print(f"  Max diff: {abs(L.H.data - L.adjoint().data).max():.2e}")
 
     subsection("Adjoint involution: (L^H)^H = L")
     L_HH = L.H.H
-    print(f"  Max |L - (L^H)^H|: {np.max(np.abs(L.data - L_HH.data)):.2e}")
+    print(f"  Max |L - (L^H)^H|: {abs(L.data - L_HH.data).max():.2e}")
 
     subsection("Inner product property: <Lq, P> = <q, L^H P>")
-    q = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
-    P = Vector(np.random.randn(M, d, d), grade=2, metric=euclidean_metric(d))
+    q = Vector(randn(N), grade=0, metric=euclidean_metric(d))
+    P = Vector(randn(M, d, d), grade=2, metric=euclidean_metric(d))
 
     Lq = L * q
     LhP = L.H * P
 
-    inner1 = np.sum(Lq.data.conj() * P.data)
-    inner2 = np.sum(q.data.conj() * LhP.data)
+    inner1 = (Lq.data.conj() * P.data).sum()
+    inner2 = (q.data.conj() * LhP.data).sum()
 
     print(f"  <Lq, P>   = {inner1:.6f}")
     print(f"  <q, L^H P> = {inner2:.6f}")
@@ -181,9 +182,9 @@ def demo_least_squares() -> None:
     section("4. LEAST SQUARES INVERSION")
 
     d, M, N = 3, 20, 5  # Overdetermined: more measurements than sources
-    np.random.seed(42)
+    seed(42)
     # Lot-first layout: (M, N, d, d)
-    L_data = np.random.randn(M, N, d, d)
+    L_data = randn(M, N, d, d)
     L_data = (L_data - L_data.transpose(0, 1, 3, 2)) / 2
 
     L = Operator(
@@ -194,7 +195,7 @@ def demo_least_squares() -> None:
     )
 
     subsection("Generate synthetic data")
-    q_true = Vector(np.array([1.0, -0.5, 0.3, 0.8, -0.2]), grade=0, metric=euclidean_metric(d))
+    q_true = Vector(array([1.0, -0.5, 0.3, 0.8, -0.2]), grade=0, metric=euclidean_metric(d))
     P = L * q_true
     print("q_true (ground truth):")
     print(q_true)
@@ -205,21 +206,21 @@ def demo_least_squares() -> None:
     print("q_est (recovered):")
     print(q_est)
 
-    error = np.linalg.norm(q_est.data - q_true.data)
+    error = norm(q_est.data - q_true.data)
     print(f"  Recovery error: {error:.2e}")
 
     subsection("With measurement noise")
     noise_level = 0.01
-    P_noisy = Vector(P.data + noise_level * np.random.randn(*P.shape), grade=2, metric=euclidean_metric(d))
+    P_noisy = Vector(P.data + noise_level * randn(*P.shape), grade=2, metric=euclidean_metric(d))
 
     q_est_noisy = L.solve(P_noisy, method="lstsq")
-    error_noisy = np.linalg.norm(q_est_noisy.data - q_true.data)
+    error_noisy = norm(q_est_noisy.data - q_true.data)
     print(f"  Noise level: {noise_level}")
     print(f"  Recovery error with noise: {error_noisy:.4f}")
 
     subsection("Tikhonov regularization for stability")
     q_reg = L.solve(P_noisy, method="lstsq", alpha=1e-3)
-    error_reg = np.linalg.norm(q_reg.data - q_true.data)
+    error_reg = norm(q_reg.data - q_true.data)
     print(f"  With alpha=1e-3: {error_reg:.4f}")
     print("  Regularization trades bias for variance reduction")
 
@@ -234,9 +235,9 @@ def demo_svd() -> None:
     section("5. SVD DECOMPOSITION")
 
     d, M, N = 3, 10, 5
-    np.random.seed(42)
+    seed(42)
     # Lot-first layout: (M, N, d, d)
-    L_data = np.random.randn(M, N, d, d)
+    L_data = randn(M, N, d, d)
 
     L = Operator(
         data=L_data,
@@ -256,7 +257,7 @@ def demo_svd() -> None:
     print(f"  Condition number: {S[0] / S[-1]:.2f}")
 
     subsection("Verify reconstruction")
-    q = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
+    q = Vector(randn(N), grade=0, metric=euclidean_metric(d))
 
     # Original: P = L * q
     P_orig = L * q
@@ -266,7 +267,7 @@ def demo_svd() -> None:
     s_vt_q = Vector(S * vt_q.data, grade=0, metric=euclidean_metric(d))
     P_svd = U * s_vt_q
 
-    recon_error = np.max(np.abs(P_orig.data - P_svd.data))
+    recon_error = abs(P_orig.data - P_svd.data).max()
     print(f"  Max |P_orig - P_svd|: {recon_error:.2e}")
 
     subsection("Low-rank approximation")
@@ -284,9 +285,9 @@ def demo_pseudoinverse() -> None:
     section("6. PSEUDOINVERSE")
 
     d, M, N = 3, 10, 5
-    np.random.seed(42)
+    seed(42)
     # Lot-first layout: (M, N, d, d)
-    L_data = np.random.randn(M, N, d, d)
+    L_data = randn(M, N, d, d)
 
     L = Operator(
         data=L_data,
@@ -301,18 +302,18 @@ def demo_pseudoinverse() -> None:
     print(f"  L^+ maps: {L_pinv.input_shape} -> {L_pinv.output_shape}")
 
     subsection("Pseudoinverse identity: L * L^+ * L = L")
-    q = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
+    q = Vector(randn(N), grade=0, metric=euclidean_metric(d))
 
     Lq = L * q
     LpLq = L_pinv * Lq
     LLpLq = L * LpLq
 
-    identity_error = np.max(np.abs(Lq.data - LLpLq.data))
+    identity_error = abs(Lq.data - LLpLq.data).max()
     print(f"  Max |Lq - L * L^+ * Lq|: {identity_error:.2e}")
 
     subsection("Solve via pseudoinverse")
     q_pinv = L.solve(Lq, method="pinv")
-    pinv_error = np.linalg.norm(q_pinv.data - q.data)
+    pinv_error = norm(q_pinv.data - q.data)
     print(f"  Recovery error: {pinv_error:.2e}")
 
 
@@ -332,12 +333,12 @@ def demo_complex_operators() -> None:
     print("The transfer operator L can include frequency-dependent phase shifts.")
 
     d, M, N = 3, 10, 5
-    np.random.seed(42)
+    seed(42)
 
     subsection("Create complex transfer operator")
     # Complex operator with magnitude and phase (lot-first layout)
-    L_mag = np.random.randn(M, N, d, d)
-    L_phase = np.random.randn(M, N, d, d) * 0.5
+    L_mag = randn(M, N, d, d)
+    L_phase = randn(M, N, d, d) * 0.5
     L_data = L_mag * exp(1j * L_phase)
 
     L = Operator(
@@ -349,8 +350,8 @@ def demo_complex_operators() -> None:
     print(f"  L.data.dtype = {L.data.dtype}")
 
     subsection("Complex source phasors")
-    q_mag = np.array([1.0, 0.5, 0.3, 0.8, 0.2])
-    q_phase = np.array([0, pi / 4, pi / 2, -pi / 4, pi / 3])
+    q_mag = array([1.0, 0.5, 0.3, 0.8, 0.2])
+    q_phase = array([0, pi / 4, pi / 2, -pi / 4, pi / 3])
     q_tilde = Vector(q_mag * exp(1j * q_phase), grade=0, metric=euclidean_metric(d))
     print("q_tilde (source phasors):")
     print(q_tilde)
@@ -366,7 +367,7 @@ def demo_complex_operators() -> None:
 
     subsection("Least squares with complex data")
     q_recovered = L.solve(P_tilde, method="lstsq")
-    recovery_error = np.linalg.norm(q_recovered.data - q_tilde.data)
+    recovery_error = norm(q_recovered.data - q_tilde.data)
     print(f"  Recovery error: {recovery_error:.2e}")
 
 
@@ -380,11 +381,11 @@ def demo_vector_operator() -> None:
     section("8. VECTOR-TO-VECTOR OPERATORS")
 
     d, M, N = 3, 4, 5
-    np.random.seed(42)
+    seed(42)
 
     subsection("Create vector-to-vector operator")
     # Lot-first layout: (*out_lot, *in_lot, *out_geo, *in_geo) = (M, N, d, d)
-    T_data = np.random.randn(M, N, d, d)
+    T_data = randn(M, N, d, d)
 
     T = Operator(
         data=T_data,
@@ -397,7 +398,7 @@ def demo_vector_operator() -> None:
     print(f"  T.output_shape = {T.output_shape}")
 
     subsection("Apply to vector collection")
-    v = Vector(np.random.randn(N, d), grade=1, metric=euclidean_metric(d))
+    v = Vector(randn(N, d), grade=1, metric=euclidean_metric(d))
     w = T * v
     print(f"  Input v: shape {v.shape}, grade {v.grade}")
     print(f"  Output w: shape {w.shape}, grade {w.grade}")
@@ -423,14 +424,14 @@ def demo_outermorphism() -> None:
     print()
 
     d = 3
-    np.random.seed(42)
+    seed(42)
 
     subsection("Create a grade-1 → grade-1 operator (rotation-like)")
     # Create an orthogonal matrix (rotation)
     theta = pi / 4
-    R_data = np.array([
-        [np.cos(theta), -np.sin(theta), 0],
-        [np.sin(theta), np.cos(theta), 0],
+    R_data = array([
+        [cos(theta), -sin(theta), 0],
+        [sin(theta), cos(theta), 0],
         [0, 0, 1],
     ])
 
@@ -447,7 +448,7 @@ def demo_outermorphism() -> None:
     print(f"R.vector_map =\n{R.vector_map}")
 
     subsection("Apply to a vector (grade-1)")
-    v = Vector(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
+    v = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
     v_rotated = R * v
     print("v:")
     print(v)
@@ -458,8 +459,8 @@ def demo_outermorphism() -> None:
     subsection("Apply to a bivector (grade-2) via exterior power")
     from morphis.operations.products import wedge
 
-    e1 = Vector(np.array([1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
-    e2 = Vector(np.array([0.0, 1.0, 0.0]), grade=1, metric=euclidean_metric(d))
+    e1 = Vector(array([1.0, 0.0, 0.0]), grade=1, metric=euclidean_metric(d))
+    e2 = Vector(array([0.0, 1.0, 0.0]), grade=1, metric=euclidean_metric(d))
     B = wedge(e1, e2)  # xy-plane
     print("  Bivector B = e1 ∧ e2 represents the xy-plane")
     print()
@@ -478,10 +479,10 @@ def demo_outermorphism() -> None:
     Re1 = R * e1
     Re2 = R * e2
     B_expected = wedge(Re1, Re2)
-    print(f"  Max |R*B - (R*e1)∧(R*e2)|: {np.max(np.abs(B_rotated.data - B_expected.data)):.2e}")
+    print(f"  Max |R*B - (R*e1)∧(R*e2)|: {abs(B_rotated.data - B_expected.data).max():.2e}")
 
     subsection("Apply to a full multivector")
-    s = Vector(np.array(5.0), grade=0, metric=euclidean_metric(d))
+    s = Vector(array(5.0), grade=0, metric=euclidean_metric(d))
     M = MultiVector(data={0: s, 1: v, 2: B}, metric=euclidean_metric(d))
     print(f"  M has grades: {M.grades}")
     print()
@@ -505,7 +506,7 @@ def demo_outermorphism() -> None:
     I = pseudoscalar(euclidean_metric(d))
 
     # Use a general matrix to see nontrivial determinant
-    A_data = np.array(
+    A_data = array(
         [
             [2, 0, 0],
             [0, 3, 0],
@@ -521,10 +522,10 @@ def demo_outermorphism() -> None:
     )
 
     I_transformed = A * I
-    det_A = np.linalg.det(A_data)
+    det_A = det(A_data)
 
     # Find ratio
-    nonzero_idx = np.unravel_index(np.argmax(np.abs(I.data)), I.data.shape)
+    nonzero_idx = unravel_index(argmax(abs(I.data)), I.data.shape)
     ratio = I_transformed.data[nonzero_idx] / I.data[nonzero_idx]
 
     print(f"  det(A) = {det_A}")
@@ -535,7 +536,7 @@ def demo_outermorphism() -> None:
     print("  Operators that don't map grade-1 → grade-1 cannot act on multivectors:")
     # Lot-first layout: (5, 3, d, d)
     L = Operator(
-        data=np.random.randn(5, 3, d, d),
+        data=randn(5, 3, d, d),
         input_spec=VectorSpec(grade=0, lot=(1,), dim=d),
         output_spec=VectorSpec(grade=2, lot=(1,), dim=d),
         metric=euclidean_metric(d),

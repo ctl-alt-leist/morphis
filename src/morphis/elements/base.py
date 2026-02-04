@@ -30,6 +30,7 @@ from morphis.elements.metric import Metric
 
 if TYPE_CHECKING:
     from morphis.algebra.contraction import IndexedTensor
+    from morphis.elements.multivector import MultiVector
     from morphis.elements.vector import Vector
 
 
@@ -123,6 +124,33 @@ class Element(BaseModel):
     def dim(self) -> int:
         """Dimension of the underlying vector space."""
         return self.metric.dim
+
+    def apply_similarity(
+        self,
+        S: "MultiVector",
+        t: "Vector | None" = None,
+    ) -> Self:
+        """
+        Apply a similarity transformation to this element.
+
+        Computes: transform(self, S) + t
+
+        The similarity versor S (from align_vectors or a rotor) is applied via
+        sandwich product. The optional translation t is added after.
+
+        Args:
+            S: Similarity versor or rotor (MultiVector with grades {0, 2})
+            t: Optional translation vector (grade-1). Added after sandwich product.
+
+        Returns:
+            New element with the transformation applied.
+
+        Example:
+            S = align_vectors(u, v)  # Similarity versor
+            t = Vector([1, 0, 0], grade=1, metric=g)  # Translation
+            v_transformed = v.apply_similarity(S, t)
+        """
+        raise NotImplementedError("Subclasses must implement apply_similarity()")
 
 
 class GradedElement(Element):
