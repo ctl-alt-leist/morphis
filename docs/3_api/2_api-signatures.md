@@ -29,6 +29,9 @@ class Element(BaseModel):
     @property
     def dim(self): ...
 
+    def apply_similarity(self, S: "'MultiVector'", t: "'Vector | None'" = None) -> 'Self'
+        """Apply a similarity transformation to this element."""
+
     def __init__(self, /, **data: 'Any') -> 'None'
         """Create a new model by parsing and validating input data from keyword arguments."""
 ```
@@ -55,6 +58,9 @@ class GradedElement(Element):
 
     def __init__(self, /, **data: 'Any') -> 'None'
         """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def apply_similarity(self, S: "'MultiVector'", t: "'Vector | None'" = None) -> 'Self'
+        """Apply a similarity transformation to this element."""
 ```
 
 
@@ -76,6 +82,9 @@ class CompositeElement(Element):
 
     def __init__(self, /, **data: 'Any') -> 'None'
         """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def apply_similarity(self, S: "'MultiVector'", t: "'Vector | None'" = None) -> 'Self'
+        """Apply a similarity transformation to this element."""
 ```
 
 
@@ -177,6 +186,9 @@ class Tensor(Element):
 
     def __init__(self, /, **data: 'Any') -> 'None'
         """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def apply_similarity(self, S: "'MultiVector'", t: "'Vector | None'" = None) -> 'Self'
+        """Apply a similarity transformation to this element."""
 ```
 
 
@@ -254,10 +266,6 @@ class Vector(IndexableMixin, Tensor):
     def __init__(self, data=None, /, **kwargs)
         """Allow positional argument for data: Vector(arr, grade=1, metric=m)."""
 
-    @classmethod
-    def stack(cls, vectors: 'Sequence[Vector]', axis: 'int' = 0) -> 'Vector'
-        """Stack Vectors along a new lot axis."""
-
     def reverse(self) -> 'Vector'
         """Reverse operator."""
 
@@ -272,6 +280,9 @@ class Vector(IndexableMixin, Tensor):
 
     def transform(self, M: 'MultiVector') -> 'None'
         """Transform this Vector in-place by a motor/versor."""
+
+    def apply_similarity(self, S: 'MultiVector', t: "'Vector | None'" = None) -> "'Vector'"
+        """Apply a similarity transformation to this Vector."""
 
     def with_metric(self, metric: 'Metric') -> 'Vector'
         """Return a new Vector with the specified metric context."""
@@ -380,46 +391,11 @@ class MultiVector(CompositeElement):
     def unit(self) -> 'MultiVector'
         """Return a unit multivector (M * ~M = 1)."""
 
+    def apply_similarity(self, S: 'MultiVector', t: "'Vector | None'" = None) -> 'MultiVector'
+        """Apply a similarity transformation to this MultiVector."""
+
     def with_metric(self, metric: 'Metric') -> 'MultiVector'
         """Return a new MultiVector with the specified metric context."""
-```
-
-
-### `morphis.elements.lot_indexed`
-
-*Geometric Algebra - Lot Indexed Vectors*
-
-```python
-class LotIndexed:
-    """Lightweight wrapper pairing a Vector with lot index labels."""
-
-    def __init__(self, vector: 'Vector', indices: 'str')
-        """Create a lot-indexed wrapper for broadcasting."""
-
-    def norm(self) -> 'LotIndexed'
-        """Compute norm, preserving lot indices."""
-
-    def sum(self, axis: 'int | None' = None) -> 'LotIndexed'
-        """Sum over lot axis, removing that index."""
-```
-
-LotIndexed enables explicit broadcasting over lot dimensions using index labels:
-
-```python
-x = Vector(...)  # lot (M,)
-y = Vector(...)  # lot (N, K)
-
-# Outer product on lot dimensions
-r = y["nk"] - x["m"]                 # lot (N, K, M)
-
-# Reorder to desired lot order
-r = (y["nk"] - x["m"])["mnk"]        # lot (M, N, K)
-
-# Contraction with *
-b = G["mn"] * q["n"]                 # n contracts -> lot (M,)
-
-# Hadamard (element-wise multiply) with &
-c = A["mn"] & B["mn"]                # lot (M, N)
 ```
 
 
@@ -466,6 +442,9 @@ class Frame(GradedElement):
 
     def with_metric(self, metric: 'Metric') -> 'Frame'
         """Return a new Frame with the specified metric context."""
+
+    def apply_similarity(self, S: "'MultiVector'", t: "'Vector | None'" = None) -> 'Self'
+        """Apply a similarity transformation to this element."""
 ```
 
 
@@ -922,7 +901,7 @@ def operator_shape(input_spec: specs.VectorSpec, output_spec: specs.VectorSpec, 
 class IndexedTensor:
     """Lightweight wrapper that pairs a tensor with index labels for contraction."""
 
-    def __init__(self, tensor: "'Vector | Operator'", indices: 'str')
+    def __init__(self, tensor: "'Vector | Operator'", indices: 'str', output_geo_indices: 'str' = '')
         """Create an indexed tensor wrapper."""
 ```
 
@@ -962,7 +941,7 @@ Geometric transformations.
 
 ### `morphis.transforms.rotations`
 
-*Geometric Algebra - Rotation Constructors*
+*Geometric Algebra - Rotation and Similarity Constructors*
 
 **Functions:**
 
@@ -972,6 +951,12 @@ def rotor(B: 'Vector', angle: 'float | NDArray') -> 'MultiVector'
 
 def rotation_about_point(p: 'Vector', B: 'Vector', angle: 'float | NDArray') -> 'MultiVector'
     """Create a motor for rotation about an arbitrary center point (PGA)."""
+
+def align_vectors(u: 'Vector', v: 'Vector') -> 'MultiVector'
+    """Create a similarity versor that transforms u to v."""
+
+def point_alignment(u1: 'Vector', u2: 'Vector', v1: 'Vector', v2: 'Vector') -> 'tuple[MultiVector, Vector]'
+    """Compute similarity transform aligning two point pairs."""
 ```
 
 
@@ -1067,6 +1052,90 @@ def screw(B: 'Vector', angle: 'float | NDArray', translation: 'Vector', center: 
 
 Visualization and rendering tools.
 
+### `morphis.visuals.scene`
+
+*Scene - Unified Visualization Interface*
+
+```python
+class SceneEffect(BaseModel):
+    """Effect wrapper that uses string element IDs."""
+
+    def evaluate(self, t: 'float') -> 'float'
+        """Evaluate opacity at time t."""
+
+    def is_active(self, t: 'float') -> 'bool'
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+```python
+class TrackedElement(BaseModel):
+    """Internal tracking for elements added to the scene."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+```python
+class Scene:
+    """Unified visualization interface for static and animated scenes."""
+
+    @property
+    def theme(self): ...
+
+    @property
+    def frame_rate(self): ...
+
+    def __init__(self, projection: 'tuple[int, ...] | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (600, 600), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True)
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def add(self, element: 'Element', representation: 'str | None' = None, color: 'Color | None' = None, opacity: 'float' = 1.0, **kwargs) -> 'str'
+        """Add an element to the scene."""
+
+    def remove(self, element_id: 'str') -> 'None'
+        """Remove an element from the scene."""
+
+    def set_projection(self, axes: 'tuple[int, ...]') -> 'None'
+        """Set projection axes for nD -> 3D."""
+
+    def camera(self, position: 'tuple[float, float, float] | None' = None, focal_point: 'tuple[float, float, float] | None' = None, up: 'tuple[float, float, float] | None' = None) -> 'None'
+        """Set camera position and orientation."""
+
+    def reset_camera(self) -> 'None'
+        """Reset camera to fit all objects."""
+
+    def set_clipping_range(self, near: 'float', far: 'float') -> 'None'
+        """Set camera clipping range."""
+
+    def add_light(self, position: 'tuple[float, float, float]' = (1, 1, 1), focal_point: 'tuple[float, float, float]' = (0, 0, 0), intensity: 'float' = 1.0, color: 'Color | None' = None, directional: 'bool' = True, attenuation: 'tuple[float, float, float] | None' = None) -> 'str'
+        """Add a light to the scene."""
+
+    def remove_light(self, light_id: 'str') -> 'None'
+        """Remove a light from the scene."""
+
+    def clear_lights(self) -> 'None'
+        """Remove all user-added lights."""
+
+    def fade_in(self, element: 'Element', t: 'float', duration: 'float') -> 'None'
+        """Schedule a fade-in effect for an element."""
+
+    def fade_out(self, element: 'Element', t: 'float', duration: 'float') -> 'None'
+        """Schedule a fade-out effect for an element."""
+
+    def capture(self, t: 'float') -> 'None'
+        """Render current state at time t (live mode)."""
+
+    def show(self) -> 'None'
+        """Wait for user to close window."""
+
+    def close(self) -> 'None'
+        """Close the scene and clean up."""
+```
+
+
 ### `morphis.visuals.canvas`
 
 *3D Visualization Canvas*
@@ -1090,53 +1159,59 @@ class CurveStyle(BaseModel):
 
 
 ```python
+class ModelStyle(BaseModel):
+    """Configuration for 3D model rendering."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+```python
 class Canvas:
     """3D visualization canvas with theme support and automatic color cycling."""
 
-    def __init__(self, theme: str | theme.Theme = Theme(name='obsidian', background=(0.12, 0.13, 0.14), e1=(0.85, 0.35, 0.3), e2=(0.4, 0.75, 0.45), e3=(0.35, 0.5, 0.9), palette=Palette(colors=((0.95, 0.55, 0.45), (0.55, 0.8, 0.7), (0.9, 0.75, 0.4), (0.5, 0.65, 0.9), (0.85, 0.5, 0.7), (0.45, 0.8, 0.85))), accent=(0.95, 0.85, 0.4), muted=(0.45, 0.47, 0.5), label=(0.82, 0.84, 0.86)), title: str | None = None, size: tuple[int, int] = (1200, 900), show_basis: bool = True, basis_axes: tuple[int, int, int] = (0, 1, 2))
+    def __init__(self, theme: 'str | Theme' = Theme(name='obsidian', background=(0.12, 0.13, 0.14), e1=(0.85, 0.35, 0.3), e2=(0.4, 0.75, 0.45), e3=(0.35, 0.5, 0.9), palette=Palette(colors=((0.95, 0.55, 0.45), (0.55, 0.8, 0.7), (0.9, 0.75, 0.4), (0.5, 0.65, 0.9), (0.85, 0.5, 0.7), (0.45, 0.8, 0.85))), accent=(0.95, 0.85, 0.4), muted=(0.45, 0.47, 0.5), label=(0.82, 0.84, 0.86)), title: 'str | None' = None, size: 'tuple[int, int]' = (1200, 900), show_basis: 'bool' = True, basis_axes: 'tuple[int, int, int]' = (0, 1, 2))
         """Initialize self.  See help(type(self)) for accurate signature."""
 
-    def basis(self, scale: float = 1.0, axes: tuple[int, int, int] = (0, 1, 2), labels: bool = True)
+    def basis(self, scale: 'float' = 1.0, axes: 'tuple[int, int, int]' = (0, 1, 2), labels: 'bool' = True)
         """Draw coordinate axes at origin using PyVista's native axes."""
 
-    def set_basis_axes(self, axes: tuple[int, int, int])
+    def set_basis_axes(self, axes: 'tuple[int, int, int]')
         """Change which basis vectors are displayed."""
 
-    def arrow(self, start, direction, color: tuple[float, float, float] | None = None, shaft_radius: float | None = None)
+    def arrow(self, start, direction, color: 'Color | None' = None, shaft_radius: 'float | None' = None)
         """Add an arrow to the scene."""
 
-    def arrows(self, starts, directions, color: tuple[float, float, float] | None = None, colors: theme.Palette | list | None = None, shaft_radius: float | None = None)
+    def arrows(self, starts, directions, color: 'Color | None' = None, colors: 'Palette | list | None' = None, shaft_radius: 'float | None' = None)
         """Add multiple arrows to the scene."""
 
-    def curve(self, points, color: tuple[float, float, float] | None = None, radius: float | None = None, closed: bool = False)
+    def curve(self, points, color: 'Color | None' = None, radius: 'float | None' = None, closed: 'bool' = False)
         """Add a smooth curve through the given points."""
 
-    def curves(self, point_sets, color: tuple[float, float, float] | None = None, colors: theme.Palette | list | None = None, radius: float | None = None)
+    def curves(self, point_sets, color: 'Color | None' = None, colors: 'Palette | list | None' = None, radius: 'float | None' = None)
         """Add multiple curves to the scene."""
 
-    def point(self, position, color: tuple[float, float, float] | None = None, radius: float = 0.03)
+    def point(self, position, color: 'Color | None' = None, radius: 'float' = 0.03)
         """Add a point (sphere) to the scene."""
 
-    def points(self, positions, color: tuple[float, float, float] | None = None, colors: theme.Palette | list | None = None, radius: float = 0.03)
+    def points(self, positions, color: 'Color | None' = None, colors: 'Palette | list | None' = None, radius: 'float' = 0.03)
         """Add multiple points to the scene."""
 
-    def plane(self, center, normal, size: float = 1.0, color: tuple[float, float, float] | None = None, opacity: float = 0.3)
+    def plane(self, center, normal, size: 'float' = 1.0, color: 'Color | None' = None, opacity: 'float' = 0.3)
         """Add a semi-transparent plane to the scene."""
+
+    def model(self, visual: "'VisualModel'", color: 'Color | None' = None, opacity: 'float' = 1.0, style: 'ModelStyle | None' = None)
+        """Add a 3D model to the scene."""
 
     def reset_colors(self)
         """Reset color cycling to start of palette."""
 
-    def camera(self, position: tuple[float, float, float] | None = None, focal_point: tuple[float, float, float] | None = None, view_up: tuple[float, float, float] | None = None)
+    def camera(self, position: 'tuple[float, float, float] | None' = None, focal_point: 'tuple[float, float, float] | None' = None, view_up: 'tuple[float, float, float] | None' = None)
         """Set camera position and orientation."""
 
-    def show(self, block: bool = True)
+    def show(self, block: 'bool' = True)
         """Display the visualization."""
-
-    def screenshot(self, filename: str, scale: int = 2)
-        """Save the current view to an image file."""
-
-    def close(self)
-        """Close the plotter window."""
 ```
 
 
@@ -1162,6 +1237,9 @@ class Theme(BaseModel):
 
     @property
     def basis_colors(self): ...
+
+    @property
+    def foreground(self): ...
 
     @property
     def axis_color(self): ...
@@ -1243,49 +1321,49 @@ class VectorStyle(BaseModel):
 **Functions:**
 
 ```python
-def create_vector_mesh(origin: numpy.ndarray, direction: numpy.ndarray, shaft_radius: float = 0.008) -> tuple[pyvista.core.pointset.PolyData | None, pyvista.core.pointset.PolyData]
+def create_vector_mesh(origin: 'ndarray', direction: 'ndarray', shaft_radius: 'float' = 0.008) -> 'tuple[PolyData | None, PolyData]'
     """Create meshes for a vector (grade 1 blade)."""
 
-def create_bivector_mesh(origin: numpy.ndarray, u: numpy.ndarray, v: numpy.ndarray, shaft_radius: float = 0.006, face_opacity: float = 0.25) -> tuple[pyvista.core.pointset.PolyData, pyvista.core.pointset.PolyData, pyvista.core.pointset.PolyData]
+def create_bivector_mesh(origin: 'ndarray', u: 'ndarray', v: 'ndarray', shaft_radius: 'float' = 0.006, face_opacity: 'float' = 0.25) -> 'tuple[PolyData, PolyData, PolyData]'
     """Create meshes for a bivector (grade 2 blade)."""
 
-def create_trivector_mesh(origin: numpy.ndarray, u: numpy.ndarray, v: numpy.ndarray, w: numpy.ndarray, shaft_radius: float = 0.006, face_opacity: float = 0.15) -> tuple[pyvista.core.pointset.PolyData, pyvista.core.pointset.PolyData, pyvista.core.pointset.PolyData]
+def create_trivector_mesh(origin: 'ndarray', u: 'ndarray', v: 'ndarray', w: 'ndarray', shaft_radius: 'float' = 0.006, face_opacity: 'float' = 0.15) -> 'tuple[PolyData, PolyData, PolyData]'
     """Create meshes for a trivector."""
 
-def create_quadvector_mesh(origin: numpy.ndarray, u: numpy.ndarray, v: numpy.ndarray, w: numpy.ndarray, x: numpy.ndarray, projection_axes: tuple[int, int, int] = (0, 1, 2), shaft_radius: float = 0.006, face_opacity: float = 0.12) -> tuple[pyvista.core.pointset.PolyData, pyvista.core.pointset.PolyData, pyvista.core.pointset.PolyData]
+def create_quadvector_mesh(origin: 'ndarray', u: 'ndarray', v: 'ndarray', w: 'ndarray', x: 'ndarray', projection_axes: 'tuple[int, int, int]' = (0, 1, 2), shaft_radius: 'float' = 0.006, face_opacity: 'float' = 0.12) -> 'tuple[PolyData, PolyData, PolyData]'
     """Create meshes for a quadvector (4-blade) as a tesseract projection."""
 
-def create_frame_mesh(origin: numpy.ndarray, vectors: numpy.ndarray, shaft_radius: float = 0.008, projection_axes: tuple[int, int, int] | None = None, filled: bool = False) -> tuple[pyvista.core.pointset.PolyData | None, pyvista.core.pointset.PolyData | None, pyvista.core.pointset.PolyData]
+def create_frame_mesh(origin: 'ndarray', vectors: 'ndarray', shaft_radius: 'float' = 0.008, projection_axes: 'tuple[int, int, int] | None' = None, filled: 'bool' = False) -> 'tuple[PolyData | None, PolyData | None, PolyData]'
     """Create meshes for a frame (k arrows from origin)."""
 
-def create_blade_mesh(grade: int, origin: numpy.ndarray, vectors: numpy.ndarray, shaft_radius: float = 0.008, edge_radius: float = 0.006, projection_axes: tuple[int, int, int] | None = None) -> tuple[pyvista.core.pointset.PolyData | None, pyvista.core.pointset.PolyData | None, pyvista.core.pointset.PolyData]
+def create_blade_mesh(grade: 'int', origin: 'ndarray', vectors: 'ndarray', shaft_radius: 'float' = 0.008, edge_radius: 'float' = 0.006, projection_axes: 'tuple[int, int, int] | None' = None) -> 'tuple[PolyData | None, PolyData | None, PolyData]'
     """Create meshes for a blade of any grade."""
 
-def draw_blade(plotter: pyvista.plotting.plotter.Plotter, b: vector.Vector, p: vector.Vector | numpy.ndarray | tuple = None, color: tuple[float, float, float] = (0.85, 0.85, 0.85), tetrad: bool = True, surface: bool = True, label: bool = False, name: str | None = None, shaft_radius: float = 0.008, edge_radius: float = 0.006, label_offset: float = 0.08)
+def draw_blade(plotter: 'Plotter', b: 'Vector', p: 'Vector | ndarray | tuple' = None, color: 'Color' = (0.85, 0.85, 0.85), tetrad: 'bool' = True, surface: 'bool' = True, label: 'bool' = False, name: 'str | None' = None, shaft_radius: 'float' = 0.008, edge_radius: 'float' = 0.006, label_offset: 'float' = 0.08)
     """Draw a blade at a given position."""
 
-def draw_coordinate_basis(plotter: pyvista.plotting.plotter.Plotter, scale: float = 1.0, color: tuple[float, float, float] = (0.85, 0.85, 0.85), tetrad: bool = True, surface: bool = False, label: bool = True, label_offset: float = 0.08, labels: tuple[str, str, str] | None = None) -> list | None
+def draw_coordinate_basis(plotter: 'Plotter', scale: 'float' = 1.0, color: 'Color' = (0.85, 0.85, 0.85), tetrad: 'bool' = True, surface: 'bool' = False, label: 'bool' = True, label_offset: 'float' = 0.08, labels: 'tuple[str, str, str] | None' = None) -> 'list | None'
     """Draw the standard coordinate basis e1, e2, e3."""
 
-def draw_basis_blade(plotter: pyvista.plotting.plotter.Plotter, indices: tuple[int, ...], position: numpy.ndarray | tuple = (0, 0, 0), scale: float = 1.0, color: tuple[float, float, float] = (0.85, 0.85, 0.85), tetrad: bool = True, surface: bool = True, label: bool = False, name: str | None = None, label_offset: float = 0.08)
+def draw_basis_blade(plotter: 'Plotter', indices: 'tuple[int, ...]', position: 'ndarray | tuple' = (0, 0, 0), scale: 'float' = 1.0, color: 'Color' = (0.85, 0.85, 0.85), tetrad: 'bool' = True, surface: 'bool' = True, label: 'bool' = False, name: 'str | None' = None, label_offset: 'float' = 0.08)
     """Draw a basis k-blade (e1, e12, e123, etc.) at a given position."""
 
-def render_scalar(blade: vector.Vector, canvas, position: tuple[float, float, float] | None = None, style: drawing.vectors.VectorStyle | None = None) -> None
+def render_scalar(blade: 'Vector', canvas, position: 'tuple[float, float, float] | None' = None, style: 'VectorStyle | None' = None) -> 'None'
     """Render scalar blade as sphere at origin (or specified position)."""
 
-def render_vector(blade: vector.Vector, canvas, projection=None, style: drawing.vectors.VectorStyle | None = None) -> None
+def render_vector(blade: 'Vector', canvas, projection=None, style: 'VectorStyle | None' = None) -> 'None'
     """Render vector blade as arrow from origin."""
 
-def render_bivector(blade: vector.Vector, canvas, mode: 'circle', 'parallelogram', 'plane', 'circular_arrow' = 'circle', projection=None, style: drawing.vectors.VectorStyle | None = None) -> None
+def render_bivector(blade: 'Vector', canvas, mode: "'circle', 'parallelogram', 'plane', 'circular_arrow'" = 'circle', projection=None, style: 'VectorStyle | None' = None) -> 'None'
     """Render bivector blade with multiple visualization modes."""
 
-def render_trivector(blade: vector.Vector, canvas, mode: 'parallelepiped', 'sphere' = 'parallelepiped', projection=None, style: drawing.vectors.VectorStyle | None = None) -> None
+def render_trivector(blade: 'Vector', canvas, mode: "'parallelepiped', 'sphere'" = 'parallelepiped', projection=None, style: 'VectorStyle | None' = None) -> 'None'
     """Render trivector blade as 3D volume element."""
 
-def visualize_blade(blade: vector.Vector, canvas=None, mode: str = 'auto', projection=None, show_dual: bool = False, style: drawing.vectors.VectorStyle | None = None)
+def visualize_blade(blade: 'Vector', canvas=None, mode: 'str' = 'auto', projection=None, show_dual: 'bool' = False, style: 'VectorStyle | None' = None)
     """Main entry point for blade visualization."""
 
-def visualize_blades(blades: list, canvas=None, style: drawing.vectors.VectorStyle | None = None)
+def visualize_blades(blades: 'list', canvas=None, style: 'VectorStyle | None' = None)
     """Visualize multiple blades on same canvas."""
 ```
 
@@ -1369,7 +1447,7 @@ class Snapshot(BaseModel):
 
 ```python
 class AnimationTrack(BaseModel):
-    """Animation-specific tracking info for a blade or frame."""
+    """Animation-specific tracking info for a blade, frame, or model."""
 
     def __init__(self, /, **data: 'Any') -> 'None'
         """Create a new model by parsing and validating input data from keyword arguments."""
@@ -1386,11 +1464,11 @@ class Animation:
     def __init__(self, frame_rate: int = 60, theme: str | theme.Theme = 'obsidian', size: tuple[int, int] = (1800, 1350), show_basis: bool = True, auto_camera: bool = True, fps: int | None = None)
         """Initialize self.  See help(type(self)) for accurate signature."""
 
-    def watch(self, *targets: vector.Vector | frame.Frame, color: tuple[float, float, float] | None = None, filled: bool = False) -> int | list[int]
-        """Register one or more blades or frames to observe."""
+    def watch(self, *targets: vector.Vector | frame.Frame | model.VisualModel, color: tuple[float, float, float] | None = None, filled: bool = False, opacity: float = 1.0) -> int | list[int]
+        """Register one or more blades, frames, or models to observe."""
 
-    def unwatch(self, *targets: vector.Vector | frame.Frame)
-        """Stop watching one or more blades or frames."""
+    def unwatch(self, *targets: vector.Vector | frame.Frame | model.VisualModel)
+        """Stop watching one or more blades, frames, or models."""
 
     def set_vectors(self, blade: vector.Vector, vectors: NDArray, numpy.dtype[~_ScalarT]], origin: NDArray, numpy.dtype[~_ScalarT]] | None = None)
         """Set the spanning vectors for a blade directly."""
@@ -1428,11 +1506,11 @@ class Animation:
     def close(self)
         """Close the animation window."""
 
-    def track(self, *targets: vector.Vector | frame.Frame, color: tuple[float, float, float] | None = None, filled: bool = False) -> int | list[int]
-        """Register one or more blades or frames to observe."""
+    def track(self, *targets: vector.Vector | frame.Frame | model.VisualModel, color: tuple[float, float, float] | None = None, filled: bool = False, opacity: float = 1.0) -> int | list[int]
+        """Register one or more blades, frames, or models to observe."""
 
-    def untrack(self, *targets: vector.Vector | frame.Frame)
-        """Stop watching one or more blades or frames."""
+    def untrack(self, *targets: vector.Vector | frame.Frame | model.VisualModel)
+        """Stop watching one or more blades, frames, or models."""
 ```
 
 ---
@@ -1557,5 +1635,4 @@ class Observer:
     def untrack(self, *objects: base.Element) -> 'Observer'
         """Stop watching one or more objects."""
 ```
-
 

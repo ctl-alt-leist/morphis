@@ -361,6 +361,7 @@ MODULE_GROUPS = {
     "Visualization": {
         "description": "Visualization and rendering tools.",
         "modules": [
+            "morphis.visuals.scene",
             "morphis.visuals.canvas",
             "morphis.visuals.theme",
             "morphis.visuals.projection",
