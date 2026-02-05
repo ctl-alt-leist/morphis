@@ -839,3 +839,10 @@ class PyVistaBackend:
     def plotter(self) -> "Plotter | None":
         """Access underlying PyVista plotter (for advanced use)."""
         return self._plotter
+
+    def is_closed(self) -> bool:
+        """Check if the window has been closed by the user."""
+        if self._plotter is None:
+            return True
+        # PyVista sets _closed when window is closed
+        return getattr(self._plotter, "_closed", False)

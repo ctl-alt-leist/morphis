@@ -104,7 +104,7 @@ class Scene:
         self,
         projection: tuple[int, ...] | None = None,
         theme: str | Theme = "obsidian",
-        size: tuple[int, int] = (900, 900),  # MEDIUM_SQUARE
+        size: tuple[int, int] = (600, 600),  # SMALL_SQUARE
         frame_rate: int = 30,
         backend: str = "pyvista",
         show_basis: bool = True,
@@ -676,6 +676,8 @@ class Scene:
         if self._live and self._live_start_time is not None:
             target_time = self._live_start_time + t
             while time_module.time() < target_time:
+                if self._backend.is_closed():
+                    return  # User closed window
                 self._backend.process_events()
                 time_module.sleep(0.001)
 
@@ -793,6 +795,8 @@ class Scene:
 
         # If we already played live, just wait for window close
         if self._live_played and not loop:
+            if self._backend.is_closed():
+                return  # Window already closed during capture
             print("Animation complete. Close window to exit.")
             if hasattr(self._backend, "plotter") and self._backend.plotter is not None:
                 self._backend.plotter.iren.interactor.Start()
@@ -814,10 +818,16 @@ class Scene:
                 play_start = time_module.time()
 
                 for snapshot in self._snapshots:
+                    # Check if window was closed
+                    if self._backend.is_closed():
+                        return
+
                     target_time = play_start + (snapshot.t - t_start)
 
                     # Wait for target time while processing window events
                     while time_module.time() < target_time:
+                        if self._backend.is_closed():
+                            return  # User closed window
                         self._backend.process_events()
                         time_module.sleep(0.001)
 
@@ -854,9 +864,11 @@ class Scene:
         except KeyboardInterrupt:
             pass
 
-        print("Animation complete. Close window to exit.")
-        if hasattr(self._backend, "plotter") and self._backend.plotter is not None:
-            self._backend.plotter.iren.interactor.Start()
+        # Only wait for close if window is still open
+        if not self._backend.is_closed():
+            print("Animation complete. Close window to exit.")
+            if hasattr(self._backend, "plotter") and self._backend.plotter is not None:
+                self._backend.plotter.iren.interactor.Start()
 
     # =========================================================================
     # Export

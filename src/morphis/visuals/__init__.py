@@ -106,13 +106,13 @@ from morphis.visuals.theme import (
 # Square (1:1) and Rectangular (4:3 horizontal) variants.
 
 SMALL_SQUARE: tuple[int, int] = (600, 600)
-SMALL_RECT: tuple[int, int] = (800, 600)
+SMALL_RECTANGLE: tuple[int, int] = (800, 600)
 
 MEDIUM_SQUARE: tuple[int, int] = (900, 900)
-MEDIUM_RECT: tuple[int, int] = (1200, 900)
+MEDIUM_RECTANGLE: tuple[int, int] = (1200, 900)
 
 LARGE_SQUARE: tuple[int, int] = (1200, 1200)
-LARGE_RECT: tuple[int, int] = (1600, 1200)
+LARGE_RECTANGLE: tuple[int, int] = (1600, 1200)
 
 # Default size for examples
-DEFAULT_SIZE: tuple[int, int] = MEDIUM_SQUARE
+DEFAULT_SIZE: tuple[int, int] = SMALL_SQUARE

@@ -10,7 +10,7 @@ from numpy import arcsin, arctan2, array, clip, cos, pi, sin
 from numpy.linalg import norm
 
 from morphis.elements import Surface
-from morphis.visuals import MEDIUM_RECT, Scene
+from morphis.visuals import MEDIUM_RECTANGLE, Scene
 
 
 def rotation_matrix_z(angle):
@@ -62,7 +62,7 @@ def rollercoaster_path(t):
 
 
 # Create scene
-scene = Scene(theme="obsidian", show_basis=False, size=MEDIUM_RECT)
+scene = Scene(theme="obsidian", show_basis=False, size=MEDIUM_RECTANGLE)
 scene.add(surface, color=(0.85, 0.85, 0.9))
 
 # Set up lighting - key light from upper right, fill from left

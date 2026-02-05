@@ -387,6 +387,10 @@ class RenderBackend(Protocol):
         """Process pending window events to keep UI responsive during animations."""
         ...
 
+    def is_closed(self) -> bool:
+        """Check if the window has been closed by the user."""
+        ...
+
     # =========================================================================
     # Basis Display
     # =========================================================================
