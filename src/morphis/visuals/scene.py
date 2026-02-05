@@ -1,9 +1,9 @@
 """
 Scene - Unified Visualization Interface
 
-Scene provides a single interface for both static and animated visualization,
-replacing the separate Canvas and Animation classes. It uses a pluggable
-backend system for rendering.
+Scene provides a single interface for both static and animated visualization.
+Live mode shows the animation in real-time. Export mode re-runs the animation
+to capture frames without delays.
 """
 
 from __future__ import annotations
@@ -69,35 +69,22 @@ class TrackedElement(BaseModel):
     extra: dict  # Additional settings
 
 
-class Snapshot(BaseModel):
-    """State of all tracked elements at a specific time."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    t: float
-    states: dict[str, dict]  # element_id -> state dict
-
-
 class Scene:
     """
     Unified visualization interface for static and animated scenes.
 
-    Scene manages elements with visual representations, supporting both
-    interactive viewing and animation recording/playback.
+    Live animation example:
+        scene = Scene(theme="obsidian")
+        scene.add(F, color=RED, filled=True)
+        for t in times:
+            F.data[...] = transform(t)
+            scene.capture(t)
+        scene.show()  # Wait for window close
 
     Static example:
         scene = Scene(theme="obsidian")
-        scene.add(v, representation="arrow", color=RED)
+        scene.add(v, color=RED)
         scene.show()
-
-    Animation example:
-        scene = Scene(theme="obsidian", frame_rate=30)
-        scene.add(F, representation="arrows", color=RED)
-        scene.capture(0.0)
-        for t in times:
-            F.data[...] = transform(F)
-            scene.capture(t)
-        scene.play()
     """
 
     def __init__(
@@ -109,17 +96,6 @@ class Scene:
         backend: str = "pyvista",
         show_basis: bool = True,
     ):
-        """
-        Initialize the scene.
-
-        Args:
-            projection: Axes to project nD -> 3D (default: (0, 1, 2))
-            theme: Visual theme name or Theme instance
-            size: Window size (width, height)
-            frame_rate: Frames per second for animation
-            backend: Rendering backend name
-            show_basis: Show coordinate basis arrows
-        """
         if isinstance(theme, str):
             theme = get_theme(theme)
 
@@ -138,12 +114,9 @@ class Scene:
         self._color_index = 0
 
         # Animation state
-        self._snapshots: list[Snapshot] = []
-        self._recording = False
         self._effects: list[SceneEffect] = []
-        self._live = False
         self._live_start_time: float | None = None
-        self._live_played = False
+        self._first_capture = True
 
     # =========================================================================
     # Properties
@@ -209,11 +182,9 @@ class Scene:
         element_id = str(uuid4())
         color = color if color is not None else self._next_color()
 
-        # Determine default representation based on element type
         if representation is None:
             representation = self._default_representation(element)
 
-        # Create backend visuals
         backend_ids = self._create_visuals(element, representation, color, opacity, kwargs)
 
         self._elements[element_id] = TrackedElement(
@@ -234,7 +205,6 @@ class Scene:
             return
 
         tracked = self._elements.pop(element_id)
-
         for bid in tracked.backend_ids:
             self._backend.remove(bid)
 
@@ -271,7 +241,6 @@ class Scene:
         backend_ids = []
 
         if isinstance(element, Surface):
-            # Surface -> mesh
             bid = self._backend.add_mesh(
                 element.vertices.data,
                 element.faces,
@@ -283,7 +252,6 @@ class Scene:
             backend_ids.append(bid)
 
         elif isinstance(element, Frame):
-            # Frame -> use create_frame_mesh for proper arrows + edges + faces
             from morphis.visuals.drawing.vectors import create_frame_mesh
 
             origin = kwargs.get("origin", zeros(3))
@@ -293,11 +261,10 @@ class Scene:
             edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
                 origin_3d,
                 vecs_3d,
-                projection_axes=None,  # Already projected
+                projection_axes=None,
                 filled=kwargs.get("filled", False),
             )
 
-            # Track which mesh types we create (for _sync_visuals)
             mesh_types = []
 
             if edges_mesh is not None:
@@ -339,7 +306,6 @@ class Scene:
             if element.grade == 1:
                 data = element.data
                 if element.lot and element.lot != ():
-                    # Collection of vectors
                     origins = kwargs.get("origins", zeros((len(data), 3)))
                     vecs_3d = self._project_vectors(data)
                     origins_3d = self._project_vectors(origins)
@@ -352,7 +318,6 @@ class Scene:
                     )
                     backend_ids.append(bid)
                 else:
-                    # Single vector
                     origin = kwargs.get("origin", zeros(3))
                     origin_3d = self._project_point(origin)
                     vec_3d = self._project_point(data)
@@ -366,7 +331,6 @@ class Scene:
                     backend_ids.append(bid)
 
             elif element.grade >= 2:
-                # Bivector/trivector as span
                 from morphis.operations.factorization import spanning_vectors
 
                 factors = spanning_vectors(element)
@@ -409,18 +373,12 @@ class Scene:
     # =========================================================================
 
     def set_projection(self, axes: tuple[int, ...]) -> None:
-        """
-        Set projection axes for nD -> 3D.
-
-        Args:
-            axes: Tuple of 3 axis indices (0-indexed)
-        """
+        """Set projection axes for nD -> 3D."""
         if len(axes) != 3:
             raise ValueError("Projection requires exactly 3 axes")
 
         self._projection = axes
 
-        # Update basis labels
         labels = tuple(f"$\\mathbf{{e}}_{i + 1}$" for i in axes)
         if self._backend_initialized:
             self._backend.set_basis_labels(labels)
@@ -445,16 +403,7 @@ class Scene:
         self._backend.reset_camera()
 
     def set_clipping_range(self, near: float, far: float) -> None:
-        """
-        Set camera clipping range.
-
-        Use this to prevent objects from being clipped when they move
-        far from the camera.
-
-        Args:
-            near: Near clipping plane distance
-            far: Far clipping plane distance
-        """
+        """Set camera clipping range."""
         self._ensure_backend()
         self._backend.set_clipping_range(near, far)
 
@@ -471,45 +420,7 @@ class Scene:
         directional: bool = True,
         attenuation: tuple[float, float, float] | None = None,
     ) -> str:
-        """
-        Add a light to the scene.
-
-        Args:
-            position: Light position. For directional lights, this is the
-                     direction the light comes FROM (normalized internally).
-            focal_point: Point the light aims at (default: origin)
-            intensity: Light brightness [0, inf). Default 1.0.
-            color: Light color RGB. Default: white (1, 1, 1)
-            directional: If True (default), parallel rays like sunlight from
-                        infinity. If False, point light at position.
-            attenuation: For point lights only: (constant, linear, quadratic).
-                        Intensity falls as 1/(c + l*d + q*d²).
-                        Examples:
-                          None or (1,0,0) = no falloff (constant)
-                          (0,0,1) = inverse square law
-                          (1,0,0.1) = gentle falloff
-
-        Returns:
-            Light ID for later removal
-
-        Examples:
-            # Sunlight from upper-right
-            scene.add_light(position=(10, -5, 8), directional=True)
-
-            # Point light with inverse square falloff
-            scene.add_light(
-                position=(2, 0, 3),
-                directional=False,
-                attenuation=(0, 0, 1),
-            )
-
-            # Soft fill light (no falloff)
-            scene.add_light(
-                position=(-5, 5, 2),
-                intensity=0.3,
-                directional=True,
-            )
-        """
+        """Add a light to the scene."""
         self._ensure_backend()
 
         if color is None:
@@ -536,20 +447,8 @@ class Scene:
     # Effects
     # =========================================================================
 
-    def fade_in(
-        self,
-        element: Element,
-        t: float,
-        duration: float,
-    ) -> None:
-        """
-        Schedule a fade-in effect for an element.
-
-        Args:
-            element: Element to fade in (must be already added)
-            t: Start time in seconds
-            duration: Duration of fade in seconds
-        """
+    def fade_in(self, element: Element, t: float, duration: float) -> None:
+        """Schedule a fade-in effect for an element."""
         element_id = self._find_element_id(element)
         if element_id is None:
             raise ValueError("Element not found in scene. Add it first.")
@@ -563,20 +462,8 @@ class Scene:
             )
         )
 
-    def fade_out(
-        self,
-        element: Element,
-        t: float,
-        duration: float,
-    ) -> None:
-        """
-        Schedule a fade-out effect for an element.
-
-        Args:
-            element: Element to fade out (must be already added)
-            t: Start time in seconds
-            duration: Duration of fade in seconds
-        """
+    def fade_out(self, element: Element, t: float, duration: float) -> None:
+        """Schedule a fade-out effect for an element."""
         element_id = self._find_element_id(element)
         if element_id is None:
             raise ValueError("Element not found in scene. Add it first.")
@@ -602,21 +489,17 @@ class Scene:
         relevant = [e for e in self._effects if e.element_id == element_id]
 
         if not relevant:
-            return 1.0  # Default visible
+            return 1.0
 
-        # Find active effects
         active = [e for e in relevant if e.is_active(t)]
 
         if not active:
-            # Check if past all effects
             past = [e for e in relevant if t > e.t_end]
             if past:
                 latest = max(past, key=lambda e: e.t_end)
                 return latest.evaluate(latest.t_end)
-            # Before any effects
             return 0.0
 
-        # Use most recently started active effect
         current = max(active, key=lambda e: e.t_start)
         return current.evaluate(t)
 
@@ -624,97 +507,51 @@ class Scene:
     # Animation
     # =========================================================================
 
-    def start(self, live: bool = True) -> None:
+    def capture(self, t: float) -> None:
         """
-        Start recording animation.
+        Render current state at time t (live mode).
 
-        Args:
-            live: If True, show window immediately and render in real-time
+        Shows window on first call, then syncs to real-time.
         """
         self._ensure_backend()
-        self._recording = True
-        self._live = live
 
-        if live:
+        # Show window on first capture
+        if self._first_capture:
             self._backend.show(interactive=False)
             _bring_window_to_front()
             self._live_start_time = time_module.time()
-            self._live_played = True  # Mark that we showed live
+            self._first_capture = False
 
-    def capture(self, t: float) -> None:
-        """
-        Capture current state at time t for animation.
-
-        Args:
-            t: Animation time in seconds
-        """
-        self._ensure_backend()
-
-        # Auto-start in live mode if not already started
-        if not self._recording:
-            self.start(live=True)
-
-        # Capture state of all elements (including computed opacity)
-        states = {}
-        for element_id, tracked in self._elements.items():
-            state = self._capture_element_state(tracked)
-            state["opacity"] = self._compute_opacity(element_id, t)
-            states[element_id] = state
-
-        self._snapshots.append(Snapshot(t=t, states=states))
-
-        # Set up camera after first capture in live mode (now we have geometry data)
-        if self._live and len(self._snapshots) == 1:
-            camera_pos, camera_focal = self._compute_auto_camera()
-            if camera_pos is not None:
-                self._backend.set_camera(position=camera_pos, focal_point=camera_focal)
-
-        # Sync visuals with current element state and opacity
+        # Sync visuals with current element state
         self._sync_visuals(t)
 
-        # In live mode, wait for real-time sync while processing events
-        if self._live and self._live_start_time is not None:
+        # Wait for real-time sync
+        if self._live_start_time is not None:
             target_time = self._live_start_time + t
             while time_module.time() < target_time:
                 if self._backend.is_closed():
-                    return  # User closed window
+                    return
                 self._backend.process_events()
                 time_module.sleep(0.001)
 
-    def _capture_element_state(self, tracked: TrackedElement) -> dict:
-        """Capture current state of an element."""
-        element = tracked.element
-
-        if hasattr(element, "vertices"):
-            # Surface
-            return {"vertices": element.vertices.data.copy()}
-        elif isinstance(element, Frame):
-            return {"data": element.data.copy()}
-        elif isinstance(element, Vector):
-            return {"data": element.data.copy()}
-
-        return {}
-
-    def _sync_visuals(self, t: float | None = None) -> None:
+    def _sync_visuals(self, t: float) -> None:
         """Synchronize backend visuals with current element state."""
         from morphis.elements.surface import Surface
 
         for element_id, tracked in self._elements.items():
             element = tracked.element
 
-            # Compute opacity if we have time (faces get 0.2 multiplier)
-            if t is not None:
-                base_opacity = self._compute_opacity(element_id, t) * tracked.opacity
-                mesh_types = tracked.extra.get("_mesh_types", [])
-                for idx, bid in enumerate(tracked.backend_ids):
-                    mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
-                    if mesh_type == "faces":
-                        self._backend.set_opacity(bid, base_opacity * 0.2)
-                    else:
-                        self._backend.set_opacity(bid, base_opacity)
+            # Compute opacity (faces get 0.2 multiplier)
+            base_opacity = self._compute_opacity(element_id, t) * tracked.opacity
+            mesh_types = tracked.extra.get("_mesh_types", [])
+            for idx, bid in enumerate(tracked.backend_ids):
+                mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
+                if mesh_type == "faces":
+                    self._backend.set_opacity(bid, base_opacity * 0.2)
+                else:
+                    self._backend.set_opacity(bid, base_opacity)
 
             if isinstance(element, Surface):
-                # Update mesh vertices
                 if tracked.backend_ids:
                     self._backend.update_mesh(
                         tracked.backend_ids[0],
@@ -722,7 +559,6 @@ class Scene:
                     )
 
             elif isinstance(element, Frame):
-                # Update frame geometry - same code as _update_element_in_plotter
                 from morphis.visuals.drawing.vectors import create_frame_mesh
 
                 origin = tracked.extra.get("origin", zeros(3))
@@ -736,7 +572,6 @@ class Scene:
                     filled=tracked.extra.get("filled", False),
                 )
 
-                # Map backend_ids to mesh types
                 mesh_types = tracked.extra.get("_mesh_types", [])
                 for idx, bid in enumerate(tracked.backend_ids):
                     mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
@@ -748,10 +583,8 @@ class Scene:
                         actor.mapper.SetInputData(edges_mesh)
                     elif mesh_type == "faces" and faces_mesh is not None:
                         actor.mapper.SetInputData(faces_mesh)
-                    # origin mesh doesn't change geometry, just opacity
 
             elif isinstance(element, Vector) and element.grade == 1:
-                # Update vector arrows
                 if element.lot and element.lot != ():
                     origins = tracked.extra.get("origins", zeros((len(element.data), 3)))
                     vecs_3d = self._project_vectors(element.data)
@@ -777,419 +610,20 @@ class Scene:
 
         self._backend.render()
 
-    def play(self, loop: bool = False) -> None:
-        """
-        Play back recorded animation.
-
-        Args:
-            loop: If True, loop indefinitely
-        """
-        if not self._snapshots:
-            print("No snapshots to play.")
-            return
-
+    def show(self) -> None:
+        """Wait for user to close window."""
         self._ensure_backend()
 
-        # Sort by time
-        self._snapshots.sort(key=lambda s: s.t)
-
-        # If we already played live, just wait for window close
-        if self._live_played and not loop:
-            if self._backend.is_closed():
-                return  # Window already closed during capture
-            self._backend.wait_for_close()
+        if self._backend.is_closed():
             return
 
-        # Set up auto camera (same as export)
-        camera_pos, camera_focal = self._compute_auto_camera()
-        if camera_pos is not None:
-            self._backend.set_camera(position=camera_pos, focal_point=camera_focal)
-
-        # Show window
-        self._backend.show(interactive=False)
-        _bring_window_to_front()
-
-        t_start = self._snapshots[0].t
-
-        try:
-            while True:
-                play_start = time_module.time()
-
-                for snapshot in self._snapshots:
-                    # Check if window was closed
-                    if self._backend.is_closed():
-                        return
-
-                    target_time = play_start + (snapshot.t - t_start)
-
-                    # Wait for target time while processing window events
-                    while time_module.time() < target_time:
-                        if self._backend.is_closed():
-                            return  # User closed window
-                        self._backend.process_events()
-                        time_module.sleep(0.001)
-
-                    # Apply snapshot state to elements
-                    for element_id, state in snapshot.states.items():
-                        if element_id not in self._elements:
-                            continue
-
-                        tracked = self._elements[element_id]
-                        element = tracked.element
-
-                        if "vertices" in state:
-                            element.vertices.data[:] = state["vertices"]
-                        elif "data" in state:
-                            element.data[:] = state["data"]
-
-                        # Apply opacity from snapshot (with correct multipliers)
-                        if "opacity" in state:
-                            base_opacity = state["opacity"] * tracked.opacity
-                            mesh_types = tracked.extra.get("_mesh_types", [])
-                            for idx, bid in enumerate(tracked.backend_ids):
-                                mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
-                                if mesh_type == "faces":
-                                    self._backend.set_opacity(bid, base_opacity * 0.2)
-                                else:
-                                    self._backend.set_opacity(bid, base_opacity)
-
-                    # Sync visuals (without time - opacity already applied)
-                    self._sync_visuals()
-
-                if not loop:
-                    break
-
-        except KeyboardInterrupt:
-            pass
-
-        # Only wait for close if window is still open
-        if not self._backend.is_closed():
-            self._backend.wait_for_close()
-
-    # =========================================================================
-    # Export
-    # =========================================================================
-
-    def export(self, path: str, format: str | None = None) -> None:
-        """
-        Export animation to file.
-
-        Args:
-            path: Output file path
-            format: Format ("gif" or "mp4"). Inferred from extension if None.
-        """
-        if not self._snapshots:
-            print("No snapshots to export.")
-            return
-
-        if format is None:
-            format = path.split(".")[-1].lower()
-
-        if format not in ("gif", "mp4"):
-            raise ValueError(f"Unsupported format: {format}")
-
-        self._snapshots.sort(key=lambda s: s.t)
-
-        # Create off-screen plotter for export
-        from pyvista import Plotter
-
-        from morphis.visuals.drawing.vectors import draw_coordinate_basis
-
-        plotter = Plotter(off_screen=True)
-        plotter.set_background(self._theme.background)
-        plotter.window_size = self._size
-
-        # Draw coordinate basis if enabled
-        if self._show_basis:
-            draw_coordinate_basis(plotter, color=self._theme.axis_color)
-
-        # Compute auto camera position based on geometry extent
-        camera_pos, camera_focal = self._compute_auto_camera()
-        if camera_pos is not None:
-            plotter.camera.position = camera_pos
-            plotter.camera.focal_point = camera_focal
-
-        # Add all tracked elements with initial state
-        element_actors: dict[str, dict] = {}  # element_id -> {actors, tracked}
-
-        first_snapshot = self._snapshots[0]
-        for element_id, tracked in self._elements.items():
-            state = first_snapshot.states.get(element_id, {})
-            opacity = state.get("opacity", 1.0) * tracked.opacity
-
-            actors = self._add_element_to_plotter(plotter, tracked, opacity)
-            element_actors[element_id] = {"actors": actors, "tracked": tracked}
-
-        # Capture frames
-        frames = []
-        for snapshot in self._snapshots:
-            # Update each element's state and opacity
-            for element_id, state in snapshot.states.items():
-                if element_id not in element_actors:
-                    continue
-
-                tracked = self._elements[element_id]
-                element = tracked.element
-                actors = element_actors[element_id]["actors"]
-
-                # Apply data to element
-                if "vertices" in state:
-                    element.vertices.data[:] = state["vertices"]
-                elif "data" in state:
-                    element.data[:] = state["data"]
-
-                # Compute opacity
-                opacity = state.get("opacity", 1.0) * tracked.opacity
-
-                # Update geometry and opacity
-                self._update_element_in_plotter(plotter, tracked, actors, opacity)
-
-            # Render and capture
-            plotter.render()
-            frame = plotter.screenshot(return_img=True)
-            frames.append(frame)
-
-        plotter.close()
-
-        # Save
-        import imageio.v3 as iio
-
-        if format == "gif":
-            if len(self._snapshots) > 1:
-                total_time = self._snapshots[-1].t - self._snapshots[0].t
-                duration_ms = int((total_time / len(frames)) * 1000)
-            else:
-                duration_ms = int(1000 / self._frame_rate)
-            duration_ms = max(duration_ms, 20)
-
-            iio.imwrite(path, frames, extension=".gif", duration=duration_ms, loop=0)
-        else:
-            iio.imwrite(path, frames, fps=self._frame_rate)
-
-        print(f"Saved to {path}")
-
-    def _add_element_to_plotter(self, plotter, tracked: TrackedElement, opacity: float) -> dict:
-        """Add an element to an off-screen plotter for export."""
-        from morphis.elements.surface import Surface
-        from morphis.visuals.drawing.vectors import (
-            _create_arrow_mesh,
-            create_frame_mesh,
-        )
-
-        element = tracked.element
-        actors = {"edges": None, "faces": None, "origin": None}
-
-        if isinstance(element, Surface):
-            # Surface mesh
-            from pyvista import PolyData
-
-            vertices = element.vertices.data
-            faces = element.faces
-            mesh = PolyData(vertices, faces)
-            actors["edges"] = plotter.add_mesh(
-                mesh,
-                color=tracked.color,
-                opacity=opacity,
-                smooth_shading=True,
-            )
-
-        elif isinstance(element, Frame):
-            # Frame: multiple arrows from origin with optional faces
-            origin = tracked.extra.get("origin", zeros(3))
-            origin_3d = self._project_point(origin)
-            vecs_3d = self._project_vectors(element.data)
-
-            edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
-                origin_3d,
-                vecs_3d,
-                projection_axes=None,  # Already projected
-                filled=tracked.extra.get("filled", False),
-            )
-
-            if edges_mesh is not None:
-                actors["edges"] = plotter.add_mesh(
-                    edges_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-                )
-
-            if faces_mesh is not None:
-                actors["faces"] = plotter.add_mesh(
-                    faces_mesh, color=tracked.color, opacity=opacity * 0.2, smooth_shading=True
-                )
-
-            if origin_mesh is not None:
-                actors["origin"] = plotter.add_mesh(
-                    origin_mesh, color=tracked.color, opacity=opacity, smooth_shading=True
-                )
-
-        elif isinstance(element, Vector) and element.grade == 1:
-            # Single vector or collection
-            origin = tracked.extra.get("origin", zeros(3))
-            origin_3d = self._project_point(origin)
-
-            if element.lot and element.lot != ():
-                # Collection of vectors
-                vecs_3d = self._project_vectors(element.data)
-                origins = tracked.extra.get("origins", zeros((len(element.data), 3)))
-                origins_3d = self._project_vectors(origins)
-
-                from pyvista import merge
-
-                arrow_meshes = []
-                for o, d in zip(origins_3d, vecs_3d, strict=False):
-                    mesh = _create_arrow_mesh(o, d)
-                    if mesh is not None:
-                        arrow_meshes.append(mesh)
-
-                if arrow_meshes:
-                    combined = merge(arrow_meshes)
-                    actors["edges"] = plotter.add_mesh(
-                        combined, color=tracked.color, opacity=opacity, smooth_shading=True
-                    )
-            else:
-                # Single vector
-                vec_3d = self._project_point(element.data)
-                mesh = _create_arrow_mesh(origin_3d, vec_3d)
-                if mesh is not None:
-                    actors["edges"] = plotter.add_mesh(mesh, color=tracked.color, opacity=opacity, smooth_shading=True)
-
-        return actors
-
-    def _update_element_in_plotter(self, plotter, tracked: TrackedElement, actors: dict, opacity: float) -> None:
-        """Update an element's geometry and opacity in the plotter."""
-        from morphis.elements.surface import Surface
-        from morphis.visuals.drawing.vectors import create_frame_mesh
-
-        element = tracked.element
-
-        if isinstance(element, Surface):
-            # Update mesh vertices
-            if actors["edges"] is not None:
-                actors["edges"].mapper.GetInput().points = element.vertices.data
-                actors["edges"].GetProperty().SetOpacity(opacity)
-
-        elif isinstance(element, Frame):
-            # Update frame geometry
-            origin = tracked.extra.get("origin", zeros(3))
-            origin_3d = self._project_point(origin)
-            vecs_3d = self._project_vectors(element.data)
-
-            edges_mesh, faces_mesh, _ = create_frame_mesh(
-                origin_3d,
-                vecs_3d,
-                projection_axes=None,
-                filled=tracked.extra.get("filled", False),
-            )
-
-            if actors["edges"] is not None and edges_mesh is not None:
-                actors["edges"].mapper.SetInputData(edges_mesh)
-                actors["edges"].GetProperty().SetOpacity(opacity)
-
-            if actors["faces"] is not None and faces_mesh is not None:
-                actors["faces"].mapper.SetInputData(faces_mesh)
-                actors["faces"].GetProperty().SetOpacity(opacity * 0.2)
-
-            if actors["origin"] is not None:
-                actors["origin"].GetProperty().SetOpacity(opacity)
-
-    def _compute_auto_camera(self) -> tuple[tuple | None, tuple | None]:
-        """
-        Compute reasonable camera position based on tracked elements' extent.
-
-        Strategy:
-        - Compute bounding box of all tracked objects across all snapshots
-        - Position camera to see entire scene with margin
-        - Default viewing angle: isometric-ish (positive x, negative y, positive z)
-
-        Returns:
-            (camera_position, focal_point) or (None, None) if no data
-        """
-        from numpy import array, max as np_max, min as np_min
-        from numpy.linalg import norm
-
-        if not self._snapshots:
-            return (4.0, -3.0, 3.5), (0.0, 0.0, 0.0)
-
-        # Collect all vertex positions across all snapshots
-        all_points = []
-
-        for snapshot in self._snapshots:
-            for element_id, state in snapshot.states.items():
-                if element_id not in self._elements:
-                    continue
-
-                tracked = self._elements[element_id]
-                element = tracked.element
-
-                # Get the data from the element
-                if hasattr(element, "vertices"):
-                    data = state.get("vertices", element.vertices.data)
-                elif hasattr(element, "data"):
-                    data = state.get("data", element.data)
-                else:
-                    continue
-
-                origin = tracked.extra.get("origin", zeros(3))
-                origin_3d = self._project_point(origin)
-                all_points.append(origin_3d)
-
-                # Add extent from data
-                if isinstance(element, Frame):
-                    vecs_3d = self._project_vectors(data)
-                    for vec in vecs_3d:
-                        all_points.append(origin_3d + vec)
-                elif hasattr(data, "ndim") and data.ndim >= 1:
-                    if data.ndim == 1:
-                        # Single point/vector
-                        pt = self._project_point(data)
-                        all_points.append(origin_3d + pt)
-                    else:
-                        # Multiple points
-                        for row in data:
-                            pt = self._project_point(row)
-                            all_points.append(pt)
-
-        if not all_points:
-            return (4.0, -3.0, 3.5), (0.0, 0.0, 0.0)
-
-        points = array(all_points)
-
-        # Bounding box
-        min_pt = np_min(points, axis=0)
-        max_pt = np_max(points, axis=0)
-        center = (min_pt + max_pt) / 2
-        extent = np_max(max_pt - min_pt)
-
-        # Camera distance based on extent (with margin)
-        distance = extent * 4
-
-        # Isometric-like viewing angle: (1, -0.6, 0.8) normalized
-        direction = array([1.0, -0.6, 0.8])
-        direction = direction / norm(direction)
-
-        camera_position = tuple(center + direction * distance)
-        camera_focal = tuple(center)
-
-        return camera_position, camera_focal
-
-    # =========================================================================
-    # Display
-    # =========================================================================
-
-    def show(self, interactive: bool = True) -> None:
-        """
-        Display the scene.
-
-        Args:
-            interactive: If True, allows user interaction
-        """
-        self._ensure_backend()
-        _bring_window_to_front()
-        self._backend.show(interactive=interactive)
-
-    def render(self) -> None:
-        """Render current frame without showing window."""
-        self._ensure_backend()
-        self._backend.render()
+        # If we haven't shown the window yet, show it now
+        if self._first_capture:
+            self._backend.show(interactive=False)
+            _bring_window_to_front()
+            self._first_capture = False
+
+        self._backend.wait_for_close()
 
     def close(self) -> None:
         """Close the scene and clean up."""

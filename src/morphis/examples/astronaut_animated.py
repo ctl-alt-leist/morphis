@@ -110,4 +110,4 @@ def create_scene():
 
 if __name__ == "__main__":
     scene = create_scene()
-    scene.play()
+    scene.show()

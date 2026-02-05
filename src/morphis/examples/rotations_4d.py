@@ -8,8 +8,6 @@ Visualizes a 4D frame rotating with projection to 3D:
 Run: uv run python -m morphis.examples.rotations_4d
 """
 
-import argparse
-
 from numpy import diff, pi
 
 from morphis.elements import Frame, basis_vectors, euclidean_metric
@@ -100,14 +98,5 @@ def create_scene():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="4D frame rotation animation")
-    parser.add_argument("--save", type=str, help="Also save to file (e.g., out.gif)")
-    args = parser.parse_args()
-
     scene = create_scene()
-
-    scene.play()
-
-    if args.save:
-        scene.export(args.save)
-        print(f"Saved {args.save}")
+    scene.show()
