@@ -413,5 +413,5 @@ class Renderer:
     def wait_for_close(self) -> None:
         """Block until user closes window."""
         if self._plotter is not None:
-            # Use PyVista's native blocking show
-            self._plotter.show()
+            # Start the interactor event loop (blocking)
+            self._plotter.iren.start()

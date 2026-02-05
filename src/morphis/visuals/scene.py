@@ -624,7 +624,7 @@ class Scene:
     # Animation
     # =========================================================================
 
-    def start(self, live: bool = True) -> None:
+    def start(self, live: bool = False) -> None:
         """
         Start recording animation.
 
@@ -650,9 +650,9 @@ class Scene:
         """
         self._ensure_backend()
 
-        # Auto-start in live mode if not already started
+        # Auto-start recording if not already started
         if not self._recording:
-            self.start(live=True)
+            self.start(live=False)
 
         # Capture state of all elements (including computed opacity)
         states = {}

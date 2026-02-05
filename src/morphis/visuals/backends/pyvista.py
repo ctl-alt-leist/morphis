@@ -857,5 +857,6 @@ class PyVistaBackend:
     def wait_for_close(self) -> None:
         """Block until user closes window."""
         if self._plotter is not None and not self.is_closed():
-            # Use PyVista's native blocking show
-            self._plotter.show()
+            # Start the interactor event loop (blocking)
+            # This works even after show(interactive_update=True)
+            self._plotter.iren.start()
