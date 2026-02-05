@@ -79,11 +79,11 @@ scene.camera(
 # Set clipping range to accommodate the entire path
 scene.set_clipping_range(near=0.1, far=cam_dist * 5)
 
-print("Starting animation (30 seconds, 3 loops)...", flush=True)
+print("Starting animation...", flush=True)
 
 # Capture frames
-for frame in range(n_frames * 3):
-    t_normalized = (frame % n_frames) / n_frames
+for frame in range(n_frames):
+    t_normalized = frame / n_frames
     t = frame / fps
 
     # Position
