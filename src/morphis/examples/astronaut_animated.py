@@ -1,4 +1,10 @@
-"""Animated GLB model with smooth rotations and a rollercoaster path."""
+"""
+Astronaut Animated
+
+NASA's Extravehicular Mobility Unit on a rollercoaster path with rotations.
+
+Run: uv run python -m morphis.examples.astronaut_animated
+"""
 
 from numpy import arcsin, arctan2, array, clip, cos, pi, sin
 from numpy.linalg import norm

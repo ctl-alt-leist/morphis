@@ -1,4 +1,10 @@
-"""Load and display a GLB model (static viewer)."""
+"""
+Astronaut Static Viewer
+
+Displays NASA's Extravehicular Mobility Unit (spacesuit) model.
+
+Run: uv run python -m morphis.examples.astronaut_view
+"""
 
 from morphis.elements import Surface
 from morphis.visuals import Scene

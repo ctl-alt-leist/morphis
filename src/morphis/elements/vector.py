@@ -203,9 +203,9 @@ class Vector(IndexableMixin, Tensor):
 
         Examples:
             >>> from morphis.elements import Vector, euclidean_metric
-            >>> import numpy as np
+            >>> from numpy.random import randn
             >>> g = euclidean_metric(3)
-            >>> vectors = [Vector(np.random.randn(3), grade=1, metric=g) for _ in range(10)]
+            >>> vectors = [Vector(randn(3), grade=1, metric=g) for _ in range(10)]
             >>> stacked = Vector.stack(vectors, axis=0)
             >>> stacked.lot
             (10,)

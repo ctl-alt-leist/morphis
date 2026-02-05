@@ -143,6 +143,29 @@ class PyVistaBackend:
         if tracked.extra.get("mesh"):
             tracked.extra["mesh"].points = vertices
 
+    def set_mesh_data(self, object_id: str, mesh: "PolyData") -> None:
+        """
+        Replace entire mesh data (vertices + topology).
+
+        Use this when the mesh structure changes, not just vertex positions.
+        For frames, the arrow geometry is procedurally generated and needs
+        complete replacement when direction vectors change.
+        """
+        if object_id not in self._objects:
+            return
+
+        tracked = self._objects[object_id]
+        if tracked.actors:
+            tracked.actors[0].mapper.SetInputData(mesh)
+            tracked.extra["mesh"] = mesh
+
+    def get_actor(self, object_id: str) -> Any | None:
+        """Get the primary VTK actor for an object."""
+        if object_id not in self._objects:
+            return None
+        tracked = self._objects[object_id]
+        return tracked.actors[0] if tracked.actors else None
+
     # =========================================================================
     # Arrow Operations
     # =========================================================================
@@ -649,7 +672,12 @@ class PyVistaBackend:
         """Display the scene."""
         self._ensure_plotter()
         self._ensure_clipping_range()
-        self._plotter.show(interactive_update=True, auto_close=False)
+        if interactive:
+            # Blocking show - wait for user to close window
+            self._plotter.show()
+        else:
+            # Non-blocking show for animations
+            self._plotter.show(interactive_update=True, auto_close=False)
 
     # =========================================================================
     # Basis Display

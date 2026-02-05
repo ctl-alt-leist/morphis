@@ -141,6 +141,9 @@ class Scene:
         self._snapshots: list[Snapshot] = []
         self._recording = False
         self._effects: list[SceneEffect] = []
+        self._live = False
+        self._live_start_time: float | None = None
+        self._live_played = False
 
     # =========================================================================
     # Properties
@@ -280,35 +283,57 @@ class Scene:
             backend_ids.append(bid)
 
         elif isinstance(element, Frame):
-            # Frame -> arrows from origin
+            # Frame -> use create_frame_mesh for proper arrows + edges + faces
+            from morphis.visuals.drawing.vectors import create_frame_mesh
+
             origin = kwargs.get("origin", zeros(3))
-            vectors = element.data
-
-            # Project to 3D if needed
             origin_3d = self._project_point(origin)
-            vecs_3d = self._project_vectors(vectors)
+            vecs_3d = self._project_vectors(element.data)
 
-            origins = array([origin_3d] * len(vecs_3d))
-            bid = self._backend.add_arrows(
-                origins,
+            edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
+                origin_3d,
                 vecs_3d,
-                color=color,
-                opacity=opacity,
-                tip_length=kwargs.get("tip_length", 0.12),
-                shaft_radius=kwargs.get("shaft_radius", 0.008),
+                projection_axes=None,  # Already projected
+                filled=kwargs.get("filled", False),
             )
-            backend_ids.append(bid)
 
-            # Optional filled visualization
-            if kwargs.get("filled", False) and len(vecs_3d) >= 2:
-                bid = self._backend.add_span(
-                    origin_3d,
-                    vecs_3d[:3],  # Max 3 vectors for span
+            # Track which mesh types we create (for _sync_visuals)
+            mesh_types = []
+
+            if edges_mesh is not None:
+                bid = self._backend.add_mesh(
+                    edges_mesh.points,
+                    edges_mesh.faces,
                     color=color,
-                    opacity=opacity * 0.3,
-                    filled=True,
+                    opacity=opacity,
+                    smooth_shading=True,
                 )
                 backend_ids.append(bid)
+                mesh_types.append("edges")
+
+            if faces_mesh is not None:
+                bid = self._backend.add_mesh(
+                    faces_mesh.points,
+                    faces_mesh.faces,
+                    color=color,
+                    opacity=opacity * 0.2,
+                    smooth_shading=True,
+                )
+                backend_ids.append(bid)
+                mesh_types.append("faces")
+
+            if origin_mesh is not None:
+                bid = self._backend.add_mesh(
+                    origin_mesh.points,
+                    origin_mesh.faces,
+                    color=color,
+                    opacity=opacity,
+                    smooth_shading=True,
+                )
+                backend_ids.append(bid)
+                mesh_types.append("origin")
+
+            kwargs["_mesh_types"] = mesh_types
 
         elif isinstance(element, Vector):
             if element.grade == 1:
@@ -599,6 +624,23 @@ class Scene:
     # Animation
     # =========================================================================
 
+    def start(self, live: bool = True) -> None:
+        """
+        Start recording animation.
+
+        Args:
+            live: If True, show window immediately and render in real-time
+        """
+        self._ensure_backend()
+        self._recording = True
+        self._live = live
+
+        if live:
+            self._backend.show(interactive=False)
+            _bring_window_to_front()
+            self._live_start_time = time_module.time()
+            self._live_played = True  # Mark that we showed live
+
     def capture(self, t: float) -> None:
         """
         Capture current state at time t for animation.
@@ -607,7 +649,10 @@ class Scene:
             t: Animation time in seconds
         """
         self._ensure_backend()
-        self._recording = True
+
+        # Auto-start in live mode if not already started
+        if not self._recording:
+            self.start(live=True)
 
         # Capture state of all elements (including computed opacity)
         states = {}
@@ -618,8 +663,21 @@ class Scene:
 
         self._snapshots.append(Snapshot(t=t, states=states))
 
+        # Set up camera after first capture in live mode (now we have geometry data)
+        if self._live and len(self._snapshots) == 1:
+            camera_pos, camera_focal = self._compute_auto_camera()
+            if camera_pos is not None:
+                self._backend.set_camera(position=camera_pos, focal_point=camera_focal)
+
         # Sync visuals with current element state and opacity
         self._sync_visuals(t)
+
+        # In live mode, wait for real-time sync
+        if self._live and self._live_start_time is not None:
+            target_time = self._live_start_time + t
+            now = time_module.time()
+            if target_time > now:
+                time_module.sleep(target_time - now)
 
     def _capture_element_state(self, tracked: TrackedElement) -> dict:
         """Capture current state of an element."""
@@ -642,11 +700,16 @@ class Scene:
         for element_id, tracked in self._elements.items():
             element = tracked.element
 
-            # Compute opacity if we have time
+            # Compute opacity if we have time (faces get 0.2 multiplier)
             if t is not None:
-                opacity = self._compute_opacity(element_id, t)
-                for bid in tracked.backend_ids:
-                    self._backend.set_opacity(bid, opacity * tracked.opacity)
+                base_opacity = self._compute_opacity(element_id, t) * tracked.opacity
+                mesh_types = tracked.extra.get("_mesh_types", [])
+                for idx, bid in enumerate(tracked.backend_ids):
+                    mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
+                    if mesh_type == "faces":
+                        self._backend.set_opacity(bid, base_opacity * 0.2)
+                    else:
+                        self._backend.set_opacity(bid, base_opacity)
 
             if isinstance(element, Surface):
                 # Update mesh vertices
@@ -657,18 +720,33 @@ class Scene:
                     )
 
             elif isinstance(element, Frame):
-                # Update arrows
+                # Update frame geometry - same code as _update_element_in_plotter
+                from morphis.visuals.drawing.vectors import create_frame_mesh
+
                 origin = tracked.extra.get("origin", zeros(3))
                 origin_3d = self._project_point(origin)
                 vecs_3d = self._project_vectors(element.data)
-                origins = array([origin_3d] * len(vecs_3d))
 
-                if tracked.backend_ids:
-                    self._backend.update_arrows(
-                        tracked.backend_ids[0],
-                        origins,
-                        vecs_3d,
-                    )
+                edges_mesh, faces_mesh, _ = create_frame_mesh(
+                    origin_3d,
+                    vecs_3d,
+                    projection_axes=None,
+                    filled=tracked.extra.get("filled", False),
+                )
+
+                # Map backend_ids to mesh types
+                mesh_types = tracked.extra.get("_mesh_types", [])
+                for idx, bid in enumerate(tracked.backend_ids):
+                    mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
+                    actor = self._backend.get_actor(bid)
+                    if actor is None:
+                        continue
+
+                    if mesh_type == "edges" and edges_mesh is not None:
+                        actor.mapper.SetInputData(edges_mesh)
+                    elif mesh_type == "faces" and faces_mesh is not None:
+                        actor.mapper.SetInputData(faces_mesh)
+                    # origin mesh doesn't change geometry, just opacity
 
             elif isinstance(element, Vector) and element.grade == 1:
                 # Update vector arrows
@@ -713,6 +791,18 @@ class Scene:
         # Sort by time
         self._snapshots.sort(key=lambda s: s.t)
 
+        # If we already played live, just wait for window close
+        if self._live_played and not loop:
+            print("Animation complete. Close window to exit.")
+            if hasattr(self._backend, "plotter") and self._backend.plotter is not None:
+                self._backend.plotter.iren.interactor.Start()
+            return
+
+        # Set up auto camera (same as export)
+        camera_pos, camera_focal = self._compute_auto_camera()
+        if camera_pos is not None:
+            self._backend.set_camera(position=camera_pos, focal_point=camera_focal)
+
         # Show window
         self._backend.show(interactive=False)
         _bring_window_to_front()
@@ -743,10 +833,16 @@ class Scene:
                         elif "data" in state:
                             element.data[:] = state["data"]
 
-                        # Apply opacity from snapshot
+                        # Apply opacity from snapshot (with correct multipliers)
                         if "opacity" in state:
-                            for bid in tracked.backend_ids:
-                                self._backend.set_opacity(bid, state["opacity"] * tracked.opacity)
+                            base_opacity = state["opacity"] * tracked.opacity
+                            mesh_types = tracked.extra.get("_mesh_types", [])
+                            for idx, bid in enumerate(tracked.backend_ids):
+                                mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
+                                if mesh_type == "faces":
+                                    self._backend.set_opacity(bid, base_opacity * 0.2)
+                                else:
+                                    self._backend.set_opacity(bid, base_opacity)
 
                     # Sync visuals (without time - opacity already applied)
                     self._sync_visuals()

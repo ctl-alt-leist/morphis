@@ -8,9 +8,8 @@ structured Operators for the results.
 
 from typing import TYPE_CHECKING
 
-import numpy as np
-from numpy import prod
-from numpy.linalg import lstsq, svd
+from numpy import diag_indices_from, prod
+from numpy.linalg import lstsq, pinv, solve, svd
 from numpy.typing import NDArray
 
 from morphis.algebra.specs import VectorSpec
@@ -143,9 +142,9 @@ def structured_lstsq(
     if alpha > 0:
         # Regularized: (G^H G + alpha*I) x = G^H y
         GhG = G_matrix.conj().T @ G_matrix
-        GhG[np.diag_indices_from(GhG)] += alpha
+        GhG[diag_indices_from(GhG)] += alpha
         Ghy = G_matrix.conj().T @ y_vector
-        x_vector = np.linalg.solve(GhG, Ghy)
+        x_vector = solve(GhG, Ghy)
     else:
         # Standard least squares
         x_vector, _, _, _ = lstsq(G_matrix, y_vector, rcond=None)
@@ -211,9 +210,9 @@ def structured_pinv(
 
     # Compute pseudoinverse
     if r_cond is None:
-        G_pinv = np.linalg.pinv(G_matrix)
+        G_pinv = pinv(G_matrix)
     else:
-        G_pinv = np.linalg.pinv(G_matrix, rcond=r_cond)
+        G_pinv = pinv(G_matrix, rcond=r_cond)
 
     # Reconstruct as Operator with swapped specs
     return _from_matrix(
