@@ -846,3 +846,11 @@ class PyVistaBackend:
             return True
         # PyVista sets _closed when window is closed
         return getattr(self._plotter, "_closed", False)
+
+    def wait_for_close(self) -> None:
+        """Block until user closes window, while keeping it responsive."""
+        from time import sleep
+
+        while not self.is_closed():
+            self.process_events()
+            sleep(0.01)

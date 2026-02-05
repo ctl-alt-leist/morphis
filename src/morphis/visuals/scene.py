@@ -798,8 +798,7 @@ class Scene:
             if self._backend.is_closed():
                 return  # Window already closed during capture
             print("Animation complete. Close window to exit.")
-            if hasattr(self._backend, "plotter") and self._backend.plotter is not None:
-                self._backend.plotter.iren.interactor.Start()
+            self._backend.wait_for_close()
             return
 
         # Set up auto camera (same as export)
@@ -867,8 +866,7 @@ class Scene:
         # Only wait for close if window is still open
         if not self._backend.is_closed():
             print("Animation complete. Close window to exit.")
-            if hasattr(self._backend, "plotter") and self._backend.plotter is not None:
-                self._backend.plotter.iren.interactor.Start()
+            self._backend.wait_for_close()
 
     # =========================================================================
     # Export

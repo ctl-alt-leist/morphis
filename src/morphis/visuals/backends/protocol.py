@@ -391,6 +391,10 @@ class RenderBackend(Protocol):
         """Check if the window has been closed by the user."""
         ...
 
+    def wait_for_close(self) -> None:
+        """Block until user closes window, while keeping it responsive."""
+        ...
+
     # =========================================================================
     # Basis Display
     # =========================================================================

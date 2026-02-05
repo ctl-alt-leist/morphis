@@ -409,3 +409,11 @@ class Renderer:
     def plotter(self) -> "Plotter | None":
         """Access the underlying PyVista plotter (for advanced use)."""
         return self._plotter
+
+    def wait_for_close(self) -> None:
+        """Block until user closes window, while keeping it responsive."""
+        from time import sleep
+
+        while self._plotter is not None and not getattr(self._plotter, "_closed", False):
+            self._plotter.update()
+            sleep(0.01)

@@ -487,9 +487,7 @@ class Animation:
         self._started = False
         if self._live:
             print("Animation complete. Close window to exit.")
-            # Keep window open
-            if self._renderer.plotter is not None:
-                self._renderer.plotter.iren.interactor.Start()
+            self._renderer.wait_for_close()
 
     def play(self, loop: bool = False):
         """
@@ -578,8 +576,7 @@ class Animation:
             pass
 
         print("Animation complete. Close window to exit.")
-        if self._renderer.plotter is not None:
-            self._renderer.plotter.iren.interactor.Start()
+        self._renderer.wait_for_close()
 
     # =========================================================================
     # Saving
