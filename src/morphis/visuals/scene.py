@@ -104,7 +104,7 @@ class Scene:
         self,
         projection: tuple[int, ...] | None = None,
         theme: str | Theme = "obsidian",
-        size: tuple[int, int] = (1200, 900),
+        size: tuple[int, int] = (900, 900),  # MEDIUM_SQUARE
         frame_rate: int = 30,
         backend: str = "pyvista",
         show_basis: bool = True,
@@ -672,12 +672,12 @@ class Scene:
         # Sync visuals with current element state and opacity
         self._sync_visuals(t)
 
-        # In live mode, wait for real-time sync
+        # In live mode, wait for real-time sync while processing events
         if self._live and self._live_start_time is not None:
             target_time = self._live_start_time + t
-            now = time_module.time()
-            if target_time > now:
-                time_module.sleep(target_time - now)
+            while time_module.time() < target_time:
+                self._backend.process_events()
+                time_module.sleep(0.001)
 
     def _capture_element_state(self, tracked: TrackedElement) -> dict:
         """Capture current state of an element."""
@@ -816,8 +816,9 @@ class Scene:
                 for snapshot in self._snapshots:
                     target_time = play_start + (snapshot.t - t_start)
 
-                    # Wait for target time
+                    # Wait for target time while processing window events
                     while time_module.time() < target_time:
+                        self._backend.process_events()
                         time_module.sleep(0.001)
 
                     # Apply snapshot state to elements

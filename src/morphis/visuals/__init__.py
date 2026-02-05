@@ -97,3 +97,22 @@ from morphis.visuals.theme import (
     Theme as Theme,
     get_theme as get_theme,
 )
+
+
+# =============================================================================
+# Standard Window Sizes
+# =============================================================================
+# Use these for consistent sizing across examples.
+# Square (1:1) and Rectangular (4:3 horizontal) variants.
+
+SMALL_SQUARE: tuple[int, int] = (600, 600)
+SMALL_RECT: tuple[int, int] = (800, 600)
+
+MEDIUM_SQUARE: tuple[int, int] = (900, 900)
+MEDIUM_RECT: tuple[int, int] = (1200, 900)
+
+LARGE_SQUARE: tuple[int, int] = (1200, 1200)
+LARGE_RECT: tuple[int, int] = (1600, 1200)
+
+# Default size for examples
+DEFAULT_SIZE: tuple[int, int] = MEDIUM_SQUARE

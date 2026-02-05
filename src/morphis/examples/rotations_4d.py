@@ -16,7 +16,7 @@ from morphis.elements import Frame, basis_vectors, euclidean_metric
 from morphis.operations import unit
 from morphis.transforms import rotor
 from morphis.utils.easing import ease_in_out_cubic
-from morphis.visuals import RED, Scene
+from morphis.visuals import MEDIUM_SQUARE, RED, Scene
 
 
 # Configuration
@@ -57,7 +57,7 @@ def create_scene():
     scene = Scene(
         frame_rate=FRAME_RATE,
         theme="obsidian",
-        size=(1200, 900),
+        size=MEDIUM_SQUARE,
         projection=(0, 1, 2),
     )
     scene.add(F, color=RED, filled=True)

@@ -679,6 +679,11 @@ class PyVistaBackend:
             # Non-blocking show for animations
             self._plotter.show(interactive_update=True, auto_close=False)
 
+    def process_events(self) -> None:
+        """Process pending window events to keep UI responsive."""
+        if self._plotter is not None:
+            self._plotter.update()
+
     # =========================================================================
     # Basis Display
     # =========================================================================

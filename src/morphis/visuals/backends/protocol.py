@@ -383,6 +383,10 @@ class RenderBackend(Protocol):
         """
         ...
 
+    def process_events(self) -> None:
+        """Process pending window events to keep UI responsive during animations."""
+        ...
+
     # =========================================================================
     # Basis Display
     # =========================================================================
