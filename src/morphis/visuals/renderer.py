@@ -411,18 +411,7 @@ class Renderer:
         return self._plotter
 
     def wait_for_close(self) -> None:
-        """Block until user closes window, while keeping it responsive."""
-        from time import sleep
-
-        while self._plotter is not None:
-            # Check if window was closed (render_window becomes None)
-            if self._plotter.render_window is None:
-                break
-            if getattr(self._plotter, "_closed", False):
-                break
-            try:
-                self._plotter.update()
-            except RuntimeError:
-                # Window closed - interactor no longer available
-                break
-            sleep(0.01)
+        """Block until user closes window."""
+        if self._plotter is not None:
+            # Use PyVista's native blocking show
+            self._plotter.show()

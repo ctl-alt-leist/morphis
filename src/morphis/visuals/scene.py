@@ -797,7 +797,6 @@ class Scene:
         if self._live_played and not loop:
             if self._backend.is_closed():
                 return  # Window already closed during capture
-            print("Animation complete. Close window to exit.")
             self._backend.wait_for_close()
             return
 
@@ -865,7 +864,6 @@ class Scene:
 
         # Only wait for close if window is still open
         if not self._backend.is_closed():
-            print("Animation complete. Close window to exit.")
             self._backend.wait_for_close()
 
     # =========================================================================

@@ -486,7 +486,6 @@ class Animation:
         """End an animation session (live mode)."""
         self._started = False
         if self._live:
-            print("Animation complete. Close window to exit.")
             self._renderer.wait_for_close()
 
     def play(self, loop: bool = False):
@@ -575,7 +574,6 @@ class Animation:
         except KeyboardInterrupt:
             pass
 
-        print("Animation complete. Close window to exit.")
         self._renderer.wait_for_close()
 
     # =========================================================================

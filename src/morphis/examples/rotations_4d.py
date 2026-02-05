@@ -106,7 +106,6 @@ if __name__ == "__main__":
 
     scene = create_scene()
 
-    print("Playing animation... (close window when done)")
     scene.play()
 
     if args.save:

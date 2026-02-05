@@ -79,7 +79,7 @@ scene.camera(
 # Set clipping range to accommodate the entire path
 scene.set_clipping_range(near=0.1, far=cam_dist * 5)
 
-print("Starting animation (30 seconds, 3 loops)... Close window to exit.", flush=True)
+print("Starting animation (30 seconds, 3 loops)...", flush=True)
 
 # Capture frames
 for frame in range(n_frames * 3):

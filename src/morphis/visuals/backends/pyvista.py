@@ -855,9 +855,7 @@ class PyVistaBackend:
         return getattr(self._plotter, "_closed", False)
 
     def wait_for_close(self) -> None:
-        """Block until user closes window, while keeping it responsive."""
-        from time import sleep
-
-        while not self.is_closed():
-            self.process_events()
-            sleep(0.01)
+        """Block until user closes window."""
+        if self._plotter is not None and not self.is_closed():
+            # Use PyVista's native blocking show
+            self._plotter.show()
