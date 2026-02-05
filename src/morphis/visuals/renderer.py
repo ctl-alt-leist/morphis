@@ -414,6 +414,15 @@ class Renderer:
         """Block until user closes window, while keeping it responsive."""
         from time import sleep
 
-        while self._plotter is not None and not getattr(self._plotter, "_closed", False):
-            self._plotter.update()
+        while self._plotter is not None:
+            # Check if window was closed (render_window becomes None)
+            if self._plotter.render_window is None:
+                break
+            if getattr(self._plotter, "_closed", False):
+                break
+            try:
+                self._plotter.update()
+            except RuntimeError:
+                # Window closed - interactor no longer available
+                break
             sleep(0.01)

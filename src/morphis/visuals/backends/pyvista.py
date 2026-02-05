@@ -681,8 +681,12 @@ class PyVistaBackend:
 
     def process_events(self) -> None:
         """Process pending window events to keep UI responsive."""
-        if self._plotter is not None:
-            self._plotter.update()
+        if self._plotter is not None and not self.is_closed():
+            try:
+                self._plotter.update()
+            except RuntimeError:
+                # Window was closed - interactor no longer available
+                pass
 
     # =========================================================================
     # Basis Display
@@ -844,7 +848,10 @@ class PyVistaBackend:
         """Check if the window has been closed by the user."""
         if self._plotter is None:
             return True
-        # PyVista sets _closed when window is closed
+        # render_window becomes None when window is closed
+        if self._plotter.render_window is None:
+            return True
+        # Also check _closed flag as backup
         return getattr(self._plotter, "_closed", False)
 
     def wait_for_close(self) -> None:
