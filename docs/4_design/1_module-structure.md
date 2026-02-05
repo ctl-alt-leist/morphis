@@ -58,18 +58,25 @@ src/morphis/
 │   └── docgen.py               # API documentation generator
 │
 ├── visuals/                     # Visualization
-│   ├── __init__.py
-│   ├── canvas.py               # 3D canvas
+│   ├── __init__.py             # Public API, window size constants
+│   ├── scene.py                # Scene - unified visualization (recommended)
+│   ├── canvas.py               # Low-level 3D canvas
+│   ├── loop.py                 # Animation class (legacy)
+│   ├── renderer.py             # Blade rendering utilities
+│   ├── theme.py                # Color themes
+│   ├── effects.py              # Visual effects (FadeIn, FadeOut)
 │   ├── contexts.py             # PGA-specific rendering
-│   ├── drawing/
-│   │   ├── __init__.py
-│   │   └── vectors.py          # Vector mesh generation
-│   ├── effects.py              # Visual effects
-│   ├── loop.py                 # Animation
 │   ├── operations.py           # Operation visualization
 │   ├── projection.py           # Dimension projection
-│   ├── renderer.py             # Rendering utilities
-│   └── theme.py                # Color themes
+│   ├── model.py                # VisualModel for 3D meshes
+│   ├── text.py                 # Text annotations
+│   ├── backends/               # Rendering backend abstraction
+│   │   ├── __init__.py
+│   │   ├── protocol.py         # Backend interface
+│   │   └── pyvista.py          # PyVista/VTK implementation
+│   └── drawing/
+│       ├── __init__.py
+│       └── vectors.py          # Vector/frame mesh generation
 │
 ├── examples/                    # Example scripts
 │   └── ...
