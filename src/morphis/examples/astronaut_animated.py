@@ -113,4 +113,4 @@ for frame in range(n_frames * 3):
     scene.capture(t)
 
 # Play animation
-scene.play(loop=True)
+scene.play()
