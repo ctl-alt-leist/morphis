@@ -413,5 +413,4 @@ class Renderer:
     def wait_for_close(self) -> None:
         """Block until user closes window."""
         if self._plotter is not None:
-            # Start the interactor event loop (blocking)
-            self._plotter.iren.start()
+            self._plotter.show()
