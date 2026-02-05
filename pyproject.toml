@@ -1,6 +1,6 @@
 [project]
 name = "morphis"
-version = "0.11.0"
+version = "0.12.0"
 description = "A unified mathematical framework for geometric computation"
 readme = "README.md"
 license = "MIT"
@@ -18,17 +18,31 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = [
+    "DracoPy>=1.4.0",
     "imageio>=2.37.2",
     "imageio-ffmpeg>=0.6.0",
     "matplotlib>=3.10.8",
     "numpy>=2.3.5",
     "pydantic>=2.12.5",
+    "pygltflib>=1.16.5",
     "pyvista>=0.46.4",
     "scipy>=1.16.3",
     "tomli>=2.3.0",
+    "trimesh>=4.11.1",
 ]
 
 [project.optional-dependencies]
+visuals = [
+  # These are currently in main dependencies but documented here
+  # for explicit dependency declaration. In a future major version,
+  # these may be moved out of main dependencies.
+  "pyvista>=0.46.4",
+  "imageio>=2.37.2",
+  "imageio-ffmpeg>=0.6.0",
+  "trimesh>=4.11.1",
+  "pygltflib>=1.16.5",
+  "DracoPy>=1.4.0",
+]
 dev = [
   "build",
   "flake8",

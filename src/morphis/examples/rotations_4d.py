@@ -8,15 +8,13 @@ Visualizes a 4D frame rotating with projection to 3D:
 Run: uv run python -m morphis.examples.rotations_4d
 """
 
-import argparse
-
 from numpy import diff, pi
 
 from morphis.elements import Frame, basis_vectors, euclidean_metric
 from morphis.operations import unit
 from morphis.transforms import rotor
 from morphis.utils.easing import ease_in_out_cubic
-from morphis.visuals import RED, Animation
+from morphis.visuals import RED, SMALL_SQUARE, Scene
 
 
 # Configuration
@@ -33,11 +31,11 @@ def compute_delta_angles(duration: float, total_angle: float) -> list[float]:
     return list(diff([0.0] + angles))
 
 
-def create_animation():
+def create_scene():
     """
     Create the 4D frame rotation animation.
 
-    Returns configured Animation ready for play() or save().
+    Returns configured Scene ready for play() or export().
     """
     # Create 4D basis
     g = euclidean_metric(4)
@@ -53,16 +51,15 @@ def create_animation():
     # Pre-compute delta angles for eased rotation
     d_angles = compute_delta_angles(DURATION_ROTATE, TOTAL_ROTATION)
 
-    # Create animation
-    anim = Animation(
+    # Create scene
+    scene = Scene(
         frame_rate=FRAME_RATE,
         theme="obsidian",
-        size=(1200, 900),
-        auto_camera=True,
+        size=SMALL_SQUARE,
+        projection=(0, 1, 2),
     )
-    anim.watch(F, color=RED, filled=True)
-    anim.set_projection((0, 1, 2))
-    anim.fade_in(F, t=0.0, duration=DURATION_FADE_IN)
+    scene.add(F, color=RED, filled=True)
+    scene.fade_in(F, t=0.0, duration=DURATION_FADE_IN)
 
     print("4D Frame Rotation Animation")
     print("=" * 40)
@@ -70,13 +67,12 @@ def create_animation():
     print(f"4 rotation phases: {DURATION_ROTATE}s each")
     print()
 
-    anim.start()
     t = 0.0
     dt = 1.0 / FRAME_RATE
 
     # Fade in
     for _ in range(int(DURATION_FADE_IN * FRAME_RATE) + 1):
-        anim.capture(t)
+        scene.capture(t)
         t += dt
 
     # First two rotations in e123 projection
@@ -84,33 +80,23 @@ def create_animation():
         for d_angle in d_angles:
             M = rotor(b, d_angle)
             F.data[...] = F.transform(M).data
-            anim.capture(t)
+            scene.capture(t)
             t += dt
 
     # Switch to e234 projection
-    anim.set_projection((1, 2, 3))
+    scene.set_projection((1, 2, 3))
 
     # Last two rotations in e234 projection
     for b in [b1, b2]:
         for d_angle in d_angles:
             M = rotor(b, d_angle)
             F.data[...] = F.transform(M).data
-            anim.capture(t)
+            scene.capture(t)
             t += dt
 
-    return anim
+    return scene
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="4D frame rotation animation")
-    parser.add_argument("--save", type=str, help="Also save to file (e.g., out.gif)")
-    args = parser.parse_args()
-
-    anim = create_animation()
-
-    print("Playing animation... (close window when done)")
-    anim.play()
-
-    if args.save:
-        anim.save(args.save)
-        print(f"Saved {args.save}")
+    scene = create_scene()
+    scene.show()

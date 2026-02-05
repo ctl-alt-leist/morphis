@@ -203,9 +203,9 @@ class Vector(IndexableMixin, Tensor):
 
         Examples:
             >>> from morphis.elements import Vector, euclidean_metric
-            >>> import numpy as np
+            >>> from numpy.random import randn
             >>> g = euclidean_metric(3)
-            >>> vectors = [Vector(np.random.randn(3), grade=1, metric=g) for _ in range(10)]
+            >>> vectors = [Vector(randn(3), grade=1, metric=g) for _ in range(10)]
             >>> stacked = Vector.stack(vectors, axis=0)
             >>> stacked.lot
             (10,)
@@ -727,6 +727,38 @@ class Vector(IndexableMixin, Tensor):
 
         transformed = transform(self, M)
         self.data[...] = transformed.data
+
+    def apply_similarity(
+        self,
+        S: MultiVector,
+        t: "Vector | None" = None,
+    ) -> "Vector":
+        """
+        Apply a similarity transformation to this Vector.
+
+        Computes: transform(self, S) + t
+
+        The similarity versor S (from align_vectors or a rotor) is applied via
+        sandwich product. The optional translation t is added after.
+
+        Args:
+            S: Similarity versor or rotor (MultiVector with grades {0, 2})
+            t: Optional translation vector (grade-1). Added after sandwich product.
+
+        Returns:
+            New Vector with the transformation applied.
+
+        Example:
+            S = align_vectors(u, v)
+            t = Vector([1, 0, 0], grade=1, metric=g)
+            w = u.apply_similarity(S, t)  # w = transform(u, S) + t
+        """
+        from morphis.transforms.actions import transform
+
+        result = transform(self, S)
+        if t is not None:
+            result = result + t
+        return result
 
     # =========================================================================
     # Utility Methods

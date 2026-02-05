@@ -10,10 +10,13 @@ It has no knowledge of:
 - Effects or scheduling
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import pyvista as pv
 from numpy import array
+
+
+if TYPE_CHECKING:
+    from pyvista import Plotter
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
@@ -35,6 +38,8 @@ class TrackedObject(BaseModel):
     opacity: float = 1.0
     projection_axes: tuple[int, int, int] | None = None  # For nD -> 3D projection
     filled: bool = False  # For frames: whether to show edges and faces
+    model: Any | None = None  # VisualModel reference for grade=-2
+    model_opacity: float = 1.0  # Model-specific opacity
 
 
 class Renderer:
@@ -70,7 +75,7 @@ class Renderer:
         self.theme = theme
         self._size = size
         self._show_basis = show_basis
-        self._plotter: pv.Plotter | None = None
+        self._plotter: "Plotter | None" = None
         self._objects: dict[int, TrackedObject] = {}
         self._color_index = 0
         self._basis_label_actors: list | None = None
@@ -79,7 +84,9 @@ class Renderer:
     def _ensure_plotter(self):
         """Create plotter if not yet created."""
         if self._plotter is None:
-            self._plotter = pv.Plotter(off_screen=False)
+            from pyvista import Plotter
+
+            self._plotter = Plotter(off_screen=False)
             self._plotter.set_background(self.theme.background)
             self._plotter.window_size = self._size
 
@@ -110,19 +117,23 @@ class Renderer:
         opacity: float = 1.0,
         projection_axes: tuple[int, int, int] | None = None,
         filled: bool = False,
+        model: Any | None = None,
+        model_opacity: float = 1.0,
     ):
         """
         Add a new object to the renderer.
 
         Args:
             obj_id: Unique identifier for this object
-            grade: Geometric grade (1=vector, 2=bivector, 3=trivector, 4=quadvector, -1=frame)
+            grade: Geometric grade (1=vector, 2=bivector, 3=trivector, 4=quadvector, -1=frame, -2=model)
             origin: Origin point (nD)
-            vectors: Spanning vectors (shape depends on grade)
+            vectors: Spanning vectors (shape depends on grade), or vertices for models
             color: RGB color tuple (0-1 range), or None for auto
             opacity: Initial opacity [0, 1]
             projection_axes: For nD blades, which 3 axes to project onto
             filled: For frames, whether to show edges and faces of spanned shape
+            model: VisualModel reference (required for grade=-2)
+            model_opacity: Model-specific opacity setting (for grade=-2)
         """
         self._ensure_plotter()
 
@@ -135,6 +146,33 @@ class Renderer:
 
         origin = array(origin, dtype=float)
         vectors = array(vectors, dtype=float)
+
+        # Handle VisualModel (grade=-2)
+        if grade == -2:
+            if model is None:
+                raise ValueError("VisualModel required for grade=-2")
+            # Sync mesh and add directly
+            model.sync_mesh()
+            edges_actor = self._plotter.add_mesh(
+                model.mesh,
+                color=color,
+                opacity=opacity * model_opacity,
+                smooth_shading=True,
+            )
+            self._objects[obj_id] = TrackedObject(
+                obj_id=obj_id,
+                grade=grade,
+                color=color,
+                edges_actor=edges_actor,
+                faces_actor=None,
+                origin_actor=None,
+                opacity=opacity,
+                projection_axes=projection_axes,
+                filled=filled,
+                model=model,
+                model_opacity=model_opacity,
+            )
+            return
 
         # Create meshes using centralized drawing functions
         if grade == -1:
@@ -195,7 +233,7 @@ class Renderer:
         Args:
             obj_id: The object to update
             origin: New origin point
-            vectors: New spanning vectors
+            vectors: New spanning vectors (or vertices for models)
             opacity: New opacity (or None to keep current)
             projection_axes: For nD blades, which 3 axes to project onto
         """
@@ -211,6 +249,14 @@ class Renderer:
 
         if projection_axes is not None:
             tracked.projection_axes = projection_axes
+
+        # Handle VisualModel (grade=-2)
+        if tracked.grade == -2:
+            # For models, vectors contains the new vertex positions
+            if tracked.edges_actor is not None:
+                tracked.edges_actor.mapper.GetInput().points = vectors
+                tracked.edges_actor.GetProperty().SetOpacity(tracked.opacity * tracked.model_opacity)
+            return
 
         # Recreate meshes using centralized drawing functions
         if tracked.grade == -1:
@@ -360,6 +406,11 @@ class Renderer:
             self._plotter = None
 
     @property
-    def plotter(self) -> pv.Plotter | None:
+    def plotter(self) -> "Plotter | None":
         """Access the underlying PyVista plotter (for advanced use)."""
         return self._plotter
+
+    def wait_for_close(self) -> None:
+        """Block until user closes window."""
+        if self._plotter is not None:
+            self._plotter.show()

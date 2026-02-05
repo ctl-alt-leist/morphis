@@ -13,6 +13,9 @@ Vector Visualization API:
 - render_scalar, render_vector, render_bivector, render_trivector: Grade-specific
 """
 
+from __future__ import annotations
+
+
 # Enable LaTeX/MathText rendering in VTK (must be before pyvista import)
 try:
     import vtkmodules.vtkRenderingFreeType  # noqa: F401
@@ -20,9 +23,8 @@ try:
 except ImportError:
     pass  # LaTeX rendering may not be available
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import pyvista as pv
 from numpy import (
     abs as np_abs,
     argmax,
@@ -45,6 +47,10 @@ from pydantic import BaseModel, ConfigDict
 from morphis.elements.vector import Vector
 from morphis.operations.factorization import spanning_vectors
 from morphis.visuals.theme import Color
+
+
+if TYPE_CHECKING:
+    from pyvista import Plotter, PolyData
 
 
 # =============================================================================
@@ -128,8 +134,10 @@ def _create_arrow_mesh(
     tip_ratio: float = 0.12,
     tip_radius_ratio: float = 2.5,
     resolution: int = 20,
-) -> pv.PolyData | None:
+) -> PolyData | None:
     """Create an arrow mesh from start in the given direction."""
+    from pyvista import Cone, Cylinder
+
     length = norm(direction)
     if length < 1e-10:
         return None
@@ -141,7 +149,7 @@ def _create_arrow_mesh(
 
     shaft_end = start + dir_norm * shaft_length
 
-    shaft = pv.Cylinder(
+    shaft = Cylinder(
         center=(start + shaft_end) / 2,
         direction=dir_norm,
         radius=shaft_radius,
@@ -150,7 +158,7 @@ def _create_arrow_mesh(
         capping=True,
     )
 
-    tip = pv.Cone(
+    tip = Cone(
         center=shaft_end + dir_norm * (tip_length / 2),
         direction=dir_norm,
         height=tip_length,
@@ -162,16 +170,18 @@ def _create_arrow_mesh(
     return shaft.merge(tip)
 
 
-def _create_origin_marker(origin: ndarray, radius: float = 0.025) -> pv.PolyData:
+def _create_origin_marker(origin: ndarray, radius: float = 0.025) -> PolyData:
     """Create a sphere mesh to mark the origin point."""
-    return pv.Sphere(radius=radius, center=origin)
+    from pyvista import Sphere
+
+    return Sphere(radius=radius, center=origin)
 
 
 def create_vector_mesh(
     origin: ndarray,
     direction: ndarray,
     shaft_radius: float = 0.008,
-) -> tuple[pv.PolyData | None, pv.PolyData]:
+) -> tuple[PolyData | None, PolyData]:
     """
     Create meshes for a vector (grade 1 blade).
 
@@ -189,7 +199,7 @@ def create_bivector_mesh(
     v: ndarray,
     shaft_radius: float = 0.006,
     face_opacity: float = 0.25,
-) -> tuple[pv.PolyData, pv.PolyData, pv.PolyData]:
+) -> tuple[PolyData, PolyData, PolyData]:
     """
     Create meshes for a bivector (grade 2 blade).
 
@@ -199,6 +209,8 @@ def create_bivector_mesh(
     Returns:
         (edges_mesh, face_mesh, origin_marker_mesh)
     """
+    from pyvista import PolyData, Quadrilateral
+
     # Boundary circulation arrows (open surface has a boundary)
     boundary_arrows = [
         (origin, u),  # along +u
@@ -213,13 +225,13 @@ def create_bivector_mesh(
         if arrow is not None:
             edge_meshes.append(arrow)
 
-    edges_mesh = edge_meshes[0] if edge_meshes else pv.PolyData()
+    edges_mesh = edge_meshes[0] if edge_meshes else PolyData()
     for mesh in edge_meshes[1:]:
         edges_mesh = edges_mesh.merge(mesh)
 
     # Face
     corners = [origin, origin + u, origin + u + v, origin + v]
-    face_mesh = pv.Quadrilateral(corners)
+    face_mesh = Quadrilateral(corners)
 
     # Origin marker
     marker = _create_origin_marker(origin)
@@ -232,8 +244,10 @@ def _create_tube_mesh(
     end: ndarray,
     radius: float = 0.006,
     resolution: int = 20,
-) -> pv.PolyData | None:
+) -> PolyData | None:
     """Create a tube (cylinder) mesh between two points."""
+    from pyvista import Cylinder
+
     direction = end - start
     length = norm(direction)
     if length < 1e-10:
@@ -242,7 +256,7 @@ def _create_tube_mesh(
     dir_norm = direction / length
     center = (start + end) / 2
 
-    return pv.Cylinder(
+    return Cylinder(
         center=center,
         direction=dir_norm,
         radius=radius,
@@ -259,7 +273,7 @@ def create_trivector_mesh(
     w: ndarray,
     shaft_radius: float = 0.006,
     face_opacity: float = 0.15,
-) -> tuple[pv.PolyData, pv.PolyData, pv.PolyData]:
+) -> tuple[PolyData, PolyData, PolyData]:
     """
     Create meshes for a trivector.
 
@@ -270,6 +284,8 @@ def create_trivector_mesh(
     Returns:
         (edges_mesh, faces_mesh, origin_marker_mesh)
     """
+    from pyvista import PolyData, Quadrilateral
+
     edge_meshes = []
 
     # Orientation arrows: trace path 0 → u → u+v → u+v+w
@@ -320,7 +336,7 @@ def create_trivector_mesh(
             if tube is not None:
                 edge_meshes.append(tube)
 
-    edges_mesh = edge_meshes[0] if edge_meshes else pv.PolyData()
+    edges_mesh = edge_meshes[0] if edge_meshes else PolyData()
     for mesh in edge_meshes[1:]:
         edges_mesh = edges_mesh.merge(mesh)
 
@@ -348,7 +364,7 @@ def create_trivector_mesh(
 
     face_meshes = []
     for indices in face_indices:
-        quad = pv.Quadrilateral([corners[k] for k in indices])
+        quad = Quadrilateral([corners[k] for k in indices])
         face_meshes.append(quad)
 
     faces_mesh = face_meshes[0]
@@ -370,7 +386,7 @@ def create_quadvector_mesh(
     projection_axes: tuple[int, int, int] = (0, 1, 2),
     shaft_radius: float = 0.006,
     face_opacity: float = 0.12,
-) -> tuple[pv.PolyData, pv.PolyData, pv.PolyData]:
+) -> tuple[PolyData, PolyData, PolyData]:
     """
     Create meshes for a quadvector (4-blade) as a tesseract projection.
 
@@ -386,6 +402,8 @@ def create_quadvector_mesh(
     Returns:
         (edges_mesh, faces_mesh, origin_marker_mesh)
     """
+    from pyvista import PolyData, Quadrilateral
+
     # A tesseract has 16 vertices (2^4 combinations)
     # Vertices are: origin + any combination of {u, v, w, x}
 
@@ -445,7 +463,7 @@ def create_quadvector_mesh(
             if tube is not None:
                 edge_meshes.append(tube)
 
-    edges_mesh = edge_meshes[0] if edge_meshes else pv.PolyData()
+    edges_mesh = edge_meshes[0] if edge_meshes else PolyData()
     for mesh in edge_meshes[1:]:
         edges_mesh = edges_mesh.merge(mesh)
 
@@ -473,10 +491,10 @@ def create_quadvector_mesh(
     face_meshes = []
     for face_corners in face_definitions:
         quad_corners = [vertices_3d[c] for c in face_corners]
-        quad = pv.Quadrilateral(quad_corners)
+        quad = Quadrilateral(quad_corners)
         face_meshes.append(quad)
 
-    faces_mesh = face_meshes[0] if face_meshes else pv.PolyData()
+    faces_mesh = face_meshes[0] if face_meshes else PolyData()
     for mesh in face_meshes[1:]:
         faces_mesh = faces_mesh.merge(mesh)
 
@@ -493,7 +511,7 @@ def create_frame_mesh(
     shaft_radius: float = 0.008,
     projection_axes: tuple[int, int, int] | None = None,
     filled: bool = False,
-) -> tuple[pv.PolyData | None, pv.PolyData | None, pv.PolyData]:
+) -> tuple[PolyData | None, PolyData | None, PolyData]:
     """
     Create meshes for a frame (k arrows from origin).
 
@@ -512,6 +530,8 @@ def create_frame_mesh(
         (edges_mesh, faces_mesh, origin_marker_mesh)
         faces_mesh is None if filled=False
     """
+    from pyvista import Quadrilateral
+
     origin = array(origin, dtype=float)
     vectors = array(vectors, dtype=float)
 
@@ -555,7 +575,7 @@ def create_frame_mesh(
                 edge_meshes.append(tube2)
             # Face
             face_corners = [origin_3d, origin_3d + u_vec, origin_3d + u_vec + v_vec, origin_3d + v_vec]
-            faces_mesh = pv.Quadrilateral(face_corners)
+            faces_mesh = Quadrilateral(face_corners)
 
         elif k == 3:
             # Parallelepiped: 9 more edges + 6 faces
@@ -612,7 +632,7 @@ def create_frame_mesh(
                     origin_3d + u_vec + w_vec,
                 ],
             ]
-            local_face_meshes = [pv.Quadrilateral(fc) for fc in face_quads]
+            local_face_meshes = [Quadrilateral(fc) for fc in face_quads]
             faces_mesh = local_face_meshes[0]
             for fm in local_face_meshes[1:]:
                 faces_mesh = faces_mesh.merge(fm)
@@ -681,7 +701,7 @@ def create_frame_mesh(
                                 face_corners.append(vertices[idx])
                             face_quads.append(face_corners)
 
-            local_face_meshes = [pv.Quadrilateral(fc) for fc in face_quads]
+            local_face_meshes = [Quadrilateral(fc) for fc in face_quads]
             faces_mesh = local_face_meshes[0]
             for fm in local_face_meshes[1:]:
                 faces_mesh = faces_mesh.merge(fm)
@@ -707,7 +727,7 @@ def create_blade_mesh(
     shaft_radius: float = 0.008,
     edge_radius: float = 0.006,
     projection_axes: tuple[int, int, int] | None = None,
-) -> tuple[pv.PolyData | None, pv.PolyData | None, pv.PolyData]:
+) -> tuple[PolyData | None, PolyData | None, PolyData]:
     """
     Create meshes for a blade of any grade.
 
@@ -789,7 +809,7 @@ def create_blade_mesh(
 
 
 def _draw_arrow(
-    plotter: pv.Plotter,
+    plotter: Plotter,
     start: ndarray,
     direction: ndarray,
     color: Color,
@@ -805,7 +825,7 @@ def _draw_arrow(
 
 
 def _draw_parallelogram(
-    plotter: pv.Plotter,
+    plotter: Plotter,
     origin: ndarray,
     u: ndarray,
     v: ndarray,
@@ -827,7 +847,7 @@ def _draw_parallelogram(
 
 
 def _draw_parallelepiped(
-    plotter: pv.Plotter,
+    plotter: Plotter,
     origin: ndarray,
     u: ndarray,
     v: ndarray,
@@ -855,7 +875,7 @@ def _draw_parallelepiped(
 
 
 def draw_blade(
-    plotter: pv.Plotter,
+    plotter: Plotter,
     b: Vector,
     p: Vector | ndarray | tuple = None,
     color: Color = (0.85, 0.85, 0.85),
@@ -889,6 +909,8 @@ def draw_blade(
         edge_radius: Radius for edge tubes
         label_offset: Distance to offset labels from geometry
     """
+    from pyvista import Sphere
+
     # Handle position
     if p is None:
         origin = zeros(3)
@@ -908,7 +930,7 @@ def draw_blade(
 
     if grade == 0:
         # Scalar: draw a point
-        sphere = pv.Sphere(radius=0.02, center=origin)
+        sphere = Sphere(radius=0.02, center=origin)
         plotter.add_mesh(sphere, color=color, smooth_shading=True)
 
     elif grade == 1:
@@ -991,7 +1013,7 @@ def draw_blade(
 
 
 def draw_coordinate_basis(
-    plotter: pv.Plotter,
+    plotter: Plotter,
     scale: float = 1.0,
     color: Color = (0.85, 0.85, 0.85),
     tetrad: bool = True,
@@ -1065,7 +1087,7 @@ def draw_coordinate_basis(
 
 
 def draw_basis_blade(
-    plotter: pv.Plotter,
+    plotter: Plotter,
     indices: tuple[int, ...],
     position: ndarray | tuple = (0, 0, 0),
     scale: float = 1.0,

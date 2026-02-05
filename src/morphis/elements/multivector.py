@@ -526,6 +526,51 @@ class MultiVector(CompositeElement):
 
         return unit(self)
 
+    def apply_similarity(
+        self,
+        S: MultiVector,
+        t: "Vector | None" = None,
+    ) -> MultiVector:
+        """
+        Apply a similarity transformation to this MultiVector.
+
+        Computes: S * self * ~S + t (translation on grade-1 component only)
+
+        The similarity versor S (from align_vectors or a rotor) is applied via
+        sandwich product. The optional translation t is added to the grade-1
+        component only (translations affect positions, not orientations).
+
+        Args:
+            S: Similarity versor or rotor (MultiVector with grades {0, 2})
+            t: Optional translation vector (grade-1). Added to grade-1 component.
+
+        Returns:
+            New MultiVector with the transformation applied.
+
+        Example:
+            S = align_vectors(u, v)
+            t = Vector([1, 0, 0], grade=1, metric=g)
+            M_transformed = M.apply_similarity(S, t)
+        """
+        from morphis.operations.products import geometric, reverse
+
+        # Sandwich product: S * self * ~S
+        S_rev = reverse(S)
+        temp = geometric(S, self)
+        result = geometric(temp, S_rev)
+
+        if t is not None:
+            # Translation applies to grade-1 component only
+            grade1 = result.grade_select(1)
+            if grade1 is not None:
+                new_grade1 = grade1 + t
+                result = MultiVector(
+                    data={**result.data, 1: new_grade1},
+                    metric=result.metric,
+                    lot=result.lot,
+                )
+        return result
+
     # =========================================================================
     # Utility Methods
     # =========================================================================

@@ -30,6 +30,7 @@ from morphis.elements.frame import Frame
 from morphis.elements.vector import Vector
 from morphis.utils.observer import Observer
 from morphis.visuals.effects import Effect, FadeIn, FadeOut, compute_opacity
+from morphis.visuals.model import VisualModel
 from morphis.visuals.renderer import Renderer
 from morphis.visuals.theme import Color, Theme
 
@@ -46,18 +47,20 @@ class Snapshot(BaseModel):
 
 
 class AnimationTrack(BaseModel):
-    """Animation-specific tracking info for a blade or frame."""
+    """Animation-specific tracking info for a blade, frame, or model."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    target: Any  # Vector | Frame - using Any for compatibility
+    target: Any  # Vector | Frame | VisualModel - using Any for compatibility
     obj_id: int
     color: Color
-    grade: int  # For blades; -1 for frames
+    grade: int  # For blades; -1 for frames; -2 for models
     is_frame: bool = False  # True if target is a Frame
+    is_model: bool = False  # True if target is a VisualModel
     filled: bool = False  # For frames: whether to show edges and faces
     vectors: Any | None = None  # NDArray | None - Override for spanning vectors
     origin: Any | None = None  # NDArray | None - Override for origin
+    opacity: float = 1.0  # For models: opacity setting
 
 
 class Animation:
@@ -118,14 +121,21 @@ class Animation:
     # Tracking
     # =========================================================================
 
-    def watch(self, *targets: Vector | Frame, color: Color | None = None, filled: bool = False) -> int | list[int]:
+    def watch(
+        self,
+        *targets: Vector | Frame | VisualModel,
+        color: Color | None = None,
+        filled: bool = False,
+        opacity: float = 1.0,
+    ) -> int | list[int]:
         """
-        Register one or more blades or frames to observe.
+        Register one or more blades, frames, or models to observe.
 
         Args:
-            *targets: Vectors or Frames to watch
+            *targets: Vectors, Frames, or VisualModels to watch
             color: Optional color override (applies to all)
             filled: For frames, whether to show edges and faces of spanned shape
+            opacity: For models, the opacity setting (0-1)
 
         Returns:
             Object ID(s) for the target(s)
@@ -141,8 +151,19 @@ class Animation:
             target_color = color if color is not None else self._renderer._next_color()
 
             is_frame = isinstance(target, Frame)
+            is_model = isinstance(target, VisualModel)
 
-            if is_frame:
+            if is_model:
+                # VisualModel: grade=-2 signals model rendering
+                self._tracks[obj_id] = AnimationTrack(
+                    target=target,
+                    obj_id=obj_id,
+                    color=target_color,
+                    grade=-2,
+                    is_model=True,
+                    opacity=opacity,
+                )
+            elif is_frame:
                 # Frame: grade=-1 signals frame rendering
                 self._tracks[obj_id] = AnimationTrack(
                     target=target,
@@ -170,14 +191,14 @@ class Animation:
     # Alias for backward compatibility
     track = watch
 
-    def unwatch(self, *targets: Vector | Frame):
-        """Stop watching one or more blades or frames."""
+    def unwatch(self, *targets: Vector | Frame | VisualModel):
+        """Stop watching one or more blades, frames, or models."""
         for target in targets:
             obj_id = id(target)
             if obj_id in self._tracks:
                 track = self._tracks[obj_id]
                 del self._tracks[obj_id]
-                if not track.is_frame:
+                if not track.is_frame and not track.is_model:
                     self._observer.unwatch(target)
                 self._renderer.remove_object(obj_id)
 
@@ -304,16 +325,17 @@ class Animation:
 
     def _tracked_to_geometry(self, tracked: AnimationTrack) -> tuple[NDArray, NDArray, tuple[int, int, int] | None]:
         """
-        Extract origin and spanning vectors from a tracked blade or frame.
+        Extract origin and spanning vectors from a tracked blade, frame, or model.
 
         If custom vectors have been set via set_vectors(), those are used.
         For frames, vectors are extracted directly from the Frame object.
+        For models, syncs mesh and returns vertices as the geometry.
         For blades, uses Observer.spanning_vectors_as_array() to factorize.
 
         Returns:
             (origin, vectors, projection_axes) where origin is the origin point,
-            vectors are the spanning vectors, and projection_axes are the axes
-            to project onto.
+            vectors are the spanning vectors (or vertices for models),
+            and projection_axes are the axes to project onto.
         """
         projection_axes = self._projection_axes
 
@@ -321,6 +343,15 @@ class Animation:
         if tracked.vectors is not None:
             origin = tracked.origin if tracked.origin is not None else zeros(3)
             return origin, tracked.vectors, projection_axes
+
+        if tracked.is_model:
+            # VisualModel: sync mesh and return vertices
+            model = tracked.target
+            model.sync_mesh()  # Sync at capture boundary
+            origin = zeros(3)
+            # Return vertices data - shape (N, 3)
+            vectors = model.vertices.data.copy()
+            return origin, vectors, projection_axes
 
         if tracked.is_frame:
             # Frame: extract vectors directly
@@ -387,6 +418,8 @@ class Animation:
                     opacity=0.0,
                     projection_axes=projection_axes,
                     filled=tracked.filled,
+                    model=tracked.target if tracked.is_model else None,
+                    model_opacity=tracked.opacity if tracked.is_model else 1.0,
                 )
             self._renderer.show()
             _bring_window_to_front()
@@ -453,10 +486,7 @@ class Animation:
         """End an animation session (live mode)."""
         self._started = False
         if self._live:
-            print("Animation complete. Close window to exit.")
-            # Keep window open
-            if self._renderer.plotter is not None:
-                self._renderer.plotter.iren.interactor.Start()
+            self._renderer.wait_for_close()
 
     def play(self, loop: bool = False):
         """
@@ -491,6 +521,8 @@ class Animation:
                 opacity=opacity,
                 projection_axes=projection_axes,
                 filled=tracked.filled,
+                model=tracked.target if tracked.is_model else None,
+                model_opacity=tracked.opacity if tracked.is_model else 1.0,
             )
 
         # Apply auto camera if enabled and no manual camera set
@@ -542,9 +574,7 @@ class Animation:
         except KeyboardInterrupt:
             pass
 
-        print("Animation complete. Close window to exit.")
-        if self._renderer.plotter is not None:
-            self._renderer.plotter.iren.interactor.Start()
+        self._renderer.wait_for_close()
 
     # =========================================================================
     # Saving
@@ -574,9 +604,9 @@ class Animation:
             raise ValueError(f"Unsupported format: {ext}. Use .gif or .mp4")
 
         # Create off-screen renderer
-        import pyvista as pv
+        from pyvista import Plotter
 
-        plotter = pv.Plotter(off_screen=True)
+        plotter = Plotter(off_screen=True)
         plotter.set_background(self._renderer.theme.background)
         plotter.window_size = self._renderer._size
 
@@ -617,7 +647,7 @@ class Animation:
             edges_actor, faces_actor = self._add_object_to_plotter(
                 plotter, tracked, origin, vectors, opacity, projection_axes
             )
-            actors[tracked.obj_id] = (edges_actor, faces_actor, tracked.grade, tracked.filled)
+            actors[tracked.obj_id] = (edges_actor, faces_actor, tracked.grade, tracked.filled, tracked)
 
         # Collect frames
         frames = []
@@ -638,9 +668,18 @@ class Animation:
                 if obj_id not in actors:
                     continue
 
-                edges_actor, faces_actor, grade, filled = actors[obj_id]
+                edges_actor, faces_actor, grade, filled, tracked = actors[obj_id]
                 self._update_actor_geometry(
-                    plotter, edges_actor, faces_actor, grade, origin, vectors, opacity, projection_axes, filled
+                    plotter,
+                    edges_actor,
+                    faces_actor,
+                    grade,
+                    origin,
+                    vectors,
+                    opacity,
+                    projection_axes,
+                    filled,
+                    tracked,
                 )
 
             # Capture frame
@@ -710,6 +749,17 @@ class Animation:
                 return v
             return array([blade[axes[0]], blade[axes[1]], blade[axes[2]]])
 
+        if tracked.grade == -2:
+            # VisualModel: render mesh directly
+            model = tracked.target
+            edges_actor = plotter.add_mesh(
+                model.mesh,
+                color=tracked.color,
+                opacity=opacity * tracked.opacity,
+                smooth_shading=True,
+            )
+            return edges_actor, None
+
         if tracked.grade == -1:
             # Frame: k arrows from origin (optionally with edges/faces)
             edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
@@ -769,7 +819,17 @@ class Animation:
         return edges_actor, faces_actor
 
     def _update_actor_geometry(
-        self, plotter, edges_actor, faces_actor, grade, origin, vectors, opacity, projection_axes=None, filled=False
+        self,
+        plotter,
+        edges_actor,
+        faces_actor,
+        grade,
+        origin,
+        vectors,
+        opacity,
+        projection_axes=None,
+        filled=False,
+        tracked=None,
     ):
         """Update actor geometry and opacity."""
         from morphis.visuals.drawing.vectors import (
@@ -786,6 +846,14 @@ class Animation:
                 v = blade[:3] if len(blade) >= 3 else array([*blade, *[0.0] * (3 - len(blade))])
                 return v
             return array([blade[axes[0]], blade[axes[1]], blade[axes[2]]])
+
+        if grade == -2:
+            # VisualModel: update mesh points directly
+            # vectors contains the vertices data (N, 3)
+            edges_actor.mapper.GetInput().points = vectors
+            model_opacity = tracked.opacity if tracked else 1.0
+            edges_actor.GetProperty().SetOpacity(opacity * model_opacity)
+            return
 
         if grade == -1:
             # Frame: k arrows from origin (optionally with edges/faces)

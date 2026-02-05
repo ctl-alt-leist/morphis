@@ -37,6 +37,8 @@ from morphis.transforms.projective import (
     weight as weight,
 )
 from morphis.transforms.rotations import (
+    align_vectors as align_vectors,
+    point_alignment as point_alignment,
     rotation_about_point as rotation_about_point,
     rotor as rotor,
 )

@@ -48,12 +48,12 @@ class Operator(IndexableMixin):
     Examples:
         >>> from morphis.elements import euclidean_metric
         >>> from morphis.algebra import VectorSpec
-        >>> import numpy as np
+        >>> from numpy.random import randn
         >>>
         >>> # Create transfer operator G^{ab}_{mn} for B = G * I
         >>> # Maps scalar currents (N,) to bivector fields (M, 3, 3)
         >>> M, N, d = 10, 5, 3
-        >>> G_data = np.random.randn(M, N, d, d)  # lot-first: (out_lot, in_lot, out_geo)
+        >>> G_data = randn(M, N, d, d)  # lot-first: (out_lot, in_lot, out_geo)
         >>> G_data = (G_data - G_data.transpose(0, 1, 3, 2)) / 2  # Antisymmetrize geo
         >>>
         >>> G = Operator(
@@ -64,7 +64,7 @@ class Operator(IndexableMixin):
         ... )
         >>>
         >>> # Forward application
-        >>> I = Vector(np.random.randn(N), grade=0, metric=euclidean_metric(d))
+        >>> I = Vector(randn(N), grade=0, metric=euclidean_metric(d))
         >>> B = G * I  # or G.apply(I) or G(I)
     """
 

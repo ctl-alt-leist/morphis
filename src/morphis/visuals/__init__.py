@@ -2,18 +2,20 @@
 Morphis Visualization Module
 
 Provides 3D visualization tools for geometric algebra objects including
-blades, frames, and their transformations. Built on PyVista/VTK.
+blades, frames, surfaces, and their transformations. Built on PyVista/VTK.
 
 Main classes:
+- Scene: Unified interface for static and animated visualization (NEW)
 - Animation: Real-time animation loop with recording support
 - Canvas: High-level 3D drawing surface
-- Renderer: Low-level object management
+- Text: 3D text annotations
 
 For PGA-specific visualization, see the contexts submodule.
 """
 
-# Core visualization
-from morphis.visuals.canvas import Canvas as Canvas
+# New unified interface
+# Core visualization (legacy, still supported)
+from morphis.visuals.canvas import Canvas as Canvas, ModelStyle as ModelStyle
 
 # Context-aware visualization (PGA)
 from morphis.visuals.contexts import (
@@ -45,6 +47,7 @@ from morphis.visuals.effects import (
     compute_opacity as compute_opacity,
 )
 from morphis.visuals.loop import Animation as Animation
+from morphis.visuals.model import VisualModel as VisualModel
 
 # Operation visualization
 from morphis.visuals.operations import (
@@ -61,6 +64,10 @@ from morphis.visuals.projection import (
     project_blade as project_blade,
 )
 from morphis.visuals.renderer import Renderer as Renderer
+from morphis.visuals.scene import Scene as Scene
+
+# Text annotations
+from morphis.visuals.text import Text as Text, TextStyle as TextStyle
 
 # Themes and styling
 from morphis.visuals.theme import (
@@ -90,3 +97,22 @@ from morphis.visuals.theme import (
     Theme as Theme,
     get_theme as get_theme,
 )
+
+
+# =============================================================================
+# Standard Window Sizes
+# =============================================================================
+# Use these for consistent sizing across examples.
+# Square (1:1) and Rectangular (4:3 horizontal) variants.
+
+SMALL_SQUARE: tuple[int, int] = (600, 600)
+SMALL_RECTANGLE: tuple[int, int] = (800, 600)
+
+MEDIUM_SQUARE: tuple[int, int] = (900, 900)
+MEDIUM_RECTANGLE: tuple[int, int] = (1200, 900)
+
+LARGE_SQUARE: tuple[int, int] = (1200, 1200)
+LARGE_RECTANGLE: tuple[int, int] = (1600, 1200)
+
+# Default size for examples
+DEFAULT_SIZE: tuple[int, int] = SMALL_SQUARE
