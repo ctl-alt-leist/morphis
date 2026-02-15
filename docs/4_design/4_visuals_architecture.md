@@ -48,10 +48,10 @@ src/morphis/visuals/
 The unified interface for both static and animated visualization. Replaces the need to choose between Canvas and Animation.
 
 ```python
-from morphis.visuals import Scene, RED, SMALL_SQUARE
+from morphis.visuals import Scene, RED
 
 # Static display
-scene = Scene(theme="obsidian", size=SMALL_SQUARE)
+scene = Scene(theme="obsidian")
 scene.add(v, color=RED)
 scene.show()
 
@@ -73,8 +73,10 @@ scene.show()  # Wait for window close
 - `show()` - Wait for user to close window
 - `fade_in(element, t, duration)` - Schedule fade-in effect
 - `fade_out(element, t, duration)` - Schedule fade-out effect
+- `save(path)` - Save scene to file (.scene or .obj)
+- `Scene.load(path)` - Load a saved .scene file
 
-**Design principle:** No data copies stored. Animation happens live during `capture()` calls. Export (to be implemented) will re-run the animation.
+**Design principle:** No data copies stored. Animation happens live during `capture()` calls.
 
 ### Window Size Constants
 
@@ -93,7 +95,34 @@ SMALL_RECTANGLE = (800, 600)
 MEDIUM_RECTANGLE = (1200, 900)
 LARGE_RECTANGLE = (1600, 1200)
 
-DEFAULT_SIZE = SMALL_SQUARE
+DEFAULT_SIZE = MEDIUM_SQUARE
+```
+
+### Saving and Loading Scenes
+
+Scenes can be saved to disk and reopened later:
+
+```python
+# Save scene (format determined by extension)
+scene.save("demo.scene")  # Pickle format, reloadable
+scene.save("demo.obj")    # Wavefront OBJ, opens in macOS Preview
+
+# Load and view a saved scene
+scene = Scene.load("demo.scene")
+scene.show()
+```
+
+**Supported formats:**
+
+| Extension | Format | Use case |
+|-----------|--------|----------|
+| `.scene` | Pickle | Reloadable with full state (colors, theme, etc.) |
+| `.obj` | Wavefront OBJ | View in 3D apps (macOS Preview, Blender, etc.) |
+
+**CLI viewing:**
+
+```bash
+morphis view demo.scene
 ```
 
 ### Theme System (`theme.py`)

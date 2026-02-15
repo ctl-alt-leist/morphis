@@ -8,8 +8,11 @@ to capture frames without delays.
 
 from __future__ import annotations
 
+import pickle
 import sys
 import time as time_module
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -26,6 +29,17 @@ from morphis.visuals.theme import Color, Theme, get_theme
 
 if TYPE_CHECKING:
     from morphis.visuals.backends.protocol import RenderBackend
+
+
+@dataclass
+class SceneData:
+    """Serializable scene state for save/load."""
+
+    theme_name: str
+    size: tuple[int, int]
+    projection: tuple[int, ...]
+    show_basis: bool
+    elements: list[dict]
 
 
 class SceneEffect(BaseModel):
@@ -91,7 +105,7 @@ class Scene:
         self,
         projection: tuple[int, ...] | None = None,
         theme: str | Theme = "obsidian",
-        size: tuple[int, int] = (600, 600),  # SMALL_SQUARE
+        size: tuple[int, int] = (900, 900),  # MEDIUM_SQUARE
         frame_rate: int = 30,
         backend: str = "pyvista",
         show_basis: bool = True,
@@ -630,6 +644,97 @@ class Scene:
         if self._backend_initialized:
             self._backend.close()
             self._backend_initialized = False
+
+    # =========================================================================
+    # Save / Load
+    # =========================================================================
+
+    def save(self, path: str | Path) -> None:
+        """
+        Save scene to file.
+
+        Supported formats (determined by extension):
+            .scene - Pickle format, reloadable with Scene.load()
+            .obj   - Wavefront OBJ, viewable in macOS Preview and 3D apps
+
+        Args:
+            path: File path with extension (.scene or .obj)
+
+        Example:
+            scene.save("my_scene.scene")  # Reloadable
+            scene.save("my_scene.obj")    # For Preview/3D apps
+        """
+        path = Path(path)
+        ext = path.suffix.lower()
+
+        if ext == ".scene":
+            self._save_scene(path)
+        elif ext == ".obj":
+            self._save_obj(path)
+        else:
+            raise ValueError(f"Unknown format '{ext}'. Use .scene or .obj")
+
+    def _save_scene(self, path: Path) -> None:
+        """Save as pickle (.scene format)."""
+        data = SceneData(
+            theme_name=self._theme.name,
+            size=self._size,
+            projection=self._projection,
+            show_basis=self._show_basis,
+            elements=[
+                {
+                    "element": t.element,
+                    "color": t.color,
+                    "opacity": t.opacity,
+                    "representation": t.representation,
+                    "extra": {k: v for k, v in t.extra.items() if not k.startswith("_")},
+                }
+                for t in self._elements.values()
+            ],
+        )
+        with open(path, "wb") as f:
+            pickle.dump(data, f)
+
+    def _save_obj(self, path: Path) -> None:
+        """Save as Wavefront OBJ."""
+        self._ensure_backend()
+        self._backend._plotter.export_obj(str(path))
+
+    @classmethod
+    def load(cls, path: str | Path) -> Scene:
+        """
+        Load a scene from a .scene file.
+
+        Args:
+            path: Path to the .scene file
+
+        Returns:
+            Scene ready to display with show()
+
+        Example:
+            scene = Scene.load("my_scene.scene")
+            scene.show()
+        """
+        with open(path, "rb") as f:
+            data: SceneData = pickle.load(f)
+
+        scene = cls(
+            theme=data.theme_name,
+            size=data.size,
+            projection=data.projection,
+            show_basis=data.show_basis,
+        )
+
+        for elem_data in data.elements:
+            scene.add(
+                elem_data["element"],
+                color=elem_data["color"],
+                opacity=elem_data["opacity"],
+                representation=elem_data["representation"],
+                **elem_data["extra"],
+            )
+
+        return scene
 
 
 def _bring_window_to_front():
