@@ -7,7 +7,8 @@ The frame is displayed as three arrows from the origin.
 Run: uv run python -m morphis.examples.rotations_3d
 """
 
-from numpy import diff, pi
+from numpy import array, diff, pi, sqrt
+from numpy.linalg import norm
 
 from morphis.elements import Frame, basis_vectors, euclidean_metric
 from morphis.operations import unit
@@ -56,6 +57,13 @@ def create_scene():
     )
     scene.add(F, color=RED, filled=True)
     scene.fade_in(F, t=0.0, duration=DURATION_FADE_IN)
+
+    # Camera setup
+    focal_point = array([1.0, 1.0, 1.0]) * 0.0 / sqrt(2)
+    direction = array([+0.9, -0.8, 0.7])
+    distance = 7.0
+    position = tuple(array(focal_point) + distance * direction / norm(direction))
+    scene.camera(position=position, focal_point=focal_point)
 
     print("3D Frame Rotation Animation")
     print("=" * 40)

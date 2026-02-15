@@ -57,6 +57,7 @@ class PyVistaBackend:
         self._current_basis_labels: tuple[str, str, str] | None = None
         self._explicit_clipping_range: tuple[float, float] | None = None
         self._lights: dict[str, Any] = {}  # light_id -> pyvista.Light
+        self._window_closed = False
 
     # =========================================================================
     # Lifecycle
@@ -74,13 +75,21 @@ class PyVistaBackend:
         self._theme = theme
         self._size = size
         self._show_basis = show_basis
+        self._window_closed = False
 
         self._plotter = Plotter(off_screen=False)
         self._plotter.set_background(theme.background)
         self._plotter.window_size = size
 
+        # Add close callback to detect when user closes window
+        self._plotter._before_close_callback = self._on_window_close
+
         if show_basis:
             self._draw_coordinate_basis()
+
+    def _on_window_close(self) -> None:
+        """Called when the window is closed."""
+        self._window_closed = True
 
     def close(self) -> None:
         """Close the rendering window."""
@@ -846,6 +855,8 @@ class PyVistaBackend:
 
     def is_closed(self) -> bool:
         """Check if the window has been closed by the user."""
+        if self._window_closed:
+            return True
         if self._plotter is None:
             return True
         # render_window becomes None when window is closed

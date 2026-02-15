@@ -105,10 +105,11 @@ class Scene:
         self,
         projection: tuple[int, ...] | None = None,
         theme: str | Theme = "obsidian",
-        size: tuple[int, int] = (900, 900),  # MEDIUM_SQUARE
+        size: tuple[int, int] = (1280, 800),  # MEDIUM
         frame_rate: int = 30,
         backend: str = "pyvista",
         show_basis: bool = True,
+        auto_camera: bool = True,
     ):
         if isinstance(theme, str):
             theme = get_theme(theme)
@@ -118,6 +119,7 @@ class Scene:
         self._frame_rate = frame_rate
         self._projection = projection or (0, 1, 2)
         self._show_basis = show_basis
+        self._auto_camera = auto_camera
 
         # Get backend but don't initialize yet (lazy)
         self._backend: RenderBackend = get_backend(backend)
@@ -407,7 +409,8 @@ class Scene:
         focal_point: tuple[float, float, float] | None = None,
         up: tuple[float, float, float] | None = None,
     ) -> None:
-        """Set camera position and orientation."""
+        """Set camera position and orientation. Disables auto_camera."""
+        self._auto_camera = False
         self._ensure_backend()
         self._backend.set_camera(position=position, focal_point=focal_point, up=up)
 
@@ -529,9 +532,15 @@ class Scene:
         """
         self._ensure_backend()
 
+        # Exit early if window was closed
+        if self._backend.is_closed():
+            return
+
         # Show window on first capture
         if self._first_capture:
             self._backend.show(interactive=False)
+            if self._auto_camera:
+                self._backend.reset_camera()
             _bring_window_to_front()
             self._live_start_time = time_module.time()
             self._first_capture = False
@@ -634,6 +643,8 @@ class Scene:
         # If we haven't shown the window yet, show it now
         if self._first_capture:
             self._backend.show(interactive=False)
+            if self._auto_camera:
+                self._backend.reset_camera()
             _bring_window_to_front()
             self._first_capture = False
 
@@ -644,6 +655,12 @@ class Scene:
         if self._backend_initialized:
             self._backend.close()
             self._backend_initialized = False
+
+    def is_closed(self) -> bool:
+        """Check if the window has been closed."""
+        if not self._backend_initialized:
+            return True
+        return self._backend.is_closed()
 
     # =========================================================================
     # Save / Load

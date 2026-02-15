@@ -22,6 +22,15 @@ def _discover_examples() -> list[str]:
 
 def main() -> None:
     """CLI entry point for morphis."""
+    try:
+        _main()
+    except KeyboardInterrupt:
+        print()
+        sys.exit(0)
+
+
+def _main() -> None:
+    """Main CLI logic."""
     args = sys.argv[1:]
 
     if not args:

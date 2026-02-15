@@ -83,19 +83,14 @@ scene.show()  # Wait for window close
 Standard sizes for consistent visualization:
 
 ```python
-from morphis.visuals import SMALL_SQUARE, MEDIUM_RECTANGLE
+from morphis.visuals import SMALL, MEDIUM, LARGE
 
-# Square (1:1)
-SMALL_SQUARE = (600, 600)
-MEDIUM_SQUARE = (900, 900)
-LARGE_SQUARE = (1200, 1200)
+# All sizes are horizontal rectangles
+SMALL = (800, 600)
+MEDIUM = (1200, 750)
+LARGE = (1600, 950)
 
-# Rectangular (4:3)
-SMALL_RECTANGLE = (800, 600)
-MEDIUM_RECTANGLE = (1200, 900)
-LARGE_RECTANGLE = (1600, 1200)
-
-DEFAULT_SIZE = MEDIUM_SQUARE
+DEFAULT_SIZE = MEDIUM
 ```
 
 ### Saving and Loading Scenes

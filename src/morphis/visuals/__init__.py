@@ -69,7 +69,7 @@ from morphis.visuals.scene import Scene as Scene
 # Text annotations
 from morphis.visuals.text import Text as Text, TextStyle as TextStyle
 
-# Themes and styling
+# Themes, styling, and window sizes
 from morphis.visuals.theme import (
     # Standard colors
     AMBER as AMBER,
@@ -79,15 +79,20 @@ from morphis.visuals.theme import (
     CHALK as CHALK,
     CORAL as CORAL,
     CYAN as CYAN,
+    # Window sizes
+    DEFAULT_SIZE as DEFAULT_SIZE,
     DEFAULT_THEME as DEFAULT_THEME,
     GRAY as GRAY,
     GREEN as GREEN,
+    LARGE as LARGE,
+    MEDIUM as MEDIUM,
     MIDNIGHT as MIDNIGHT,
     OBSIDIAN as OBSIDIAN,
     ORANGE as ORANGE,
     PAPER as PAPER,
     PURPLE as PURPLE,
     RED as RED,
+    SMALL as SMALL,
     TEAL as TEAL,
     VIOLET as VIOLET,
     WHITE as WHITE,
@@ -97,22 +102,3 @@ from morphis.visuals.theme import (
     Theme as Theme,
     get_theme as get_theme,
 )
-
-
-# =============================================================================
-# Standard Window Sizes
-# =============================================================================
-# Use these for consistent sizing across examples.
-# Square (1:1) and Rectangular (4:3 horizontal) variants.
-
-SMALL_SQUARE: tuple[int, int] = (600, 600)
-SMALL_RECTANGLE: tuple[int, int] = (800, 600)
-
-MEDIUM_SQUARE: tuple[int, int] = (900, 900)
-MEDIUM_RECTANGLE: tuple[int, int] = (1200, 900)
-
-LARGE_SQUARE: tuple[int, int] = (1200, 1200)
-LARGE_RECTANGLE: tuple[int, int] = (1600, 1200)
-
-# Default size for examples
-DEFAULT_SIZE: tuple[int, int] = SMALL_SQUARE
