@@ -296,6 +296,10 @@ class MultiVector(CompositeElement):
         - Scalar: returns MultiVector with scaled components
         - Vector/MultiVector/Frame: returns geometric product
         """
+        from numbers import Number
+
+        from numpy import ndarray
+
         from morphis.elements.frame import Frame
         from morphis.elements.vector import Vector
         from morphis.operations.operator import Operator
@@ -314,13 +318,16 @@ class MultiVector(CompositeElement):
             return _geometric_mv_v(self, other.as_vector())
         elif isinstance(other, Operator):
             raise TypeError("MultiVector * Operator not currently supported")
-        else:
-            # Scalar multiplication
+        elif isinstance(other, (Number, ndarray)):
+            # Scalar or array multiplication
             return MultiVector(
                 data={k: vec * other for k, vec in self.data.items()},
                 metric=self.metric,
                 lot=self.lot,
             )
+        else:
+            # Unknown type - let Python try other.__rmul__
+            return NotImplemented
 
     def __rmul__(self, other) -> MultiVector:
         """Right multiplication: scalar or geometric product."""

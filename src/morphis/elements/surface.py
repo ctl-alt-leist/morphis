@@ -23,6 +23,65 @@ if TYPE_CHECKING:
     from morphis.elements.multivector import MultiVector
 
 
+# =============================================================================
+# Intermediate Operation Class
+# =============================================================================
+
+
+class _SurfaceOp:
+    """
+    Intermediate state for Surface operations that yield non-Vector results.
+
+    When a MultiVector multiplies a Surface (e.g., M * s), the result is
+    a MultiVector per vertex. This class tracks the Surface context so that
+    subsequent operations (e.g., * ~M) can complete and return a Surface.
+
+    This enables the sandwich product pattern: M * s * ~M → Surface
+    """
+
+    __slots__ = ("surface", "current")
+
+    def __init__(self, surface: "Surface", current):
+        """
+        Args:
+            surface: Original Surface (for faces topology)
+            current: Current state (MultiVector from M * vertices)
+        """
+        self.surface = surface
+        self.current = current
+
+    def __mul__(self, other) -> "Surface | _SurfaceOp":
+        """
+        Right multiplication: (M * surface) * other.
+
+        If result is grade-1, returns Surface. Otherwise keeps intermediate.
+        """
+        from numpy import allclose
+
+        from morphis.config import TOLERANCE
+        from morphis.elements.multivector import MultiVector
+
+        result = self.current * other
+
+        # Check if result is grade-1 (can become Surface)
+        if isinstance(result, Vector) and result.grade == 1:
+            return Surface(vertices=result, faces=self.surface.faces)
+
+        if isinstance(result, MultiVector):
+            # Check if grade-1 exists and all other grades are negligible
+            grade1 = result[1]
+            if grade1 is not None:
+                other_grades_zero = all(allclose(result[k].data, 0, atol=TOLERANCE) for k in result.grades if k != 1)
+                if other_grades_zero:
+                    return Surface(vertices=grade1, faces=self.surface.faces)
+
+        # Still mixed grade, keep as intermediate
+        return _SurfaceOp(self.surface, result)
+
+    def __repr__(self) -> str:
+        return f"_SurfaceOp(current={type(self.current).__name__})"
+
+
 class Surface(Element):
     """
     A 3D mesh with GA-compatible vertices.
@@ -161,7 +220,79 @@ class Surface(Element):
             surface_world = surface_local.apply_similarity(S, t)
         """
         new_vertices = self.vertices.apply_similarity(S, t)
-        return Surface(vertices=new_vertices, faces=self.faces.copy())
+        return Surface(vertices=new_vertices, faces=self.faces)
+
+    # =========================================================================
+    # Arithmetic Operators
+    # =========================================================================
+
+    def __add__(self, other: Vector) -> "Surface":
+        """
+        Translation: s + v.
+
+        Translates all vertices by adding a grade-1 vector.
+        """
+        return Surface(vertices=self.vertices + other, faces=self.faces)
+
+    def __sub__(self, other: Vector) -> "Surface":
+        """
+        Translation: s - v.
+
+        Translates all vertices by subtracting a grade-1 vector.
+        """
+        return Surface(vertices=self.vertices - other, faces=self.faces)
+
+    def __neg__(self) -> "Surface":
+        """
+        Negation: -s.
+
+        Reflects all vertices through the origin.
+        """
+        return Surface(vertices=-self.vertices, faces=self.faces)
+
+    def __mul__(self, other) -> "Surface | _SurfaceOp":
+        """
+        Right multiplication: s * other.
+
+        - Scalar: returns scaled Surface
+        - MultiVector: returns intermediate for sandwich product
+        """
+        from morphis.elements.multivector import MultiVector
+
+        result = self.vertices * other
+
+        if isinstance(result, Vector):
+            return Surface(vertices=result, faces=self.faces)
+        if isinstance(result, MultiVector):
+            return _SurfaceOp(self, result)
+
+        raise TypeError(f"Cannot multiply Surface by {type(other)}")
+
+    def __rmul__(self, other) -> "Surface | _SurfaceOp":
+        """
+        Left multiplication: other * s.
+
+        - Scalar: returns scaled Surface
+        - MultiVector: returns intermediate for sandwich product (M * s)
+        """
+        from morphis.elements.multivector import MultiVector
+
+        result = other * self.vertices
+
+        if isinstance(result, Vector):
+            return Surface(vertices=result, faces=self.faces)
+        if isinstance(result, MultiVector):
+            return _SurfaceOp(self, result)
+
+        raise TypeError(f"Cannot multiply {type(other)} by Surface")
+
+    def __truediv__(self, other) -> "Surface":
+        """
+        Scalar division: s / a.
+
+        Scales all vertices by 1/a.
+        """
+        return Surface(vertices=self.vertices / other, faces=self.faces)
 
     # =========================================================================
     # Factory Methods
@@ -360,7 +491,7 @@ class Surface(Element):
         """Return a new Surface with the specified metric context."""
         return Surface(
             vertices=self.vertices.with_metric(metric),
-            faces=self.faces.copy(),
+            faces=self.faces,
         )
 
     def __repr__(self) -> str:
