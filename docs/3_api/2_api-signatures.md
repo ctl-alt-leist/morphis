@@ -1133,6 +1133,13 @@ class Scene:
 
     def close(self) -> 'None'
         """Close the scene and clean up."""
+
+    def save(self, path: 'str | Path') -> 'None'
+        """Save scene to file (.scene for pickle, .obj for Wavefront OBJ)."""
+
+    @classmethod
+    def load(cls, path: 'str | Path') -> 'Scene'
+        """Load a scene from a .scene file."""
 ```
 
 
