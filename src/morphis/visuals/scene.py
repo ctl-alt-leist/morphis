@@ -681,7 +681,7 @@ class Scene:
             scene.save("my_scene.scene")  # Reloadable
             scene.save("my_scene.obj")    # For Preview/3D apps
         """
-        path = Path(path)
+        path = Path(path).expanduser()
         ext = path.suffix.lower()
 
         if ext == ".scene":
@@ -732,6 +732,7 @@ class Scene:
             scene = Scene.load("my_scene.scene")
             scene.show()
         """
+        path = Path(path).expanduser()
         with open(path, "rb") as f:
             data: SceneData = pickle.load(f)
 

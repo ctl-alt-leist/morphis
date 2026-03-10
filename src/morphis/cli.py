@@ -91,7 +91,7 @@ def _view_scene(args: list[str]) -> None:
         print("Usage: morphis view <file.scene>")
         sys.exit(1)
 
-    path = args[0]
+    path = Path(args[0]).expanduser()
 
     from morphis.visuals import Scene
 
