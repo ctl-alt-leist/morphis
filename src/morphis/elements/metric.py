@@ -54,6 +54,20 @@ class GASignature(Enum):
         return cls.EUCLIDEAN
 
 
+# The geometric index base is a property of the signature: a signature with a
+# distinguished 0th direction (time in Lorentzian, the ideal/null direction in
+# degenerate/PGA) is indexed from 0; a purely spatial Euclidean algebra is
+# indexed from 1 so that e_1 is the first spatial direction (x). This table is
+# the single point tying a signature to its base index -- a future flexible
+# layout (multiple projective directions, custom slot labels) replaces it
+# without touching any call site that goes through Metric.to_internal / to_user.
+_SIGNATURE_BASE_INDEX: dict[GASignature, int] = {
+    GASignature.EUCLIDEAN: 1,
+    GASignature.LORENTZIAN: 0,
+    GASignature.DEGENERATE: 0,
+}
+
+
 class GAStructure(Enum):
     """
     Geometric structure: the interpretation of GA elements.
@@ -135,6 +149,77 @@ class Metric(BaseModel):
     def signature_tuple(self) -> Tuple[int, ...]:
         """The metric signature as a tuple of eigenvalues."""
         return tuple(int(self.data[i, i]) for i in range(self.dim))
+
+    # =========================================================================
+    # Geometric Index Convention
+    # =========================================================================
+    #
+    # Geometric components are addressed in a physics-style convention that
+    # depends only on the signature. Storage is always 0-based; these methods
+    # translate between the user-facing (physics) geometric index and the
+    # internal 0-based slot. They apply to geometric axes only -- lot
+    # (collection) axes are always standard 0-based Python indexing.
+    #
+    # Every geometric access point (.on, basis construction, display) goes
+    # through to_internal / to_user, so the signature -> base mapping in
+    # _SIGNATURE_BASE_INDEX is the single place that defines the convention.
+
+    @property
+    def base_index(self) -> int:
+        """
+        First valid user-facing geometric index.
+
+        Euclidean is purely spatial and indexed from 1, so e_1 is the first
+        spatial direction (x). Lorentzian and degenerate (PGA) each carry a
+        distinguished 0th direction -- time and the ideal/null direction
+        respectively -- and are indexed from 0, which keeps e_1 as the first
+        spatial direction in every signature.
+        """
+        return _SIGNATURE_BASE_INDEX[self.signature]
+
+    @property
+    def max_index(self) -> int:
+        """Last valid user-facing geometric index (inclusive)."""
+        return self.base_index + self.dim - 1
+
+    def to_internal(self, index: int) -> int:
+        """
+        Convert a user-facing geometric index to the internal 0-based slot.
+
+        Raises IndexError if the index is outside the valid range for this
+        metric's signature and dimension.
+        """
+        base = self.base_index
+        if not (base <= index <= base + self.dim - 1):
+            raise IndexError(
+                f"geometric index {index} out of range for {self.dim}-dimensional "
+                f"{self.signature.name.lower()} metric; valid indices are "
+                f"{base} to {base + self.dim - 1}"
+            )
+
+        internal = index - base
+
+        return internal
+
+    def to_user(self, internal: int) -> int:
+        """
+        Convert an internal 0-based slot to the user-facing geometric index.
+
+        Raises IndexError if the slot is outside 0 to dim - 1.
+        """
+        if not (0 <= internal < self.dim):
+            raise IndexError(
+                f"internal slot {internal} out of range for {self.dim}-dimensional metric; "
+                f"valid slots are 0 to {self.dim - 1}"
+            )
+
+        user = internal + self.base_index
+
+        return user
+
+    def to_internal_multi(self, indices: Tuple[int, ...]) -> list[int]:
+        """Convert a tuple of user-facing geometric indices to internal slots."""
+        return [self.to_internal(n) for n in indices]
 
     def __getitem__(self, index):
         """Index into the metric tensor: metric[a, b] -> g_{ab}."""

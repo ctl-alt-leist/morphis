@@ -12,23 +12,9 @@ Run: uv run python -m morphis.examples.clifford
 
 from math import cos, pi, sin
 
-from numpy import zeros
-
-from morphis.elements import Metric, Vector, metric
+from morphis.elements import Vector, basis_vector, metric
 from morphis.operations import anticommutator, commutator, geometric, grade_project, inverse, norm, reverse
 from morphis.utils.pretty import section, subsection
-
-
-# =============================================================================
-# Helper: Basis vectors
-# =============================================================================
-
-
-def basis_vector(idx: int, metric: Metric) -> Vector:
-    """Create basis vector e_idx for the given metric."""
-    data = zeros(metric.dim)
-    data[idx] = 1.0
-    return Vector(data, grade=1, metric=metric)
 
 
 # =============================================================================
@@ -97,7 +83,7 @@ def demo_vector_contraction() -> None:
     g = metric(3)
 
     subsection("Unit vector squares to 1")
-    e1 = basis_vector(0, g)
+    e1 = basis_vector(1, g)
     print("e1 * e1:")
     print(geometric(e1, e1))
     print("  -> Scalar 1 (unit vector in Euclidean space)")
@@ -121,8 +107,8 @@ def demo_anticommutativity() -> None:
 
     g = metric(3)
 
-    e1 = basis_vector(0, g)
-    e2 = basis_vector(1, g)
+    e1 = basis_vector(1, g)
+    e2 = basis_vector(2, g)
 
     subsection("e1 * e2 vs e2 * e1")
     E1E2 = geometric(e1, e2)
@@ -169,8 +155,8 @@ def demo_reversion() -> None:
     print("  -> Same (grade-1 has sign +1)")
 
     subsection("Bivector reverse (negated)")
-    e1 = basis_vector(0, g)
-    e2 = basis_vector(1, g)
+    e1 = basis_vector(1, g)
+    e2 = basis_vector(2, g)
     b = e1 ^ e2
     print("b = e1 ^ e2:")
     print(b)
@@ -218,8 +204,8 @@ def demo_inverse() -> None:
     print(f"v^{{-1}} * v = {scalar.data:.4g}")
 
     subsection("Bivector inverse")
-    e1 = basis_vector(0, g)
-    e2 = basis_vector(1, g)
+    e1 = basis_vector(1, g)
+    e2 = basis_vector(2, g)
     b = e1 ^ e2
     b_inv = inverse(b)
     print("b = e1 ^ e2:")
@@ -245,8 +231,8 @@ def demo_commutators() -> None:
 
     g = metric(3)
 
-    e1 = basis_vector(0, g)
-    e2 = basis_vector(1, g)
+    e1 = basis_vector(1, g)
+    e2 = basis_vector(2, g)
 
     subsection("Commutator: [u, v] = (uv - vu) / 2")
     print("[e1, e2]:")
@@ -278,8 +264,8 @@ def demo_grade_structure() -> None:
     print("  grades(u_j * v_k) = |j-k|, |j-k|+2, ..., j+k")
 
     subsection("Vector * Vector (grades 1+1 -> 0, 2)")
-    e1 = basis_vector(0, g)
-    e2 = basis_vector(1, g)
+    e1 = basis_vector(1, g)
+    e2 = basis_vector(2, g)
     print(f"  e1 * e2 has grades {list(geometric(e1, e2).data.keys())}")
     print("  Grade 0: scalar (dot product)")
     print("  Grade 2: bivector (wedge product)")
@@ -291,7 +277,7 @@ def demo_grade_structure() -> None:
     print("  Grade 3: trivector (extension, if possible)")
 
     subsection("Bivector * Bivector (grades 2+2 -> 0, 2, 4)")
-    e3 = basis_vector(2, g)
+    e3 = basis_vector(3, g)
     b1 = e1 ^ e2
     b2 = e2 ^ e3
     print(f"  (e1 ^ e2) * (e2 ^ e3) has grades {list(geometric(b1, b2).data.keys())}")
@@ -316,8 +302,8 @@ def demo_geometric_interpretation() -> None:
     print("  where I is the unit bivector in the u-v plane")
 
     subsection("Bivector as rotation generator")
-    e1 = basis_vector(0, g)
-    e2 = basis_vector(1, g)
+    e1 = basis_vector(1, g)
+    e2 = basis_vector(2, g)
 
     # e1 ^ e2 gives a bivector
     I = e1 ^ e2

@@ -119,6 +119,21 @@ class Metric(BaseModel):
     @property
     def signature_tuple(self): ...
 
+    @property
+    def base_index(self): ...
+
+    @property
+    def max_index(self): ...
+
+    def to_internal(self, index: 'int') -> 'int'
+        """Convert a user-facing geometric index to the internal 0-based slot."""
+
+    def to_user(self, internal: 'int') -> 'int'
+        """Convert an internal 0-based slot to the user-facing geometric index."""
+
+    def to_internal_multi(self, indices: 'Tuple[int, ...]') -> 'list[int]'
+        """Convert a tuple of user-facing geometric indices to internal slots."""
+
     def is_compatible(self, other: 'Metric') -> 'bool'
         """Check if two metrics are compatible for operations."""
 
@@ -207,7 +222,7 @@ class AtAccessor:
 
 ```python
 class OnAccessor:
-    """Accessor for geo-only (geometric) slicing on a Vector."""
+    """Accessor for geo-only (geometric) indexing on a Vector."""
 
     def __init__(self, vector: "'Vector'")
         """Initialize self.  See help(type(self)) for accurate signature."""
@@ -319,10 +334,10 @@ class Vector(IndexableMixin, Tensor):
 
 ```python
 def basis_vector(index: 'int', metric: 'Metric') -> 'Vector'
-    """Create the i-th basis vector e_i."""
+    """Create the basis vector e_index in the metric's geometric index convention."""
 
 def basis_vectors(metric: 'Metric') -> 'tuple[Vector, ...]'
-    """Create all dim basis vectors (e0, e1, ..., e_{d-1})."""
+    """Create all dim basis vectors in geometric index order."""
 
 def basis_element(indices: 'tuple[int, ...]', metric: 'Metric') -> 'Vector'
     """Create a basis element e_{i0} ^ e_{i1} ^ ... ^ e_{ik}."""
@@ -331,7 +346,7 @@ def geometric_basis(metric: 'Metric') -> 'dict[int, tuple[Vector, ...]]'
     """Create complete geometric basis for a metric."""
 
 def pseudoscalar(metric: 'Metric') -> 'Vector'
-    """Create the pseudoscalar (volume element) e_{01...d-1}."""
+    """Create the pseudoscalar (volume element) e_{1...d} in the index convention."""
 ```
 
 
@@ -1057,6 +1072,15 @@ Visualization and rendering tools.
 *Scene - Unified Visualization Interface*
 
 ```python
+class SceneData:
+    """Serializable scene state for save/load."""
+
+    def __init__(self, theme_name: 'str', size: 'tuple[int, int]', projection: 'tuple[int, ...]', show_basis: 'bool', elements: 'list[dict]') -> None
+        """Initialize self.  See help(type(self)) for accurate signature."""
+```
+
+
+```python
 class SceneEffect(BaseModel):
     """Effect wrapper that uses string element IDs."""
 
@@ -1089,7 +1113,7 @@ class Scene:
     @property
     def frame_rate(self): ...
 
-    def __init__(self, projection: 'tuple[int, ...] | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (600, 600), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True)
+    def __init__(self, projection: 'tuple[int, ...] | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (1280, 800), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True, auto_camera: 'bool' = True)
         """Initialize self.  See help(type(self)) for accurate signature."""
 
     def add(self, element: 'Element', representation: 'str | None' = None, color: 'Color | None' = None, opacity: 'float' = 1.0, **kwargs) -> 'str'
@@ -1102,7 +1126,7 @@ class Scene:
         """Set projection axes for nD -> 3D."""
 
     def camera(self, position: 'tuple[float, float, float] | None' = None, focal_point: 'tuple[float, float, float] | None' = None, up: 'tuple[float, float, float] | None' = None) -> 'None'
-        """Set camera position and orientation."""
+        """Set camera position and orientation. Disables auto_camera."""
 
     def reset_camera(self) -> 'None'
         """Reset camera to fit all objects."""
@@ -1134,12 +1158,11 @@ class Scene:
     def close(self) -> 'None'
         """Close the scene and clean up."""
 
-    def save(self, path: 'str | Path') -> 'None'
-        """Save scene to file (.scene for pickle, .obj for Wavefront OBJ)."""
+    def is_closed(self) -> 'bool'
+        """Check if the window has been closed."""
 
-    @classmethod
-    def load(cls, path: 'str | Path') -> 'Scene'
-        """Load a scene from a .scene file."""
+    def save(self, path: 'str | Path') -> 'None'
+        """Save scene to file."""
 ```
 
 

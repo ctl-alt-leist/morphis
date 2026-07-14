@@ -49,19 +49,27 @@ The index 0 is reserved for special directions that extend Euclidean space:
 | **PGA** (Projective) | ideal direction ($\mathbf{e}_0^2 = 0$) | $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ |
 | **Lorentzian** | time direction ($\mathbf{e}_0^2 = -1$) | $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ |
 
-In code, `basis_vectors()` returns a tuple indexed from 0, but we name them according to the algebra:
+In code, the geometric index follows this convention directly. `basis_vector(1, g)`
+is $\mathbf{e}_1$ (the x direction) in every signature; Euclidean is indexed from 1
+(index 0 is invalid), while PGA and Lorentzian are indexed from 0 for their
+distinguished direction. `basis_vectors()` returns the basis in index order, so the
+unpacking names match the indices:
 
 ```python
 from morphis.elements import euclidean_metric, pga_metric, basis_vectors
 
-# Euclidean 3D: name them e1, e2, e3
+# Euclidean 3D: indexed from 1, so e1, e2, e3
 g = euclidean_metric(3)
 e1, e2, e3 = basis_vectors(g)
 
-# PGA 3D: e0 is the ideal direction
+# PGA 3D: indexed from 0, e0 is the ideal direction
 h = pga_metric(3)
 e0, e1, e2, e3 = basis_vectors(h)
 ```
+
+Component access follows the same convention: `v.on[1]` is the x component, and for
+a bivector `B.on[1, 2]` is the $\mathbf{e}_{12}$ component (with `B.on[2, 1]` its
+negative). See the design note on the index convention for the full rules.
 
 ## Tensors
 

@@ -119,7 +119,7 @@ class TestMultiVectorVectorConversion:
     def test_vector_length(self):
         """multivector_to_array returns 2^d length."""
         g = euclidean_metric(3)
-        e1 = basis_vector(0, g)
+        e1 = basis_vector(1, g)
         M = MultiVector(data={1: e1}, metric=g)
         v = multivector_to_array(M)
         assert v.shape == (8,)  # 2^3
@@ -224,7 +224,7 @@ class TestMultiplicationMatrices:
     def test_matrix_shape(self):
         """Multiplication matrices have shape (2^d, 2^d)."""
         g = euclidean_metric(3)
-        e1 = basis_vector(0, g)
+        e1 = basis_vector(1, g)
 
         L = left_matrix(e1)
         R = right_matrix(e1)

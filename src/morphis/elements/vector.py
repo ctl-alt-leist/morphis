@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Sequence
 
-from numpy import asarray, broadcast_shapes, stack, zeros
+from numpy import asarray, broadcast_shapes, integer, stack, zeros
 from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
@@ -31,6 +31,23 @@ if TYPE_CHECKING:
 # =============================================================================
 # Accessor Classes for Slicing
 # =============================================================================
+
+
+def _geo_to_internal(index, metric):
+    """
+    Translate one geometric index element from physics convention to storage.
+
+    Integer indices are mapped through the metric's index convention. Slices
+    and other advanced index objects are not supported on geometric axes --
+    reach for the raw .data array for those.
+    """
+    if isinstance(index, (int, integer)):
+        return metric.to_internal(int(index))
+
+    raise TypeError(
+        f"geometric indexing supports integer component indices only, got {type(index).__name__}; "
+        f"use the raw .data array for advanced geometric slicing"
+    )
 
 
 class AtAccessor:
@@ -81,14 +98,16 @@ class AtAccessor:
 
 class OnAccessor:
     """
-    Accessor for geo-only (geometric) slicing on a Vector.
+    Accessor for geo-only (geometric) indexing on a Vector.
+
+    Geometric indices follow the metric's physics convention (Euclidean from 1,
+    Lorentzian and PGA from 0); they are translated to internal storage slots
+    via the metric. Lot dimensions are always standard 0-based and are
+    preserved here with implicit slice(None).
 
     Usage:
-        v.on[0]        # Slice first geometric dimension
-        v.on[0, 1]     # Extract component v^{01} for a bivector
-
-    Indexing through .on only affects geometric dimensions; lot dimensions
-    are preserved with implicit slice(None).
+        v.on[1]        # Extract the first geometric component (x, in Euclidean)
+        v.on[1, 2]     # Extract component v^{12} for a bivector
     """
 
     __slots__ = ("_vector",)
@@ -97,7 +116,7 @@ class OnAccessor:
         self._vector = vector
 
     def __getitem__(self, index) -> "Vector":
-        """Slice geometric dimensions only, preserving lot structure."""
+        """Index geometric dimensions only, preserving lot structure."""
         # Normalize index to tuple
         if not isinstance(index, tuple):
             index = (index,)
@@ -112,8 +131,14 @@ class OnAccessor:
                 f"but vector has {n_geo} geometric dimensions (grade={self._vector.grade})"
             )
 
+        # Translate geometric indices from physics convention to internal slots.
+        # Only integer component access is supported; raw .data is available for
+        # advanced geometric slicing.
+        metric = self._vector.metric
+        internal_geo = tuple(_geo_to_internal(n, metric) for n in index)
+
         # Build full index: slice(None) for lot dims, then the geo indices
-        full_index = (slice(None),) * n_lot + index
+        full_index = (slice(None),) * n_lot + internal_geo
 
         new_data = self._vector.data[full_index]
 
@@ -976,62 +1001,72 @@ class Vector(IndexableMixin, Tensor):
 
 def basis_vector(index: int, metric: Metric) -> Vector:
     """
-    Create the i-th basis vector e_i.
+    Create the basis vector e_index in the metric's geometric index convention.
+
+    The index is a user-facing geometric index: Euclidean is indexed from 1
+    (e_1 is x), while Lorentzian and PGA are indexed from 0 (e_0 is the time
+    or ideal direction). See Metric.to_internal for the convention.
 
     Args:
-        index: Basis index (0-indexed: 0 for e0, 1 for e1, etc.)
+        index: Geometric basis index (physics convention for the signature)
         metric: Metric defining the geometric algebra
 
     Returns:
-        Grade-1 Vector with 1 in position index, 0 elsewhere
+        Grade-1 Vector with 1 in the addressed slot, 0 elsewhere
 
     Example:
-        e1 = basis_vector(0, euclidean_metric(3))
+        e1 = basis_vector(1, euclidean_metric(3))  # the x direction
     """
     dim = metric.dim
+    internal = metric.to_internal(index)
     data = zeros(dim)
-    data[index] = 1.0
+    data[internal] = 1.0
     return Vector(data, grade=1, metric=metric)
 
 
 def basis_vectors(metric: Metric) -> tuple[Vector, ...]:
     """
-    Create all dim basis vectors (e0, e1, ..., e_{d-1}).
+    Create all dim basis vectors in geometric index order.
+
+    Ordered by the metric's geometric index convention: (e_1, ..., e_d) for
+    Euclidean, (e_0, ..., e_{d-1}) for Lorentzian and PGA.
 
     Args:
         metric: Metric defining the geometric algebra
 
     Returns:
-        Tuple of grade-1 Vectors
+        Tuple of grade-1 Vectors in geometric index order
 
     Example:
-        e0, e1, e2 = basis_vectors(euclidean_metric(3))
-        e01 = e0 ^ e1  # Wedge product creates bivector
+        e1, e2, e3 = basis_vectors(euclidean_metric(3))
+        e12 = e1 ^ e2  # Wedge product creates bivector
     """
-    return tuple(basis_vector(k, metric) for k in range(metric.dim))
+    return tuple(basis_vector(n, metric) for n in range(metric.base_index, metric.max_index + 1))
 
 
 def basis_element(indices: tuple[int, ...], metric: Metric) -> Vector:
     """
     Create a basis element e_{i0} ^ e_{i1} ^ ... ^ e_{ik}.
 
+    Indices are user-facing geometric indices in the metric's convention.
+
     Args:
-        indices: Tuple of basis indices (0-indexed)
+        indices: Tuple of geometric basis indices (physics convention)
         metric: Metric defining the geometric algebra
 
     Returns:
         Vector of grade len(indices)
 
     Example:
-        e01 = basis_element((0, 1), euclidean_metric(3))  # e0 ^ e1
-        e012 = basis_element((0, 1, 2), euclidean_metric(3))  # pseudoscalar in 3D
+        e12 = basis_element((1, 2), euclidean_metric(3))  # e1 ^ e2
+        e123 = basis_element((1, 2, 3), euclidean_metric(3))  # pseudoscalar in 3D
     """
     if not indices:
         raise ValueError("indices must be non-empty; use Vector(1.0, grade=0, metric=m) for scalars")
 
     result = basis_vector(indices[0], metric)
-    for idx in indices[1:]:
-        result = result ^ basis_vector(idx, metric)
+    for n in indices[1:]:
+        result = result ^ basis_vector(n, metric)
     return result
 
 
@@ -1075,12 +1110,15 @@ def geometric_basis(metric: Metric) -> dict[int, tuple[Vector, ...]]:
     # Grade 0: scalar basis element (the scalar 1)
     result[0] = (Vector(ones(()), grade=0, metric=metric),)
 
+    # Geometric indices in the metric's convention (physics indices)
+    geo_indices = range(metric.base_index, metric.max_index + 1)
+
     # Grades 1 through dim
     for grade in range(1, dim + 1):
         basis_elements = []
 
         # Generate all combinations of indices for this grade
-        for indices in combinations(range(dim), grade):
+        for indices in combinations(geo_indices, grade):
             # Create basis element for these indices
             elem = basis_element(indices, metric)
             basis_elements.append(elem)
@@ -1092,7 +1130,7 @@ def geometric_basis(metric: Metric) -> dict[int, tuple[Vector, ...]]:
 
 def pseudoscalar(metric: Metric) -> Vector:
     """
-    Create the pseudoscalar (volume element) e_{01...d-1}.
+    Create the pseudoscalar (volume element) e_{1...d} in the index convention.
 
     Args:
         metric: Metric defining the geometric algebra
@@ -1101,6 +1139,6 @@ def pseudoscalar(metric: Metric) -> Vector:
         Grade-d Vector (the unit pseudoscalar)
 
     Example:
-        I = pseudoscalar(euclidean_metric(3))  # e0 ^ e1 ^ e2
+        I = pseudoscalar(euclidean_metric(3))  # e1 ^ e2 ^ e3
     """
-    return basis_element(tuple(range(metric.dim)), metric)
+    return basis_element(tuple(range(metric.base_index, metric.max_index + 1)), metric)

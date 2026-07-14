@@ -46,8 +46,8 @@ class TestGeometricBasicProperties:
         g = euclidean_metric(2)
 
         # For associativity, check: (e_1 e_2) e_1 = e_1 (e_2 e_1)
-        e_1 = make_basis_vector(0, g)
-        e_2 = make_basis_vector(1, g)
+        e_1 = make_basis_vector(1, g)
+        e_2 = make_basis_vector(2, g)
 
         # e_1 e_2 = e_12 (bivector)
         e_1_e_2 = geometric(e_1, e_2)
@@ -64,9 +64,9 @@ class TestGeometricBasicProperties:
     def test_associativity_3d_basis(self):
         """Test associativity with 3D basis vectors."""
         g = euclidean_metric(3)
-        e_1 = make_basis_vector(0, g)
-        e_2 = make_basis_vector(1, g)
-        e_3 = make_basis_vector(2, g)
+        e_1 = make_basis_vector(1, g)
+        e_2 = make_basis_vector(2, g)
+        e_3 = make_basis_vector(3, g)
 
         # (e_1 e_2) e_3 vs e_1 (e_2 e_3)
         e_1_e_2 = geometric(e_1, e_2)
@@ -113,7 +113,7 @@ class TestGeometricBasicProperties:
     def test_vector_contraction_unit(self):
         """Test v^2 = |v|^2 for unit vectors."""
         g = euclidean_metric(4)
-        e_1 = make_basis_vector(0, g)
+        e_1 = make_basis_vector(1, g)
 
         v_sq = geometric(e_1, e_1)
 
@@ -140,8 +140,8 @@ class TestGeometricBasicProperties:
     def test_orthogonal_anticommute(self):
         """Test uv = -vu for orthogonal vectors."""
         g = euclidean_metric(3)
-        e_1 = make_basis_vector(0, g)
-        e_2 = make_basis_vector(1, g)
+        e_1 = make_basis_vector(1, g)
+        e_2 = make_basis_vector(2, g)
 
         e_1_e_2 = geometric(e_1, e_2)
         e_2_e_1 = geometric(e_2, e_1)
@@ -231,8 +231,8 @@ class TestGeometricGradeDecomposition:
     def test_vector_bivector_coplanar(self):
         """Test vector in bivector plane."""
         g = euclidean_metric(3)
-        e_1 = make_basis_vector(0, g)
-        e_12 = make_basis_bivector(0, 1, g)
+        e_1 = make_basis_vector(1, g)
+        e_12 = make_basis_bivector(1, 2, g)
 
         result = geometric(e_1, e_12)
 
@@ -248,8 +248,8 @@ class TestGeometricGradeDecomposition:
     def test_vector_bivector_perpendicular(self):
         """Test vector perpendicular to bivector plane."""
         g = euclidean_metric(3)
-        e_3 = make_basis_vector(2, g)  # z-axis
-        e_12 = make_basis_bivector(0, 1, g)  # xy-plane
+        e_3 = make_basis_vector(3, g)  # z-axis
+        e_12 = make_basis_bivector(1, 2, g)  # xy-plane
 
         result = geometric(e_3, e_12)
 
@@ -265,8 +265,8 @@ class TestGeometricGradeDecomposition:
     def test_bivector_bivector_3d_orthogonal(self):
         """Test orthogonal bivector product in 3D."""
         g = euclidean_metric(3)
-        e_12 = make_basis_bivector(0, 1, g)
-        e_23 = make_basis_bivector(1, 2, g)
+        e_12 = make_basis_bivector(1, 2, g)
+        e_23 = make_basis_bivector(2, 3, g)
 
         result = geometric(e_12, e_23)
 
@@ -363,7 +363,7 @@ class TestInverse:
     def test_bivector_inverse(self):
         """Test B^{-1} B = 1 for unit bivector."""
         g = euclidean_metric(3)
-        e_12 = make_basis_bivector(0, 1, g)
+        e_12 = make_basis_bivector(1, 2, g)
 
         e_12_inv = inverse(e_12)
         product = geometric(e_12_inv, e_12)

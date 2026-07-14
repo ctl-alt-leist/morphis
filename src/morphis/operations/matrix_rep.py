@@ -242,7 +242,7 @@ def left_matrix(A: Vector | MultiVector) -> NDArray:
 
     Examples:
         >>> m = euclidean(3)
-        >>> e1 = basis_vector(0, m)
+        >>> e1 = basis_vector(1, m)
         >>> L = left_mult_matrix(e1)
         >>> L.shape
         (8, 8)
@@ -293,7 +293,7 @@ def right_matrix(A: Vector | MultiVector) -> NDArray:
 
     Examples:
         >>> m = euclidean(3)
-        >>> e1 = basis_vector(0, m)
+        >>> e1 = basis_vector(1, m)
         >>> R = right_mult_matrix(e1)
         >>> R.shape
         (8, 8)
