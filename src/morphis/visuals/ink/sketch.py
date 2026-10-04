@@ -167,16 +167,34 @@ class Sketch:
         weight: str = "regular",
         color: str | RGB | None = None,
         head: float = 1.0,
+        label: str | None = None,
+        label_offset: float = 12.0,
+        label_along: float = 0.5,
+        label_size: float = 17.0,
     ) -> NDArray:
         """
         Draw an arrow for v from the drawing-space point at.
+
+        Args:
+            label: Text set beside the shaft rather than at the tip, clear of lines leaving the tip
+            label_offset: Distance from the shaft in points; positive is left of the arrow's direction
+            label_along: Where along the shaft the label sits, 0 at the tail and 1 at the tip
 
         Returns:
             Drawing coordinates of the tip, for attaching labels and construction lines
         """
         tail = self.drawn(at)
         tip = tail + scale * self.drawn(v)
-        self.marks.append(Mark("vector", stack([tail, tip]), {"weight": weight, "color": color, "head": head}))
+        style = {
+            "weight": weight,
+            "color": color,
+            "head": head,
+            "label": label,
+            "label_offset": label_offset,
+            "label_along": label_along,
+            "label_size": label_size,
+        }
+        self.marks.append(Mark("vector", stack([tail, tip]), style))
 
         return tip
 
@@ -278,7 +296,16 @@ class Sketch:
     def save(self, path: str | Path, dpi: int = 200) -> Path:
         """Render and write the sketch; the format follows the extension (png, svg, pdf)."""
         target = Path(path).expanduser()
-        with rc_context({"mathtext.fontset": "stix", "font.family": "STIXGeneral"}):
+        font = self.theme.font
+        fonts = {
+            "font.family": font,
+            "mathtext.fontset": "custom",
+            "mathtext.rm": font,
+            "mathtext.it": f"{font}:italic",
+            "mathtext.bf": f"{font}:bold",
+            "mathtext.fallback": "stix",
+        }
+        with rc_context(fonts):
             figure = self.render(dpi=dpi)
             figure.savefig(target, dpi=dpi, facecolor=self.theme.paper)
 
@@ -402,19 +429,30 @@ class Sketch:
         axes.plot(*shaft.T, color=ink, linewidth=width, solid_capstyle="round", zorder=zorder)
         _arrowhead(axes, tail, tip, head_length, ink, zorder)
 
+        if style["label"] is not None:
+            beside = tail + style["label_along"] * (tip - tail)
+            normal = asarray([-direction[1], direction[0]]) * style["label_offset"]
+            self._annotate(axes, style["label"], beside, tuple(normal), style["label_size"], ink, LAYERS["label"])
+
     def _render_point(self, axes, page, mark, zorder, units_per_point, rng) -> None:
         style = mark.style
         axes.scatter(*page.T, s=style["radius"] ** 2 * 3.2, c=[self._ink(style["color"])], linewidths=0, zorder=zorder)
 
     def _render_label(self, axes, page, mark, zorder, units_per_point, rng) -> None:
         style = mark.style
+        self._annotate(axes, style["text"], page[0], style["offset"], style["size"], self._ink(style["color"]), zorder)
+
+    def _annotate(
+        self, axes, text: str, anchor: NDArray, offset: tuple[float, float], size: float, color: RGB, zorder: float
+    ) -> None:
+        """Set text centered at an offset in points from a page point, with a paper halo."""
         axes.annotate(
-            style["text"],
-            xy=page[0],
-            xytext=style["offset"],
+            text,
+            xy=anchor,
+            xytext=offset,
             textcoords="offset points",
-            fontsize=style["size"],
-            color=self._ink(style["color"]),
+            fontsize=size,
+            color=color,
             ha="center",
             va="center",
             zorder=zorder,

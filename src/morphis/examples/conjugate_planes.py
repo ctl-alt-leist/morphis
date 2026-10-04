@@ -55,14 +55,14 @@ def create_sketch(theme: str = "ink") -> Sketch:
         sketch.label(rf"$f_{mode}$", corner + 1.0 * sketch.drawn(u), offset=(3, -13))
         sketch.label(rf"$g_{mode}$", corner + 1.0 * sketch.drawn(v), offset=(-12, 3))
 
-    tip_a = sketch.vector(shadow_a, at=anchor_a, weight="bold")
-    tip_b = sketch.vector(shadow_b, at=anchor_b, weight="bold")
+    tip_a = sketch.vector(shadow_a, at=anchor_a, weight="bold", label="$ψ_a$", label_offset=-13)
+    tip_b = sketch.vector(shadow_b, at=anchor_b, weight="bold", label="$ψ_b$", label_offset=-17)
     sketch.circle(anchor_a, f_a, g_a, radius=norm(shadow_a.data), arc=(1.0, 2.6 + pi), arrow=True)
     sketch.circle(anchor_b, f_b, g_b, radius=norm(shadow_b.data), arc=(1.25, 2.85 + pi), arrow=True)
     sketch.point(anchor_a)
     sketch.point(anchor_b)
 
-    tip = sketch.vector(state, at=origin, scale=1.55, weight="heavy")
+    tip = sketch.vector(state, at=origin, scale=1.55, weight="heavy", label="$ψ$", label_offset=16, label_size=21)
     sketch.point(origin, radius=4.0)
     sketch.point(tip, radius=2.4)
     sketch.point(tip_a, radius=2.2)
@@ -71,18 +71,13 @@ def create_sketch(theme: str = "ink") -> Sketch:
     for start, end in ((origin, anchor_a), (origin, anchor_b), (tip, tip_a), (tip, tip_b)):
         sketch.line(start, end)
 
-    sketch.label("$ψ$", tip, offset=(15, 4), size=21)
-    sketch.label("$ψ_a$", tip_a, offset=(17, -6), size=17)
-    sketch.label("$ψ_b$", tip_b, offset=(17, 4), size=17)
-    sketch.label("conjugate plane $a$", anchor_a + array([0.0, 0.0, reach]), offset=(-10, 26), size=14)
-    sketch.label("conjugate plane $b$", anchor_b + array([reach, -reach, 0.0]), offset=(40, -34), size=14)
-    sketch.label("state space", array([0.8, 0.0, 2.55]), offset=(0, 0), size=15)
+    sketch.label(r"$\mathcal{V}$", array([-1.6, 0.0, 3.05]), offset=(0, 0), size=26)
 
     return sketch
 
 
 if __name__ == "__main__":
-    output = sys.argv[1] if len(sys.argv) > 1 else "conjugate-planes.png"
+    output = sys.argv[1] if len(sys.argv) > 1 else "figures/conjugate-planes.png"
     theme = sys.argv[2] if len(sys.argv) > 2 else "ink"
     path = create_sketch(theme).save(output)
     print(f"Saved {path}")
