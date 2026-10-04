@@ -22,7 +22,7 @@ The package provides mathematical tools. Applications live in examples.
 - `1_concepts/` — Mathematical foundations and GA concepts
 - `2_unit-tests/` — Test coverage documentation
 - `3_api/` — API reference
-- `4_design/` — Module structure, naming conventions, class hierarchy
+- `4_design/` — Module structure, naming conventions, class hierarchy, visuals architecture, outermorphism implementation, index convention
 - `5_dev/` — Architecture and development guide
 
 ## Resources
