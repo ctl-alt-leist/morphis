@@ -313,12 +313,14 @@ class Vector(IndexableMixin, Tensor):
         """
         Accessor for geo-only (geometric) slicing.
 
-        Usage:
-            v.on[0]        # Slice first geometric dimension
-            v.on[0, 1]     # Extract component v^{01} for a bivector
+        Usage (Euclidean, geometric indices start at 1):
+            v.on[1]        # x component of a vector
+            b.on[1, 2]     # e_12 component of a bivector
 
-        Indexing through .on only affects geometric dimensions; lot dimensions
-        are preserved with implicit slice(None).
+        Indices are user-facing geometric indices, translated to storage
+        slots by the metric (see Metric.base_index). Indexing through .on only
+        affects geometric dimensions; lot dimensions are preserved with
+        implicit slice(None).
         """
         return OnAccessor(self)
 
