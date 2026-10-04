@@ -171,7 +171,7 @@ class Sketch:
         label: str | None = None,
         label_offset: float = 12.0,
         label_along: float = 0.5,
-        label_size: float = 17.0,
+        label_size: float = 15.0,
     ) -> NDArray:
         """
         Draw an arrow for v from the drawing-space point at.
@@ -242,7 +242,7 @@ class Sketch:
         text: str,
         at: Point,
         offset: tuple[float, float] = (6.0, 4.0),
-        size: float = 15.0,
+        size: float = 13.0,
         color: str | RGB | None = None,
     ) -> None:
         """Place text beside a drawing-space point, offset in points."""

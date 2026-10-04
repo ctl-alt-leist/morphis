@@ -62,7 +62,7 @@ def create_sketch(theme: str = "ink") -> Sketch:
     sketch.point(anchor_a)
     sketch.point(anchor_b)
 
-    tip = sketch.vector(state, at=origin, scale=1.55, weight="heavy", label="$ψ$", label_offset=16, label_size=21)
+    tip = sketch.vector(state, at=origin, scale=1.55, weight="heavy", label="$ψ$", label_offset=16, label_size=19)
     sketch.point(origin, radius=4.0)
     sketch.point(tip, radius=2.4)
     sketch.point(tip_a, radius=2.2)
@@ -71,7 +71,7 @@ def create_sketch(theme: str = "ink") -> Sketch:
     for start, end in ((origin, anchor_a), (origin, anchor_b), (tip, tip_a), (tip, tip_b)):
         sketch.line(start, end)
 
-    sketch.label(r"$\mathcal{V}$", array([-1.6, 0.0, 3.05]), offset=(0, 0), size=26)
+    sketch.label(r"$\mathcal{V}$", array([-1.6, 0.0, 3.05]), offset=(0, 0), size=24)
 
     return sketch
 
