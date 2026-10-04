@@ -262,16 +262,16 @@ v.at[::2]     # every other in first dim → lot=(5, 5)
 
 ### Geometric Accessor (`.on`)
 
-Index or slice over geo dimensions only, preserving lot:
+Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric: Euclidean starts at 1, Lorentzian and PGA start at 0 (time or ideal direction). See [Index Convention](../4_design/6_index-convention.md).
 
 ```python
-# b has grade=2, so geo=(d, d)
-b.on[0, 1]    # component e_01 → grade=0
-b.on[:, 0]    # first column → grade=1
-b.on[0]       # first row → grade=1
+# b has grade=2 in a Euclidean metric, so geo=(d, d)
+b.on[1, 2]    # component e_12 → grade=0
+b.on[1]       # row for e_1 → grade=1
+b.on[0]       # IndexError: index 0 is forbidden in Euclidean
 ```
 
-Integer indices reduce grade; slices preserve it.
+Each integer index reduces the grade by one. Geometric slices are not supported through `.on` (they raise `TypeError`); use the raw `.data` array for advanced geometric slicing.
 
 ---
 
@@ -378,7 +378,7 @@ g = euclidean_metric(3)
 # From data
 v = Vector([1, 2, 3], grade=1, metric=g)
 
-# Btached (lot) vectors
+# Batched (lot) vectors
 v_lot = Vector(data, grade=1, metric=g, lot=(100,))
 
 # Basis vectors
@@ -447,3 +447,21 @@ R = rotor(b, angle)
 # Apply rotation
 v_rotated = rotate(v, R)  # or: R * v * ~R
 ```
+
+### Visualization
+
+```python
+from morphis.elements import basis_vectors, euclidean_metric
+from morphis.visuals import RED, Scene
+
+g = euclidean_metric(4)
+e1, e2, e3, e4 = basis_vectors(g)
+
+# Projection axes are geometric indices, like basis_vector and .on[...]
+scene = Scene(projection=(1, 2, 3))  # show e_1, e_2, e_3 (the default)
+scene.add(e1 ^ e4, color=RED)
+scene.set_projection((2, 3, 4))      # show e_2, e_3, e_4; labels follow
+scene.show()
+```
+
+Each element translates the projection axes through its own metric, so `(1, 2, 3)` is x, y, z in every signature and index 0 raises `IndexError` for a Euclidean element. See [Visualization Architecture](../4_design/4_visuals_architecture.md).
