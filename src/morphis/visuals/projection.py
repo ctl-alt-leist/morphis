@@ -3,16 +3,67 @@ Projection Utilities for High-Dimensional Vectors
 
 Tools for projecting d-dimensional blades to 3D (or 2D) for visualization.
 Supports configurable axis selection and different projection methods.
+
+Projection axes are user-facing geometric indices, the same indices used by
+`basis_vector` and `.on[...]`. They are translated to internal storage slots
+through the element's `Metric`, so `(1, 2, 3)` is always x, y, z: in Euclidean
+space index 0 is forbidden, while in Lorentzian and PGA space index 0 is the
+time or ideal direction.
 """
 
+from numbers import Integral
 from typing import Literal
 
 from numpy import abs as np_abs, argsort, zeros
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
-from morphis.elements.metric import euclidean_metric
+from morphis.elements.metric import Metric, euclidean_metric
 from morphis.elements.vector import Vector
+
+
+# The first three spatial directions. x is index 1 in every signature, so this
+# default is valid for Euclidean, Lorentzian, and PGA metrics alike.
+DEFAULT_PROJECTION: tuple[int, int, int] = (1, 2, 3)
+
+
+def validate_projection_axes(axes: tuple[int, ...]) -> tuple[int, int, int]:
+    """
+    Check that projection axes are exactly three integers and return them as a tuple.
+
+    Range checking needs a metric and happens in `projection_slots`.
+    """
+    axes = tuple(axes)
+    if len(axes) != 3 or not all(isinstance(axis, Integral) for axis in axes):
+        raise ValueError(f"Projection requires exactly 3 integer geometric indices, got {axes!r}")
+
+    axes = tuple(int(axis) for axis in axes)
+
+    return axes
+
+
+def projection_slots(axes: tuple[int, ...], metric: Metric) -> tuple[int, ...]:
+    """
+    Translate user-facing projection axes to internal storage slots.
+
+    Routes through `Metric.to_internal_multi`, so an index outside the metric's
+    valid range (for example 0 in a Euclidean metric) raises IndexError.
+    """
+    slots = tuple(metric.to_internal_multi(axes))
+
+    return slots
+
+
+def basis_labels(axes: tuple[int, ...]) -> tuple[str, ...]:
+    """
+    Basis-axis labels for user-facing geometric indices.
+
+    The label carries the same index the user addressed: axes (2, 3, 4) give
+    e_2, e_3, e_4.
+    """
+    labels = tuple(f"$\\mathbf{{e}}_{{{axis}}}$" for axis in axes)
+
+    return labels
 
 
 class ProjectionConfig(BaseModel):
@@ -20,7 +71,9 @@ class ProjectionConfig(BaseModel):
     Configuration for projecting high-dimensional blades to 3D.
 
     Attributes:
-        axes: Tuple of axis indices to project onto (e.g., (0, 1, 2) for first 3)
+        axes: User-facing geometric indices to project onto, e.g. (1, 2, 3) for
+            x, y, z or (2, 3, 4) for e_2, e_3, e_4. Translated per blade through
+            its metric. None selects axes automatically (principal method).
         method: Projection method
             - 'slice': Take specified axes directly
             - 'principal': Choose axes with largest components
@@ -34,12 +87,15 @@ class ProjectionConfig(BaseModel):
     target_dim: int = 3
 
 
-def _extract_principal_axes(data: NDArray, grade: int, target_dim: int) -> tuple[int, ...]:
+def _extract_principal_axes(data: NDArray, grade: int, target_dim: int, metric: Metric) -> tuple[int, ...]:
     """
-    Find the axes with largest component magnitudes.
+    Find the internal storage slots with largest component magnitudes.
 
     For vectors: find axes with largest absolute values.
     For bivectors: find axes that span the largest plane components.
+    For other grades: the first target_dim spatial directions.
+
+    Returns internal 0-based slots; callers report them to users via `to_user`.
     """
     if grade == 1:
         # Sum absolute values across collection dims, find largest
@@ -68,8 +124,9 @@ def _extract_principal_axes(data: NDArray, grade: int, target_dim: int) -> tuple
         return tuple(sorted(top_indices))
 
     else:
-        # Default: first target_dim axes
-        return tuple(range(target_dim))
+        # Default: the first target_dim spatial directions (e_1, e_2, ...)
+        spatial = tuple(range(1, target_dim + 1))
+        return projection_slots(spatial, metric)
 
 
 def project_vector(blade: Vector, config: ProjectionConfig) -> Vector:
@@ -91,9 +148,9 @@ def project_vector(blade: Vector, config: ProjectionConfig) -> Vector:
         return blade
 
     if config.method == "principal" or config.axes is None:
-        axes = _extract_principal_axes(blade.data, 1, target_dim)
+        axes = _extract_principal_axes(blade.data, 1, target_dim, blade.metric)
     else:
-        axes = config.axes[:target_dim]
+        axes = projection_slots(config.axes[:target_dim], blade.metric)
 
     projected_data = blade.data[..., list(axes)]
 
@@ -126,9 +183,9 @@ def project_bivector(blade: Vector, config: ProjectionConfig) -> Vector:
         return blade
 
     if config.method == "principal" or config.axes is None:
-        axes = _extract_principal_axes(blade.data, 2, target_dim)
+        axes = _extract_principal_axes(blade.data, 2, target_dim, blade.metric)
     else:
-        axes = config.axes[:target_dim]
+        axes = projection_slots(config.axes[:target_dim], blade.metric)
 
     # Extract submatrix for selected axes
     axes_list = list(axes)
@@ -167,9 +224,9 @@ def project_trivector(blade: Vector, config: ProjectionConfig) -> Vector:
         return blade
 
     if config.method == "principal" or config.axes is None:
-        axes = _extract_principal_axes(blade.data, 3, target_dim)
+        axes = _extract_principal_axes(blade.data, 3, target_dim, blade.metric)
     else:
-        axes = config.axes[:target_dim]
+        axes = projection_slots(config.axes[:target_dim], blade.metric)
 
     axes_list = list(axes)
     collection_shape = blade.collection
@@ -208,9 +265,9 @@ def project_quadvector(blade: Vector, config: ProjectionConfig) -> Vector:
         return blade
 
     if config.method == "principal" or config.axes is None:
-        axes = _extract_principal_axes(blade.data, 4, target_dim)
+        axes = _extract_principal_axes(blade.data, 4, target_dim, blade.metric)
     else:
-        axes = config.axes[:target_dim]
+        axes = projection_slots(config.axes[:target_dim], blade.metric)
 
     axes_list = list(axes)
     collection_shape = blade.collection
@@ -279,19 +336,25 @@ def project_blade(blade: Vector, config: ProjectionConfig | None = None) -> Vect
 
 def get_projection_axes(blade: Vector, config: ProjectionConfig | None = None) -> tuple[int, ...]:
     """
-    Get the axes that would be used for projection.
+    Get the user-facing geometric indices that would be used for projection.
 
-    Useful for labeling visualizations with which axes are shown.
+    Useful for labeling visualizations with which axes are shown. The result
+    uses the same convention as `basis_vector` and `.on[...]`, so it can be
+    passed straight to `basis_labels`.
     """
     if config is None:
         config = ProjectionConfig()
 
     target_dim = config.target_dim
+    metric = blade.metric
 
     if blade.dim <= target_dim:
-        return tuple(range(blade.dim))
+        slots = tuple(range(blade.dim))
+    elif config.axes is not None and config.method == "slice":
+        slots = projection_slots(config.axes[:target_dim], metric)
+    else:
+        slots = _extract_principal_axes(blade.data, blade.grade, target_dim, blade.metric)
 
-    if config.axes is not None:
-        return config.axes[:target_dim]
+    axes = tuple(metric.to_user(int(slot)) for slot in slots)
 
-    return _extract_principal_axes(blade.data, blade.grade, target_dim)
+    return axes

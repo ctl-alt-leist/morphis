@@ -22,8 +22,15 @@ from pydantic import BaseModel, ConfigDict
 
 from morphis.elements.base import Element
 from morphis.elements.frame import Frame
+from morphis.elements.metric import Metric
 from morphis.elements.vector import Vector
 from morphis.visuals.backends import get_backend
+from morphis.visuals.projection import (
+    DEFAULT_PROJECTION,
+    basis_labels,
+    projection_slots,
+    validate_projection_axes,
+)
 from morphis.visuals.theme import Color, Theme, get_theme
 
 
@@ -37,7 +44,7 @@ class SceneData:
 
     theme_name: str
     size: tuple[int, int]
-    projection: tuple[int, ...]
+    projection: tuple[int, ...]  # User-facing geometric indices
     show_basis: bool
     elements: list[dict]
 
@@ -99,6 +106,17 @@ class Scene:
         scene = Scene(theme="obsidian")
         scene.add(v, color=RED)
         scene.show()
+
+    Projection:
+        Elements of dimension greater than 3 are projected onto three axes
+        given as user-facing geometric indices, the same indices used by
+        basis_vector and .on[...]. The default (1, 2, 3) is x, y, z in every
+        signature. Each element translates the axes through its own metric,
+        so an out-of-range index (0 in a Euclidean metric) raises IndexError.
+        Elements of dimension 3 or less are drawn in their own coordinates.
+
+        scene = Scene(projection=(1, 2, 3))  # e_1, e_2, e_3
+        scene.set_projection((2, 3, 4))      # e_2, e_3, e_4
     """
 
     def __init__(
@@ -117,7 +135,7 @@ class Scene:
         self._theme = theme
         self._size = size
         self._frame_rate = frame_rate
-        self._projection = projection or (0, 1, 2)
+        self._projection = DEFAULT_PROJECTION if projection is None else validate_projection_axes(projection)
         self._show_basis = show_basis
         self._auto_camera = auto_camera
 
@@ -148,6 +166,16 @@ class Scene:
         """Animation frame rate."""
         return self._frame_rate
 
+    @property
+    def projection(self) -> tuple[int, int, int]:
+        """Projection axes as user-facing geometric indices."""
+        return self._projection
+
+    @property
+    def basis_labels(self) -> tuple[str, ...]:
+        """Labels for the drawn basis axes, derived from the projection axes."""
+        return basis_labels(self._projection)
+
     # =========================================================================
     # Backend Management
     # =========================================================================
@@ -155,6 +183,8 @@ class Scene:
     def _ensure_backend(self):
         """Initialize backend if needed."""
         if not self._backend_initialized:
+            # Labels set before initialize are used when the basis is first drawn
+            self._backend.set_basis_labels(self.basis_labels)
             self._backend.initialize(
                 size=self._size,
                 theme=self._theme,
@@ -271,8 +301,8 @@ class Scene:
             from morphis.visuals.drawing.vectors import create_frame_mesh
 
             origin = kwargs.get("origin", zeros(3))
-            origin_3d = self._project_point(origin)
-            vecs_3d = self._project_vectors(element.data)
+            origin_3d = self._project_point(origin, element.metric)
+            vecs_3d = self._project_vectors(element.data, element.metric)
 
             edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
                 origin_3d,
@@ -323,8 +353,8 @@ class Scene:
                 data = element.data
                 if element.lot and element.lot != ():
                     origins = kwargs.get("origins", zeros((len(data), 3)))
-                    vecs_3d = self._project_vectors(data)
-                    origins_3d = self._project_vectors(origins)
+                    vecs_3d = self._project_vectors(data, element.metric)
+                    origins_3d = self._project_vectors(origins, element.metric)
 
                     bid = self._backend.add_arrows(
                         origins_3d,
@@ -335,8 +365,8 @@ class Scene:
                     backend_ids.append(bid)
                 else:
                     origin = kwargs.get("origin", zeros(3))
-                    origin_3d = self._project_point(origin)
-                    vec_3d = self._project_point(data)
+                    origin_3d = self._project_point(origin, element.metric)
+                    vec_3d = self._project_point(data, element.metric)
 
                     bid = self._backend.add_arrows(
                         origin_3d,
@@ -351,8 +381,8 @@ class Scene:
 
                 factors = spanning_vectors(element)
                 origin = kwargs.get("origin", zeros(3))
-                origin_3d = self._project_point(origin)
-                vecs = array([self._project_point(f.data) for f in factors])
+                origin_3d = self._project_point(origin, element.metric)
+                vecs = array([self._project_point(f.data, element.metric) for f in factors])
 
                 bid = self._backend.add_span(
                     origin_3d,
@@ -365,39 +395,63 @@ class Scene:
 
         return backend_ids
 
-    def _project_point(self, point: NDArray) -> NDArray:
-        """Project a point to 3D using current projection axes."""
+    def _project_point(self, point: NDArray, metric: Metric) -> NDArray:
+        """
+        Project a point to 3D using the current projection axes.
+
+        Points of dimension 3 or less are zero-padded and drawn in their own
+        coordinates. Higher-dimensional points take the components at the
+        projection axes, translated to storage slots through the metric.
+        """
         point = array(point, dtype=float)
         if len(point) <= 3:
             result = zeros(3)
             result[: len(point)] = point
-            return result
+        else:
+            slots = projection_slots(self._projection, metric)
+            result = point[list(slots)]
 
-        ax = self._projection
-        return array([point[ax[0]], point[ax[1]], point[ax[2]]])
+        return result
 
-    def _project_vectors(self, vectors: NDArray) -> NDArray:
+    def _project_vectors(self, vectors: NDArray, metric: Metric) -> NDArray:
         """Project multiple vectors to 3D."""
         vectors = array(vectors, dtype=float)
         if vectors.ndim == 1:
-            return self._project_point(vectors).reshape(1, 3)
+            result = self._project_point(vectors, metric).reshape(1, 3)
+        else:
+            result = array([self._project_point(v, metric) for v in vectors])
 
-        return array([self._project_point(v) for v in vectors])
+        return result
 
     # =========================================================================
     # Projection
     # =========================================================================
 
     def set_projection(self, axes: tuple[int, ...]) -> None:
-        """Set projection axes for nD -> 3D."""
-        if len(axes) != 3:
-            raise ValueError("Projection requires exactly 3 axes")
+        """
+        Set projection axes for nD -> 3D.
+
+        Args:
+            axes: Three user-facing geometric indices, e.g. (2, 3, 4) to show
+                e_2, e_3, e_4. The basis labels follow the same indices.
+
+        Raises:
+            ValueError: if axes is not exactly three integers.
+            IndexError: if an axis is out of range for the metric of any
+                element of dimension greater than 3 already in the scene.
+        """
+        axes = validate_projection_axes(axes)
+
+        # Validate against every projected element before changing state
+        for tracked in self._elements.values():
+            metric = getattr(tracked.element, "metric", None)
+            if metric is not None and metric.dim > 3:
+                projection_slots(axes, metric)
 
         self._projection = axes
 
-        labels = tuple(f"$\\mathbf{{e}}_{i + 1}$" for i in axes)
         if self._backend_initialized:
-            self._backend.set_basis_labels(labels)
+            self._backend.set_basis_labels(self.basis_labels)
 
     # =========================================================================
     # Camera
@@ -585,8 +639,8 @@ class Scene:
                 from morphis.visuals.drawing.vectors import create_frame_mesh
 
                 origin = tracked.extra.get("origin", zeros(3))
-                origin_3d = self._project_point(origin)
-                vecs_3d = self._project_vectors(element.data)
+                origin_3d = self._project_point(origin, element.metric)
+                vecs_3d = self._project_vectors(element.data, element.metric)
 
                 edges_mesh, faces_mesh, _ = create_frame_mesh(
                     origin_3d,
@@ -610,8 +664,8 @@ class Scene:
             elif isinstance(element, Vector) and element.grade == 1:
                 if element.lot and element.lot != ():
                     origins = tracked.extra.get("origins", zeros((len(element.data), 3)))
-                    vecs_3d = self._project_vectors(element.data)
-                    origins_3d = self._project_vectors(origins)
+                    vecs_3d = self._project_vectors(element.data, element.metric)
+                    origins_3d = self._project_vectors(origins, element.metric)
 
                     if tracked.backend_ids:
                         self._backend.update_arrows(
@@ -621,8 +675,8 @@ class Scene:
                         )
                 else:
                     origin = tracked.extra.get("origin", zeros(3))
-                    origin_3d = self._project_point(origin)
-                    vec_3d = self._project_point(element.data)
+                    origin_3d = self._project_point(origin, element.metric)
+                    vec_3d = self._project_point(element.data, element.metric)
 
                     if tracked.backend_ids:
                         self._backend.update_arrows(

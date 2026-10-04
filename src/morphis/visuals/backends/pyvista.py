@@ -13,6 +13,7 @@ from numpy import array, zeros
 from numpy.linalg import norm
 from numpy.typing import NDArray
 
+from morphis.visuals.projection import DEFAULT_PROJECTION, basis_labels
 from morphis.visuals.theme import Color, Theme
 
 
@@ -721,7 +722,7 @@ class PyVistaBackend:
                 self._basis_actors.append(actor)
 
         # Add labels
-        labels = self._current_basis_labels or (r"$\mathbf{e}_1$", r"$\mathbf{e}_2$", r"$\mathbf{e}_3$")
+        labels = self._current_basis_labels or basis_labels(DEFAULT_PROJECTION)
         self._add_basis_labels(labels)
 
     def _add_basis_labels(self, labels: tuple[str, str, str]) -> None:
