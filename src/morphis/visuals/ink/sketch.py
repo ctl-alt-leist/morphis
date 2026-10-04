@@ -47,6 +47,7 @@ from numpy.typing import NDArray
 from morphis.elements.vector import Vector
 from morphis.visuals.ink.camera import Camera
 from morphis.visuals.ink.depiction import Depiction
+from morphis.visuals.ink.fonts import font_settings
 from morphis.visuals.ink.space import OrganicSpace
 from morphis.visuals.ink.theme import RGB, InkTheme, get_ink_theme
 
@@ -296,15 +297,7 @@ class Sketch:
     def save(self, path: str | Path, dpi: int = 200) -> Path:
         """Render and write the sketch; the format follows the extension (png, svg, pdf)."""
         target = Path(path).expanduser()
-        font = self.theme.font
-        fonts = {
-            "font.family": font,
-            "mathtext.fontset": "custom",
-            "mathtext.rm": font,
-            "mathtext.it": f"{font}:italic",
-            "mathtext.bf": f"{font}:bold",
-            "mathtext.fallback": "stix",
-        }
+        fonts = font_settings(self.theme.font)
         with rc_context(fonts):
             figure = self.render(dpi=dpi)
             figure.savefig(target, dpi=dpi, facecolor=self.theme.paper)

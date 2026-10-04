@@ -32,7 +32,7 @@ class InkTheme(BaseModel):
         ink: Primary stroke color
         graphite: Light-to-dark ramp of grays for secondary strokes
         accents: Named accent inks (blue, red, green, sepia, ...)
-        font: Serif family for text and mathematics (e.g. "STIX Two Text")
+        font: Serif family for text and mathematics (e.g. "Palatino", "Charter")
     """
 
     model_config = ConfigDict(frozen=True)
@@ -42,7 +42,7 @@ class InkTheme(BaseModel):
     ink: RGB
     graphite: tuple[RGB, ...]
     accents: dict[str, RGB]
-    font: str = "Times New Roman"
+    font: str = "Palatino"
 
     def gray(self, level: float) -> RGB:
         """Interpolate the graphite ramp; 0 is lightest, 1 is the ink itself."""
