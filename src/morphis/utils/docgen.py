@@ -369,6 +369,11 @@ MODULE_GROUPS = {
             "morphis.visuals.contexts",
             "morphis.visuals.operations",
             "morphis.visuals.loop",
+            "morphis.visuals.ink.sketch",
+            "morphis.visuals.ink.depiction",
+            "morphis.visuals.ink.space",
+            "morphis.visuals.ink.camera",
+            "morphis.visuals.ink.theme",
         ],
     },
     "Utilities": {

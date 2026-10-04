@@ -23,7 +23,14 @@ src/morphis/visuals/
 │   └── pyvista.py    # PyVistaBackend implementation
 ├── drawing/          # Mesh generation and blade rendering
 │   └── vectors.py    # Arrow, span, frame, tesseract meshes; draw/render helpers
-└── tests/            # test_scene.py, test_projection.py, test_model.py
+├── ink/              # Pen-and-ink conceptual figures (matplotlib)
+│   ├── sketch.py     # Sketch: records marks in 3D, renders them to the page
+│   ├── depiction.py  # Depiction: true space -> 3D drawing space
+│   ├── space.py      # OrganicSpace: seeded enclosing space and its silhouette
+│   ├── camera.py     # Camera: orbiting view, orthographic or perspective
+│   ├── theme.py      # InkTheme: paper, ink, graphite, accents, font
+│   └── fonts.py      # Font registration, including .ttc italic faces
+└── tests/            # test_scene.py, test_projection.py, test_model.py, test_ink.py
 ```
 
 ## Layer Overview
@@ -48,7 +55,7 @@ src/morphis/visuals/
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Scene talks to the backend protocol. Animation predates the backend layer and drives PyVista through `Renderer`. Canvas, `contexts.py`, and `operations.py` draw directly on a PyVista `Plotter`.
+Scene talks to the backend protocol. Animation predates the backend layer and drives PyVista through `Renderer`. Canvas, `contexts.py`, and `operations.py` draw directly on a PyVista `Plotter`. The `ink` subpackage is a separate path: it projects through its own camera and draws pen strokes and stipple with matplotlib, for conceptual figures rather than shaded 3D scenes.
 
 ## Core Components
 
@@ -203,6 +210,42 @@ Entry points: `visualize_pga_blade`, `visualize_pga_scene`, `render_pga_point`, 
 
 `render_join`, `render_meet`, `render_meet_join`, and `render_with_dual` draw the inputs and the result of an operation together on a Canvas, styled by `OperationStyle`. Each accepts an optional `ProjectionConfig` for blades of dimension greater than 3.
 
+### Ink Sketches (`ink/`)
+
+Pen-and-ink conceptual figures in the style of a hand-drawn monograph illustration: an organic enclosing space shaded with stipple, and vectors, planes, curves, construction lines, and labels drawn inside it. Output is a static image (PNG, SVG, PDF).
+
+The design separates **what is true** from **how it is drawn**:
+
+- **True geometry** is ordinary morphis objects in their own space and dimension, with their exact relationships (for example a realified qubit in ℝ⁴ and the exact shadows of a state in two conjugate planes).
+- **`Depiction`** is the figure's deliberate linear map from the true space into a 3D drawing space, stated once by naming the drawing direction that stands for each basis direction. Keys are user-facing geometric indices through the true space's `Metric`, so `1` is `e_1`. Two true directions may share one drawing direction when the figure needs it.
+- **Placement**: a `Vector` passed to a mark is true geometry and goes through the depiction; a plain `(x, y, z)` triple is a drawing-space position chosen by the figure, such as where a plane is set out.
+- **`Camera`** orbits a focal point (`azimuth`, `elevation`, `distance`, `fov`; `fov=0` is orthographic) and maps drawing coordinates to the page plus depth.
+
+```python
+from morphis.elements import basis_vectors, euclidean_metric
+from morphis.visuals.ink import Camera, Depiction, OrganicSpace, Sketch
+
+g = euclidean_metric(4)
+f_a, g_a, f_b, g_b = basis_vectors(g)
+depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
+
+sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), depiction=depiction)
+sketch.space(OrganicSpace(seed=3, stretch=(1.6, 1.25, 1.05)))
+sketch.plane(f_a, g_a, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)), grid=6)
+sketch.vector(f_a + g_b, label="$ψ$")
+sketch.save("figures/example.png")
+```
+
+**Marks.** `space`, `plane` (stippled parallelogram with a dashed grid), `vector` (pen arrowhead, optional label beside the shaft midpoint), `line` (dashed construction line), `circle` (circle or arc in a plane, optional arrow), `point`, and `label`. Marks are recorded in drawing coordinates and rendered only on `save`/`render`, so page bounds, stroke scale, and depth order come from the whole figure. Order is by layer (space, planes, construction lines and curves, vectors, points, labels), then far to near.
+
+**Organic space.** `OrganicSpace` is a star-shaped surface whose radius along a unit direction u is `1 + lumpiness · Σ a_k cos(π f_k (u · d_k) + φ_k) / Σ a_k`, with seeded random directions d_k, frequencies f_k up to `detail`, phases φ_k, and amplitudes a_k ∝ 1/f_k. It is then scaled per axis by `stretch` and by `size`. The silhouette is computed for the camera by projecting a Fibonacci-spiral sampling of the surface and keeping the farthest point at each angle about the projected center, so it stays correct as the camera moves. Shading is rim stipple: dot density falls off exponentially inward from the silhouette and is heavier on a chosen shadow side.
+
+**Repeatability.** Every random choice (shape, stipple, pen wobble) flows from a seed, so the same figure renders byte-for-byte identically and its space does not shift as contents are edited.
+
+**Themes and fonts.** `INK` (white paper), `PARCHMENT` (warm), and `CHALKBOARD` (inverted) share muted accents (blue, red, green, sepia, violet, ochre). Text and mathtext are set in the theme's `font` (default Palatino). System families shipped as `.ttc` collections expose only their upright face to matplotlib, so `fonts.py` extracts each face once to `~/.cache/morphis/fonts` and registers it, making the italic available to math.
+
+Not yet integrated with `Scene`: there is no ink `RenderBackend`, no animation, and hidden-line dashing is per mark rather than per segment.
+
 ### Theme System (`theme.py`)
 
 Four built-in themes:
@@ -353,6 +396,8 @@ anim.play() / save()   →  Replay snapshots through Renderer or an off-screen p
 
 7. **Clean window close:** windows close without Ctrl-C.
 
+8. **Truth separate from depiction (ink):** figures keep objects in their true space and state every unfaithful drawing choice in one `Depiction` plus explicit placements.
+
 ## Extension Points
 
 | To add... | Modify... |
@@ -361,3 +406,5 @@ anim.play() / save()   →  Replay snapshots through Renderer or an off-screen p
 | New backend | Implement `RenderBackend`, register in `backends/__init__.py` |
 | New element type | `Scene._default_representation()`, `_create_visuals()`, `_sync_visuals()` |
 | New projection method | `projection.py` (keep user indices at the API, slots below it) |
+| New ink mark | A recorder method on `Sketch`, a `LAYERS` entry, and a `_render_<kind>` method |
+| New ink theme | An `InkTheme` in `ink/theme.py`, added to `INK_THEMES` |

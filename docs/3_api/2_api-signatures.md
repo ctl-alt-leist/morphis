@@ -1558,6 +1558,150 @@ class Animation:
         """Stop watching one or more blades, frames, or models."""
 ```
 
+
+### `morphis.visuals.ink.sketch`
+
+*Sketch*
+
+```python
+class Mark:
+    """One recorded drawing instruction."""
+
+    def __init__(self, kind: 'str', points: 'NDArray', style: 'dict[str, Any]' = <factory>) -> None
+        """Initialize self.  See help(type(self)) for accurate signature."""
+```
+
+
+```python
+class Sketch:
+    """A pen-and-ink conceptual figure."""
+
+    def __init__(self, camera: 'Camera | None' = None, theme: 'str | InkTheme' = 'ink', depiction: 'Depiction | None' = None, size: 'tuple[float, float]' = (8.0, 6.0), seed: 'int' = 0)
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def drawn(self, point: 'Point') -> 'NDArray'
+        """Drawing coordinates of a true-space Vector or a drawing-space triple."""
+
+    def space(self, space: 'OrganicSpace', weight: 'str' = 'bold', stipple: 'float' = 1.0, light: 'float' = 210.0) -> 'None'
+        """Draw an enclosing organic space: a pen silhouette with rim stipple."""
+
+    def plane(self, u: 'Point', v: 'Point', at: 'Point' = (0.0, 0.0, 0.0), span: 'tuple[tuple[float, float], tuple[float, float]]' = ((0.0, 1.0), (0.0, 1.0)), grid: 'int' = 4, tone: 'float' = 0.18, color: 'str | RGB | None' = None) -> 'None'
+        """Draw a plane patch spanned by u and v, as a stippled parallelogram with a faint grid."""
+
+    def vector(self, v: 'Point', at: 'Point' = (0.0, 0.0, 0.0), scale: 'float' = 1.0, weight: 'str' = 'regular', color: 'str | RGB | None' = None, head: 'float' = 1.0, label: 'str | None' = None, label_offset: 'float' = 12.0, label_along: 'float' = 0.5, label_size: 'float' = 15.0) -> 'NDArray'
+        """Draw an arrow for v from the drawing-space point at."""
+
+    def line(self, start: 'Point', end: 'Point', dashed: 'bool' = True, weight: 'str' = 'fine', color: 'str | RGB | None' = None) -> 'None'
+        """Draw a construction line, dashed by default."""
+
+    def circle(self, center: 'Point', u: 'Point', v: 'Point', radius: 'float' = 1.0, arc: 'tuple[float, float]' = (0.0, 6.283185307179586), arrow: 'bool' = False, weight: 'str' = 'fine', level: 'float' = 0.6) -> 'None'
+        """Draw a circle (or arc) of the given radius in the plane of unit directions u and v."""
+
+    def point(self, p: 'Point', radius: 'float' = 3.2, color: 'str | RGB | None' = None) -> 'NDArray'
+        """Draw a solid dot; returns its drawing coordinates."""
+
+    def label(self, text: 'str', at: 'Point', offset: 'tuple[float, float]' = (6.0, 4.0), size: 'float' = 13.0, color: 'str | RGB | None' = None) -> 'None'
+        """Place text beside a drawing-space point, offset in points."""
+
+    def render(self, dpi: 'int' = 200) -> 'Figure'
+        """Render the sketch to a matplotlib Figure."""
+
+    def save(self, path: 'str | Path', dpi: 'int' = 200) -> 'Path'
+        """Render and write the sketch; the format follows the extension (png, svg, pdf)."""
+```
+
+
+### `morphis.visuals.ink.depiction`
+
+*Depiction*
+
+```python
+class Depiction:
+    """Linear map from a true space to the 3D drawing space."""
+
+    def __init__(self, metric: 'Metric', images: 'dict[int, tuple[float, float, float]] | None' = None)
+        """Initialize self.  See help(type(self)) for accurate signature."""
+```
+
+
+### `morphis.visuals.ink.space`
+
+*Organic Space*
+
+```python
+class OrganicSpace(BaseModel):
+    """A seeded, lumpy, star-shaped surface."""
+
+    def radius(self, directions: 'NDArray') -> 'NDArray'
+        """Radial scale factor r(u) for unit directions of shape (..., 3)."""
+
+    def surface(self, n_polar: 'int' = 96, n_azimuthal: 'int' = 192) -> 'NDArray'
+        """Sample the surface on a polar grid; returns shape (n_polar, n_azimuthal, 3)."""
+
+    def place(self, directions: 'NDArray') -> 'NDArray'
+        """Surface points along unit directions of shape (..., 3)."""
+
+    def samples(self, count: 'int' = 40000) -> 'NDArray'
+        """Near-uniform surface samples along a Fibonacci spiral of directions; shape (count, 3)."""
+
+    def outline(self, camera: 'Camera', n_angles: 'int' = 720, smoothing: 'int' = 15) -> 'tuple[NDArray, NDArray]'
+        """Silhouette of the space as seen by the camera."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+### `morphis.visuals.ink.camera`
+
+*Sketch Camera*
+
+```python
+class Camera(BaseModel):
+    """An orbiting camera."""
+
+    @property
+    def view_direction(self): ...
+
+    @property
+    def frame(self): ...
+
+    @property
+    def half_height(self): ...
+
+    def project(self, points: 'NDArray') -> 'tuple[NDArray, NDArray]'
+        """Project 3D points to the page."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+### `morphis.visuals.ink.theme`
+
+*Ink Themes*
+
+```python
+class InkTheme(BaseModel):
+    """A pen-on-paper palette."""
+
+    def gray(self, level: 'float') -> 'RGB'
+        """Interpolate the graphite ramp; 0 is lightest, 1 is the ink itself."""
+
+    def color(self, name: 'str') -> 'RGB'
+        """Look up an accent, 'ink', or 'paper' by name."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+**Functions:**
+
+```python
+def get_ink_theme(theme: 'str | InkTheme') -> 'InkTheme'
+    """Resolve a theme name or pass a theme through."""
+```
+
 ---
 
 ## Utilities
