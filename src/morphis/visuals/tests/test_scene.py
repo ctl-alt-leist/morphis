@@ -192,7 +192,7 @@ class TestSceneRoundTrip:
         e2 = Vector([0, 1, 0], grade=1, metric=g)
         bivector = e1 ^ e2
 
-        scene = Scene(theme="obsidian", projection="perspective")
+        scene = Scene(theme="obsidian")
         scene.add(e1, color=(1, 0, 0), opacity=0.9)
         scene.add(e2, color=(0, 1, 0), opacity=0.8)
         scene.add(bivector, color=(0, 0, 1), opacity=0.5)
