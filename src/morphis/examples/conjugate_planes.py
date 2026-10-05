@@ -42,9 +42,9 @@ def create_sketch(theme: str = "ink") -> Sketch:
     sketch.space(OrganicSpace(seed=3, stretch=(1.6, 1.25, 1.05), size=3.2))
 
     # Placement: where each piece sits in the drawing space
-    origin = array([-0.95, -0.9, -1.1])
-    anchor_a = array([-2.55, 0.5, 0.45])
-    anchor_b = array([2.2, 0.1, -2.0])
+    origin = array([-1.15, -0.9, -1.1])
+    anchor_a = array([-2.25, 0.5, 0.75])
+    anchor_b = array([1.9, 0.1, -2.25])
     reach = 1.3
 
     for anchor, u, v, mode in ((anchor_a, f_a, g_a, "a"), (anchor_b, f_b, g_b, "b")):
@@ -52,26 +52,23 @@ def create_sketch(theme: str = "ink") -> Sketch:
         sketch.plane(u, v, at=corner, span=((0.0, 2 * reach), (0.0, 2 * reach)), grid=6, tone=0.3)
         sketch.vector(0.5 * u, at=corner + 0.75 * sketch.drawn(u), weight="fine", head=0.8)
         sketch.vector(0.5 * v, at=corner + 0.75 * sketch.drawn(v), weight="fine", head=0.8)
-        sketch.label(rf"$f_{mode}$", corner + 1.0 * sketch.drawn(u), offset=(3, -13))
-        sketch.label(rf"$g_{mode}$", corner + 1.0 * sketch.drawn(v), offset=(-12, 3))
+        sketch.label(rf"$f_{mode}$", corner + 1.0 * sketch.drawn(u), offset=(3, -13), size=14)
+        sketch.label(rf"$g_{mode}$", corner + 1.0 * sketch.drawn(v), offset=(-12, 3), size=14)
 
-    tip_a = sketch.vector(shadow_a, at=anchor_a, weight="bold", label="$ψ_a$", label_offset=-13)
-    tip_b = sketch.vector(shadow_b, at=anchor_b, weight="bold", label="$ψ_b$", label_offset=-17)
+    tip_a = sketch.vector(shadow_a, at=anchor_a, weight="bold", label="$ψ_a$", label_offset=-13, label_size=14)
+    tip_b = sketch.vector(shadow_b, at=anchor_b, weight="bold", label="$ψ_b$", label_offset=-17, label_size=14)
     sketch.circle(anchor_a, f_a, g_a, radius=norm(shadow_a.data), arc=(1.0, 2.6 + pi), arrow=True)
     sketch.circle(anchor_b, f_b, g_b, radius=norm(shadow_b.data), arc=(1.25, 2.85 + pi), arrow=True)
     sketch.point(anchor_a)
     sketch.point(anchor_b)
 
-    tip = sketch.vector(state, at=origin, scale=1.55, weight="heavy", label="$ψ$", label_offset=16, label_size=19)
+    tip = sketch.vector(state, at=origin, scale=1.55, weight="heavy", label="$ψ$", label_offset=16, label_size=14)
     sketch.point(origin, radius=4.0)
-    sketch.point(tip, radius=2.4)
-    sketch.point(tip_a, radius=2.2)
-    sketch.point(tip_b, radius=2.2)
 
     for start, end in ((origin, anchor_a), (origin, anchor_b), (tip, tip_a), (tip, tip_b)):
         sketch.line(start, end)
 
-    sketch.label(r"$\mathcal{V}$", array([-1.6, 0.0, 3.05]), offset=(0, 0), size=24)
+    sketch.label(r"$\mathcal{V}$", array([2.35, 0.4, 1.95]), offset=(0, 0), size=24)
 
     return sketch
 

@@ -387,7 +387,7 @@ class Sketch:
                 )
             )
 
-        edge = _wobble(concatenate([page, page[:1]]), 0.5 * units_per_point, rng, samples=200)
+        edge = _wobble(concatenate([page, page[:1]]), 0.3 * units_per_point, rng, samples=200)
         axes.plot(*edge.T, color=ink, linewidth=WEIGHTS["regular"], solid_joinstyle="round", zorder=zorder + 3e-5)
 
     def _render_construction(self, axes, page, mark, zorder, units_per_point, rng) -> None:
