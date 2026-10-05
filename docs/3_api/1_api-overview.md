@@ -473,15 +473,15 @@ from morphis.elements import basis_vectors, euclidean_metric
 from morphis.visuals.ink import Camera, Depiction, OrganicSpace, Sketch
 
 g = euclidean_metric(4)
-e_1, f_1, e_2, f_2 = basis_vectors(g)  # e_m and its partner e_ṁ (as f_m)
+e_a, f_a, e_b, f_b = basis_vectors(g)  # e_m and its partner e_ṁ (as f_m)
 
-# The figure's choice: both mode directions e_1 and e_2 drawn along x
+# The figure's choice: both mode directions e_a and e_b drawn along x
 depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
 
 sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), depiction=depiction)
 sketch.space(OrganicSpace(seed=3))          # same seed, same shape
-sketch.plane(e_1, f_1, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)))
-sketch.vector(e_1 + f_2, label="$ψ$")       # Vectors are depicted; triples are placements
+sketch.plane(e_a, f_a, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)))
+sketch.vector(e_a + f_b, label="$ψ$")       # Vectors are depicted; triples are placements
 sketch.save("figures/example.png")
 ```
 

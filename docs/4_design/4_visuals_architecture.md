@@ -227,13 +227,13 @@ from morphis.elements import basis_vectors, euclidean_metric
 from morphis.visuals.ink import Camera, Depiction, OrganicSpace, Sketch
 
 g = euclidean_metric(4)
-e_1, f_1, e_2, f_2 = basis_vectors(g)  # e_m and its partner e_ṁ (as f_m)
+e_a, f_a, e_b, f_b = basis_vectors(g)  # e_m and its partner e_ṁ (as f_m)
 depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
 
 sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), depiction=depiction)
 sketch.space(OrganicSpace(seed=3, stretch=(1.6, 1.25, 1.05)))
-sketch.plane(e_1, f_1, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)), grid=6)
-sketch.vector(e_1 + f_2, label="$ψ$")
+sketch.plane(e_a, f_a, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)), grid=6)
+sketch.vector(e_a + f_b, label="$ψ$")
 sketch.save("figures/example.png")
 ```
 
