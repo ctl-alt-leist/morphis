@@ -7,6 +7,7 @@ true dimension and relationships; a Depiction states how the figure chooses to
 draw them in three dimensions, and a Camera sets the view.
 """
 
+from morphis.visuals.ink.animate import animate as animate
 from morphis.visuals.ink.camera import Camera as Camera
 from morphis.visuals.ink.depiction import Depiction as Depiction
 from morphis.visuals.ink.sketch import Sketch as Sketch

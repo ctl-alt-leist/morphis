@@ -12,7 +12,7 @@ from numpy.linalg import norm
 from numpy.testing import assert_allclose
 
 from morphis.elements import Vector, basis_vectors, euclidean_metric, lorentzian_metric, pga_metric
-from morphis.visuals.ink import CHALKBOARD, INK, Camera, Depiction, OrganicSpace, Sketch, get_ink_theme
+from morphis.visuals.ink import CHALKBOARD, INK, Camera, Depiction, OrganicSpace, Sketch, animate, get_ink_theme
 from morphis.visuals.ink.sketch import Mark
 
 
@@ -281,3 +281,51 @@ class TestSketch:
         assert x0 < outline[:, 0].min() and outline[:, 0].max() < x1
         assert y0 < outline[:, 1].min() and outline[:, 1].max() < y1
         assert ptp(outline[:, 0]) > 0
+
+
+# =============================================================================
+# Animation
+# =============================================================================
+
+
+def moving_sketch(t: float) -> Sketch:
+    g = euclidean_metric(3)
+    e1, e2, _ = basis_vectors(g)
+    sketch = Sketch(depiction=Depiction(g), size=(3.0, 2.0))
+    sketch.space(OrganicSpace(seed=3))
+    sketch.vector((1.0 - t) * e1 + t * e2, label="$v$")
+    sketch.curve(array([[0.0, 0.0, 0.0], [t, t, 0.0], [t, 0.0, t]]), dashed=True)
+
+    return sketch
+
+
+class TestAnimation:
+    def test_frame_shape(self):
+        image = moving_sketch(0.5).frame(dpi=50)
+
+        assert image.shape == (100, 150, 3)
+
+    def test_fixed_bounds_are_used(self):
+        sketch = moving_sketch(0.5)
+        bounds = (array([-10.0, -8.0]), array([10.0, 8.0]))
+        axes = sketch.render(dpi=50, bounds=bounds).axes[0]
+
+        assert axes.get_xlim() == (-10.0, 10.0)
+
+    def test_mark_noise_independent_of_other_marks(self):
+        # Adding a later mark must not change how earlier marks are drawn
+        first = moving_sketch(0.3).frame(dpi=50)
+        extended = moving_sketch(0.3)
+        extended.point((5.0, 5.0, 5.0))
+        bounds = moving_sketch(0.3).page_bounds()
+        second = extended.frame(dpi=50, bounds=bounds)
+        reference = moving_sketch(0.3).frame(dpi=50, bounds=bounds)
+
+        assert first.shape == second.shape
+        assert (reference != second).sum() < 0.01 * second.size
+
+    def test_gif(self, tmp_path):
+        path = animate(moving_sketch, [0.0, 0.5, 1.0], tmp_path / "motion.gif", fps=10, dpi=40)
+
+        assert path.exists()
+        assert path.stat().st_size > 0

@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from matplotlib import rc_context
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 from matplotlib.patches import Polygon
@@ -227,8 +228,21 @@ class Sketch:
         du, dv = du / norm(du), dv / norm(dv)
         angles = linspace(arc[0], arc[1], 160)
         points = self.drawn(center) + radius * (cos(angles)[:, None] * du + sin(angles)[:, None] * dv)
-        style = {"weight": weight, "level": level, "arrow": arrow}
+        style = {"weight": weight, "level": level, "arrow": arrow, "dashed": False}
         self.marks.append(Mark("curve", points, style))
+
+    def curve(
+        self,
+        points: list[Point] | NDArray,
+        dashed: bool = False,
+        arrow: bool = False,
+        weight: str = "fine",
+        level: float = 0.6,
+    ) -> None:
+        """Draw a polyline through drawing-space points (true-space Vectors are depicted)."""
+        drawn = asarray([self.drawn(p) for p in points]) if isinstance(points, list) else asarray(points, dtype=float)
+        style = {"weight": weight, "level": level, "arrow": arrow, "dashed": dashed}
+        self.marks.append(Mark("curve", drawn, style))
 
     def point(self, p: Point, radius: float = 3.2, color: str | RGB | None = None) -> NDArray:
         """Draw a solid dot; returns its drawing coordinates."""
@@ -255,54 +269,84 @@ class Sketch:
     # Rendering
     # =========================================================================
 
-    def render(self, dpi: int = 200) -> Figure:
-        """Render the sketch to a matplotlib Figure."""
-        figure = Figure(figsize=self.size, dpi=dpi, facecolor=self.theme.paper)
-        axes = figure.add_axes((0.0, 0.0, 1.0, 1.0))
-        axes.set_axis_off()
-        axes.set_facecolor(self.theme.paper)
+    def page_bounds(self) -> tuple[NDArray, NDArray]:
+        """
+        Page rectangle that holds the whole sketch with a margin, fitted to the figure aspect.
 
-        outlines = [(space.outline(self.camera), options) for space, options in self.spaces]
-        page_points = [outline for (outline, _), _ in outlines] + [self.camera.project(m.points)[0] for m in self.marks]
+        Returns:
+            lower, upper: Opposite corners of the page in focal-plane units
+        """
+        outlines = [space.outline(self.camera)[0] for space, _ in self.spaces]
+        page_points = outlines + [self.camera.project(m.points)[0] for m in self.marks]
         everything = concatenate(page_points) if page_points else asarray([[0.0, 0.0]])
         lower, upper = everything.min(axis=0), everything.max(axis=0)
         margin = 0.06 * (upper - lower).max()
         lower, upper = lower - margin, upper + margin
 
-        # Fit the page bounds to the figure aspect so one unit is equal in x and y
-        width, height = self.size
-        extent = upper - lower
-        scale = max(extent[0] / width, extent[1] / height)
+        # One unit is equal in x and y
+        size = asarray(self.size)
+        scale = ((upper - lower) / size).max()
         middle = 0.5 * (lower + upper)
-        half = 0.5 * scale * asarray([width, height])
-        axes.set(xlim=(middle[0] - half[0], middle[0] + half[0]), ylim=(middle[1] - half[1], middle[1] + half[1]))
+        half = 0.5 * scale * size
+
+        return middle - half, middle + half
+
+    def render(self, dpi: int = 200, bounds: tuple[NDArray, NDArray] | None = None) -> Figure:
+        """
+        Render the sketch to a matplotlib Figure.
+
+        Args:
+            dpi: Resolution
+            bounds: Fixed page rectangle (from page_bounds); holding it fixed keeps animation frames registered
+        """
+        figure = Figure(figsize=self.size, dpi=dpi, facecolor=self.theme.paper)
+        axes = figure.add_axes((0.0, 0.0, 1.0, 1.0))
+        axes.set_axis_off()
+        axes.set_facecolor(self.theme.paper)
+
+        lower, upper = bounds if bounds is not None else self.page_bounds()
+        axes.set(xlim=(lower[0], upper[0]), ylim=(lower[1], upper[1]))
         axes.set_aspect("equal")
+        units_per_point = (upper[0] - lower[0]) / self.size[0] / 72.0
 
-        units_per_point = scale / 72.0
-        rng = default_rng(self.seed)
-
-        for (outline, center), options in outlines:
+        # Each space and mark draws from its own seeded stream, keyed by the order it was added,
+        # so its stipple and pen wobble do not change when other marks move or reorder
+        for count, (space, options) in enumerate(self.spaces):
+            outline, center = space.outline(self.camera)
+            rng = default_rng([self.seed, 0, count])
             self._render_space(axes, outline, center, options, units_per_point, rng)
 
         depths = [self.camera.project(m.points)[1].mean() for m in self.marks]
-        ordered = sorted(zip(self.marks, depths, strict=True), key=lambda pair: (LAYERS[pair[0].kind], -pair[1]))
-        for order, (mark, _) in enumerate(ordered):
+        entries = sorted(
+            zip(range(len(self.marks)), self.marks, depths, strict=True),
+            key=lambda entry: (LAYERS[entry[1].kind], -entry[2]),
+        )
+        for order, (count, mark, _) in enumerate(entries):
             zorder = LAYERS[mark.kind] + order * 1e-4
             page, _ = self.camera.project(mark.points)
             renderer = getattr(self, f"_render_{mark.kind}")
-            renderer(axes, page, mark, zorder, units_per_point, rng)
+            renderer(axes, page, mark, zorder, units_per_point, default_rng([self.seed, 1, count]))
 
         return figure
 
-    def save(self, path: str | Path, dpi: int = 200) -> Path:
+    def save(self, path: str | Path, dpi: int = 200, bounds: tuple[NDArray, NDArray] | None = None) -> Path:
         """Render and write the sketch; the format follows the extension (png, svg, pdf)."""
         target = Path(path).expanduser()
-        fonts = font_settings(self.theme.font)
-        with rc_context(fonts):
-            figure = self.render(dpi=dpi)
+        with rc_context(font_settings(self.theme.font)):
+            figure = self.render(dpi=dpi, bounds=bounds)
             figure.savefig(target, dpi=dpi, facecolor=self.theme.paper)
 
         return target
+
+    def frame(self, dpi: int = 150, bounds: tuple[NDArray, NDArray] | None = None) -> NDArray:
+        """Render to an RGB image array of shape (height, width, 3), for assembling animations."""
+        with rc_context(font_settings(self.theme.font)):
+            figure = self.render(dpi=dpi, bounds=bounds)
+            canvas = FigureCanvasAgg(figure)
+            canvas.draw()
+            image = asarray(canvas.buffer_rgba())[..., :3].copy()
+
+        return image
 
     # -------------------------------------------------------------------------
     # Mark renderers
@@ -405,7 +449,16 @@ class Sketch:
     def _render_curve(self, axes, page, mark, zorder, units_per_point, rng) -> None:
         style = mark.style
         ink = self.theme.gray(style["level"])
-        axes.plot(*page.T, color=ink, linewidth=WEIGHTS[style["weight"]], solid_capstyle="round", zorder=zorder)
+        dash = (0, (1.0, 2.2)) if style["dashed"] else "solid"
+        axes.plot(
+            *page.T,
+            color=ink,
+            linewidth=WEIGHTS[style["weight"]],
+            linestyle=dash,
+            solid_capstyle="round",
+            dash_capstyle="round",
+            zorder=zorder,
+        )
         if style["arrow"]:
             _arrowhead(axes, page[-2], page[-1], 6.0 * units_per_point, ink, zorder)
 
