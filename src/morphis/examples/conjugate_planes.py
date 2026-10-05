@@ -8,16 +8,18 @@ this 4D arrangement in three dimensions: both representative directions are
 drawn along the same page direction, and each plane is set out at its own
 place in the space, joined to the state by dashed construction lines.
 
-The modes are energy eigenstates, so Schrödinger evolution is exact and
-geometric. Multiplication by i turns f toward g in each plane, so e^{-iω_m t}
-is a rigid rotation by -ω_m t inside conjugate plane m, and the evolution is
-the sandwich ψ(t) = R ψ(0) R̃ with the rotor
+The modes are energy eigenstates, so the evolution is exact and geometric:
+each mode's phase turns as e^{iω_m t}. Multiplication by i turns f toward g,
+so this is a rigid, right-handed rotation by +ω_m t inside conjugate plane m
+(the orientation f_m∧g_m), and the whole evolution is the sandwich
+ψ(t) = R ψ(0) R̃ with the rotor
 
-    R(t) = rotor(f_a∧g_a, -ω_a t) · rotor(f_b∧g_b, -ω_b t)
+    R(t) = rotor(f_a∧g_a, ω_a t) · rotor(f_b∧g_b, ω_b t)
 
 The two factors commute because the planes are orthogonal. The shadows keep
 their lengths and turn at their own frequencies, and the drawn state is the
-depiction of the evolved 4D state at every instant.
+depiction of the evolved 4D state at every instant. (The Schrödinger phase
+e^{-iEt/ħ} turns the opposite way; the right-handed sense is chosen here.)
 
 Run:
     uv run python -m morphis.examples.conjugate_planes [output.png] [ink|parchment|chalkboard]
@@ -58,8 +60,8 @@ INITIAL_STATE = Vector([0.75, 0.95, 0.5, 0.85], grade=1, metric=METRIC)
 
 
 def evolve(state: Vector, t: float) -> Vector:
-    """Schrödinger evolution for time t: rotate each conjugate plane by -ω_m t."""
-    R = rotor(F_A ^ G_A, -OMEGA_A * t) * rotor(F_B ^ G_B, -OMEGA_B * t)
+    """Phase evolution for time t: rotate each conjugate plane by +ω_m t, right-handed about f_m∧g_m."""
+    R = rotor(F_A ^ G_A, OMEGA_A * t) * rotor(F_B ^ G_B, OMEGA_B * t)
     evolved = (R * state * ~R).data[1]
 
     return evolved
@@ -77,7 +79,7 @@ def shadows(state: Vector) -> tuple[Vector, Vector]:
 def orbit() -> Vector:
     """The evolved state over one period, as a lot of 4D vectors on a fine time grid (computed once)."""
     times = ORBIT_TIMES
-    R = rotor(F_A ^ G_A, -OMEGA_A * times) * rotor(F_B ^ G_B, -OMEGA_B * times)
+    R = rotor(F_A ^ G_A, OMEGA_A * times) * rotor(F_B ^ G_B, OMEGA_B * times)
     states = (R * INITIAL_STATE * ~R).data[1]
 
     return states
@@ -119,9 +121,9 @@ def create_sketch(
         sketch.label(rf"$f_{mode}$", corner + 1.0 * sketch.drawn(u), offset=(3, -13), size=14)
         sketch.label(rf"$g_{mode}$", corner + 1.0 * sketch.drawn(v), offset=(-12, 3), size=14)
 
-    # Phase circles through each shadow, arrowed in the sense of e^{-iωt}
-    sketch.circle(anchor_a, F_A, G_A, radius=norm(shadow_a.data), arc=(2.6 + pi, 1.0), arrow=True)
-    sketch.circle(anchor_b, F_B, G_B, radius=norm(shadow_b.data), arc=(2.85 + pi, 1.25), arrow=True)
+    # Phase circles through each shadow, arrowed in the right-handed sense of the evolution
+    sketch.circle(anchor_a, F_A, G_A, radius=norm(shadow_a.data), arc=(1.0, 2.6 + pi), arrow=True)
+    sketch.circle(anchor_b, F_B, G_B, radius=norm(shadow_b.data), arc=(1.25, 2.85 + pi), arrow=True)
 
     if trail:
         # The drawn state's closed orbit over one period, and the part already traversed
