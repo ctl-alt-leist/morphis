@@ -153,7 +153,11 @@ def create_sketch(
 if __name__ == "__main__":
     arguments = [a for a in sys.argv[1:] if a != "--animate"]
     is_animation = "--animate" in sys.argv[1:]
-    default = "figures/conjugate-planes.mp4" if is_animation else "figures/conjugate-planes.png"
+    default = (
+        "figures/conjugate-planes/conjugate-planes.mp4"
+        if is_animation
+        else "figures/conjugate-planes/conjugate-planes.png"
+    )
     output = arguments[0] if arguments else default
     theme = arguments[1] if len(arguments) > 1 else "ink"
 
