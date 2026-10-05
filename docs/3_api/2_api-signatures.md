@@ -1597,17 +1597,38 @@ class Sketch:
     def circle(self, center: 'Point', u: 'Point', v: 'Point', radius: 'float' = 1.0, arc: 'tuple[float, float]' = (0.0, 6.283185307179586), arrow: 'bool' = False, weight: 'str' = 'fine', level: 'float' = 0.6) -> 'None'
         """Draw a circle (or arc) of the given radius in the plane of unit directions u and v."""
 
+    def curve(self, points: 'list[Point] | NDArray', dashed: 'bool' = False, arrow: 'bool' = False, weight: 'str' = 'fine', level: 'float' = 0.6) -> 'None'
+        """Draw a polyline through drawing-space points (true-space Vectors are depicted)."""
+
     def point(self, p: 'Point', radius: 'float' = 3.2, color: 'str | RGB | None' = None) -> 'NDArray'
         """Draw a solid dot; returns its drawing coordinates."""
 
     def label(self, text: 'str', at: 'Point', offset: 'tuple[float, float]' = (6.0, 4.0), size: 'float' = 13.0, color: 'str | RGB | None' = None) -> 'None'
         """Place text beside a drawing-space point, offset in points."""
 
-    def render(self, dpi: 'int' = 200) -> 'Figure'
+    def page_bounds(self) -> 'tuple[NDArray, NDArray]'
+        """Page rectangle that holds the whole sketch with a margin, fitted to the figure aspect."""
+
+    def render(self, dpi: 'int' = 200, bounds: 'tuple[NDArray, NDArray] | None' = None) -> 'Figure'
         """Render the sketch to a matplotlib Figure."""
 
-    def save(self, path: 'str | Path', dpi: 'int' = 200) -> 'Path'
+    def save(self, path: 'str | Path', dpi: 'int' = 200, bounds: 'tuple[NDArray, NDArray] | None' = None) -> 'Path'
         """Render and write the sketch; the format follows the extension (png, svg, pdf)."""
+
+    def frame(self, dpi: 'int' = 150, bounds: 'tuple[NDArray, NDArray] | None' = None) -> 'NDArray'
+        """Render to an RGB image array of shape (height, width, 3), for assembling animations."""
+```
+
+
+### `morphis.visuals.ink.animate`
+
+*Ink Animation*
+
+**Functions:**
+
+```python
+def animate(build: 'Callable[[float], Sketch]', times: 'Sequence[float]', path: 'str | Path', fps: 'int' = 30, dpi: 'int' = 150) -> 'Path'
+    """Render an ink animation to a video or GIF."""
 ```
 
 

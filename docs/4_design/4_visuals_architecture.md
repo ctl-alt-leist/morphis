@@ -25,6 +25,7 @@ src/morphis/visuals/
 │   └── vectors.py    # Arrow, span, frame, tesseract meshes; draw/render helpers
 ├── ink/              # Pen-and-ink conceptual figures (matplotlib)
 │   ├── sketch.py     # Sketch: records marks in 3D, renders them to the page
+│   ├── animate.py    # animate(): one sketch per time -> MP4 or GIF
 │   ├── depiction.py  # Depiction: true space -> 3D drawing space
 │   ├── space.py      # OrganicSpace: seeded enclosing space and its silhouette
 │   ├── camera.py     # Camera: orbiting view, orthographic or perspective
@@ -236,7 +237,7 @@ sketch.vector(f_a + g_b, label="$ψ$")
 sketch.save("figures/example.png")
 ```
 
-**Marks.** `space`, `plane` (stippled parallelogram with a dashed grid), `vector` (pen arrowhead, optional label beside the shaft midpoint), `line` (dashed construction line), `circle` (circle or arc in a plane, optional arrow), `point`, and `label`. Marks are recorded in drawing coordinates and rendered only on `save`/`render`, so page bounds, stroke scale, and depth order come from the whole figure. Order is by layer (space, planes, construction lines and curves, vectors, points, labels), then far to near.
+**Marks.** `space`, `plane` (stippled parallelogram with a dashed grid), `vector` (pen arrowhead, optional label beside the shaft midpoint), `line` (dashed construction line), `circle` (circle or arc in a plane, optional arrow), `curve` (polyline, solid or dotted), `point`, and `label`. Marks are recorded in drawing coordinates and rendered only on `save`/`render`, so page bounds, stroke scale, and depth order come from the whole figure. Order is by layer (space, planes, construction lines and curves, vectors, points, labels), then far to near.
 
 **Organic space.** `OrganicSpace` is a star-shaped surface whose radius along a unit direction u is `1 + lumpiness · Σ a_k cos(π f_k (u · d_k) + φ_k) / Σ a_k`, with seeded random directions d_k, frequencies f_k up to `detail`, phases φ_k, and amplitudes a_k ∝ 1/f_k. It is then scaled per axis by `stretch` and by `size`. The silhouette is computed for the camera by projecting a Fibonacci-spiral sampling of the surface and keeping the farthest point at each angle about the projected center, so it stays correct as the camera moves. Shading is rim stipple: dot density falls off exponentially inward from the silhouette and is heavier on a chosen shadow side.
 
@@ -244,7 +245,9 @@ sketch.save("figures/example.png")
 
 **Themes and fonts.** `INK` (white paper), `PARCHMENT` (warm), and `CHALKBOARD` (inverted) share muted accents (blue, red, green, sepia, violet, ochre). Text and mathtext are set in the theme's `font` (default Palatino). System families shipped as `.ttc` collections expose only their upright face to matplotlib, so `fonts.py` extracts each face once to `~/.cache/morphis/fonts` and registers it, making the italic available to math.
 
-Not yet integrated with `Scene`: there is no ink `RenderBackend`, no animation, and hidden-line dashing is per mark rather than per segment.
+**Animation.** `animate(build, times, path)` renders one sketch per time, where `build(t)` constructs the scene from the true geometry at time t. All frames share one page rectangle (the union of every frame's bounds, fitted to the aspect), so still parts stay registered. Each space and mark draws its stipple and pen wobble from its own seeded stream, keyed by the order it was added, so a mark looks the same in every frame even as other marks move or change depth order. The suffix picks the format: `.mp4` (H.264 via imageio-ffmpeg) or `.gif`. Expensive true-geometry work that does not depend on t, such as a whole orbit, should be computed once and reused across frames.
+
+Not yet integrated with `Scene`: there is no ink `RenderBackend`, and hidden-line dashing is per mark rather than per segment.
 
 ### Theme System (`theme.py`)
 
