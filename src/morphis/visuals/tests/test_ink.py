@@ -212,16 +212,16 @@ class TestInkTheme:
 
 def conjugate_sketch() -> Sketch:
     g = euclidean_metric(4)
-    f_a, g_a, _, g_b = basis_vectors(g)
+    e_1, f_1, _, f_2 = basis_vectors(g)
     depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
     sketch = Sketch(depiction=depiction, size=(4.0, 3.0))
     sketch.space(OrganicSpace(seed=3))
-    sketch.plane(f_a, g_a, at=(-2.0, 0.0, 0.0))
-    tip = sketch.vector(f_a + g_b, label="$ψ$")
+    sketch.plane(e_1, f_1, at=(-2.0, 0.0, 0.0))
+    tip = sketch.vector(e_1 + f_2, label="$ψ$")
     sketch.line((0.0, 0.0, 0.0), tip)
-    sketch.circle((0.0, 0.0, 0.0), f_a, g_a, arrow=True)
+    sketch.circle((0.0, 0.0, 0.0), e_1, f_1, arrow=True)
     sketch.point(tip)
-    sketch.label("$f_a$", (1.0, 0.0, 0.0))
+    sketch.label("$e_1$", (1.0, 0.0, 0.0))
 
     return sketch
 
