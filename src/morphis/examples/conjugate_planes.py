@@ -44,14 +44,12 @@ PERIOD = 2 * pi / OMEGA_A
 ORBIT_TIMES = linspace(0.0, PERIOD, 721)
 
 DURATION = 10.0
-
-# Where the state arrow is based and how large it is drawn: a still can lean the
-# arrow between the planes, while the moving state needs room for its whole orbit
-STILL_ORIGIN = (-1.15, -0.9, -1.1)
-STILL_SCALE = 1.55
-MOTION_ORIGIN = (0.35, 0.9, -0.35)
-MOTION_SCALE = 0.8
 FRAME_RATE = 30
+
+# Where the state arrow is based and how large it is drawn: room for its whole
+# orbit in the open space between the two planes
+STATE_ORIGIN = (0.35, 0.9, -0.35)
+STATE_SCALE = 0.8
 
 # True geometry: the realified qubit, directions (1, 1̇, 2, 2̇) as e_1..e_4
 METRIC = euclidean_metric(4)
@@ -85,13 +83,7 @@ def orbit() -> Vector:
     return states
 
 
-def create_sketch(
-    theme: str = "ink",
-    t: float = 0.0,
-    trail: bool = False,
-    origin: tuple[float, float, float] = STILL_ORIGIN,
-    scale: float = STILL_SCALE,
-) -> Sketch:
+def create_sketch(theme: str = "ink", t: float = 0.0) -> Sketch:
     state = evolve(INITIAL_STATE, t)
     shadow_a, shadow_b = shadows(state)
 
@@ -108,7 +100,8 @@ def create_sketch(
     sketch.space(OrganicSpace(seed=3, stretch=(1.6, 1.25, 1.05), size=3.2))
 
     # Placement: where each piece sits in the drawing space
-    origin = array(origin)
+    origin = array(STATE_ORIGIN)
+    scale = STATE_SCALE
     anchor_a = array([-2.25, 0.5, 0.75])
     anchor_b = array([1.9, 0.1, -2.25])
     reach = 1.3
@@ -125,14 +118,13 @@ def create_sketch(
     sketch.circle(anchor_a, F_A, G_A, radius=norm(shadow_a.data), arc=(1.0, 2.6 + pi), arrow=True)
     sketch.circle(anchor_b, F_B, G_B, radius=norm(shadow_b.data), arc=(1.25, 2.85 + pi), arrow=True)
 
-    if trail:
-        # The drawn state's closed orbit over one period, and the part already traversed
-        path = origin + scale * sketch.drawn(orbit())
-        sketch.curve(path, dashed=True, weight="hair", level=0.35)
-        elapsed = searchsorted(ORBIT_TIMES, t % PERIOD)
-        traversed = concatenate([path[:elapsed], [origin + scale * sketch.drawn(state)]])
-        if len(traversed) > 1:
-            sketch.curve(traversed, level=0.5)
+    # The drawn state's closed orbit over one period, and the part already traversed
+    path = origin + scale * sketch.drawn(orbit())
+    sketch.curve(path, dashed=True, weight="hair", level=0.35)
+    elapsed = searchsorted(ORBIT_TIMES, t % PERIOD)
+    traversed = concatenate([path[:elapsed], [origin + scale * sketch.drawn(state)]])
+    if len(traversed) > 1:
+        sketch.curve(traversed, level=0.5)
 
     tip_a = sketch.vector(shadow_a, at=anchor_a, weight="bold", label="$ψ_a$", label_offset=-13, label_size=14)
     tip_b = sketch.vector(shadow_b, at=anchor_b, weight="bold", label="$ψ_b$", label_offset=-17, label_size=14)
@@ -163,12 +155,7 @@ if __name__ == "__main__":
 
     if is_animation:
         times = linspace(0.0, PERIOD, int(DURATION * FRAME_RATE), endpoint=False)
-        path = animate(
-            lambda t: create_sketch(theme, t, trail=True, origin=MOTION_ORIGIN, scale=MOTION_SCALE),
-            times,
-            output,
-            fps=FRAME_RATE,
-        )
+        path = animate(lambda t: create_sketch(theme, t), times, output, fps=FRAME_RATE)
     else:
         path = create_sketch(theme).save(output)
 
