@@ -75,3 +75,6 @@ pip-wheel-metadata/
 
 # Throwaway figure renders
 figures/scratch/
+
+# macOS metadata; listed again here so it beats the figures/ exception above
+**/.DS_Store
