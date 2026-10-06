@@ -5,7 +5,11 @@ Visualizes a 3D frame rotating around a diagonal axis.
 The frame is displayed as three arrows from the origin.
 
 Run: uv run python -m morphis.examples.rotations_3d
+Record: uv run python -m morphis.examples.rotations_3d figures/rotations-3d/rotations-3d.gif
 """
+
+import sys
+from contextlib import nullcontext
 
 from numpy import array, diff, pi, sqrt
 from numpy.linalg import norm
@@ -31,11 +35,12 @@ def compute_delta_angles(duration: float, total_angle: float) -> list[float]:
     return list(diff([0.0] + angles))
 
 
-def create_scene():
+def create_scene(output: str | None = None) -> Scene:
     """
     Create the 3D frame rotation animation.
 
-    Returns configured Scene ready for play() or export().
+    Shown live in a window, or, given an output path (.gif or .mp4), recorded
+    off screen to that file.
     """
     # Build basis vectors
     g = euclidean_metric(3)
@@ -54,6 +59,7 @@ def create_scene():
     scene = Scene(
         frame_rate=FRAME_RATE,
         theme="obsidian",
+        window=output is None,
     )
     scene.add(F, color=RED, filled=True)
     scene.fade_in(F, t=0.0, duration=DURATION_FADE_IN)
@@ -71,24 +77,29 @@ def create_scene():
     print(f"Rotate 4π: {DURATION_ROTATE}s")
     print()
 
-    t = 0.0
-    dt = 1.0 / FRAME_RATE
+    recording = scene.record(output) if output else nullcontext()
+    with recording:
+        t = 0.0
+        dt = 1.0 / FRAME_RATE
 
-    # Fade in
-    for _ in range(int(DURATION_FADE_IN * FRAME_RATE) + 1):
-        scene.capture(t)
-        t += dt
+        # Fade in
+        for _ in range(int(DURATION_FADE_IN * FRAME_RATE) + 1):
+            scene.capture(t)
+            t += dt
 
-    # Rotation
-    for d_angle in d_angles:
-        M = rotor(b, d_angle)
-        F.data[...] = F.transform(M).data
-        scene.capture(t)
-        t += dt
+        # Rotation
+        for d_angle in d_angles:
+            M = rotor(b, d_angle)
+            F.data[...] = F.transform(M).data
+            scene.capture(t)
+            t += dt
 
     return scene
 
 
 if __name__ == "__main__":
-    scene = create_scene()
+    output = sys.argv[1] if len(sys.argv) > 1 else None
+    scene = create_scene(output)
+    if output:
+        print(f"Saved {output}")
     scene.show()

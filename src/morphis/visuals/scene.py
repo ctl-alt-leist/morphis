@@ -816,12 +816,13 @@ class Scene:
         self._backend.export_obj(str(path))
 
     @classmethod
-    def load(cls, path: str | Path) -> Scene:
+    def load(cls, path: str | Path, window: bool = True) -> Scene:
         """
         Load a scene from a .scene file.
 
         Args:
             path: Path to the .scene file
+            window: Open on screen (the default) or render off screen
 
         Returns:
             Scene ready to display with show()
@@ -839,6 +840,7 @@ class Scene:
             size=data.size,
             projection=data.projection,
             show_basis=data.show_basis,
+            window=window,
         )
 
         for elem_data in data.elements:
