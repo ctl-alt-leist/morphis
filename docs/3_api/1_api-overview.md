@@ -465,3 +465,24 @@ scene.show()
 ```
 
 Each element translates the projection axes through its own metric, so `(1, 2, 3)` is x, y, z in every signature and index 0 raises `IndexError` for a Euclidean element. See [Visualization Architecture](../4_design/4_visuals_architecture.md).
+
+### Ink Sketches
+
+```python
+from morphis.elements import basis_vectors, euclidean_metric
+from morphis.visuals.ink import Camera, Depiction, OrganicSpace, Sketch
+
+g = euclidean_metric(4)
+e_a, f_a, e_b, f_b = basis_vectors(g)  # e_m and its partner e_ṁ (as f_m)
+
+# The figure's choice: both mode directions e_a and e_b drawn along x
+depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
+
+sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), depiction=depiction)
+sketch.space(OrganicSpace(seed=3))          # same seed, same shape
+sketch.plane(e_a, f_a, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)))
+sketch.vector(e_a + f_b, label="$ψ$")       # Vectors are depicted; triples are placements
+sketch.save("figures/example.png")
+```
+
+Pen-and-ink conceptual figures rendered with matplotlib. See [Visualization Architecture](../4_design/4_visuals_architecture.md) and `morphis.examples.conjugate_planes`.

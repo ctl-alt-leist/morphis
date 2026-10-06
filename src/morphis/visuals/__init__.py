@@ -13,7 +13,8 @@ Main classes:
 Projection axes and basis labels use user-facing geometric indices, translated
 through each element's Metric: (1, 2, 3) is x, y, z in every signature.
 
-For PGA-specific visualization, see the contexts submodule.
+For PGA-specific visualization, see the contexts submodule. For pen-and-ink
+conceptual figures, see morphis.visuals.ink.
 """
 
 # Core drawing surface

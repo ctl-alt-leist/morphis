@@ -72,3 +72,6 @@ pip-wheel-metadata/
 
 # But allow figures/ for README assets
 !figures/**
+
+# Throwaway figure renders
+figures/scratch/
