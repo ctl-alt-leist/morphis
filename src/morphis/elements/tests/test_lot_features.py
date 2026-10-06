@@ -1,5 +1,5 @@
 """
-Tests for Maxwell features: Vector.stack, Vector.real/imag, and lot indexing.
+Tests for lot features: Vector.stack, Vector.real/imag, and lot indexing.
 """
 
 import numpy as np
@@ -301,15 +301,15 @@ class TestLotIndexingBiotSavart:
     """Integration test mimicking Biot-Savart computation pattern."""
 
     def test_biot_savart_pattern(self, g):
-        """Test the Biot-Savart broadcasting pattern from the spec."""
-        M = 5  # sensors
-        N = 3  # wires
-        K = 100  # points per wire
+        """Test the Biot-Savart broadcasting pattern."""
+        M = 5  # field points
+        N = 3  # source curves
+        K = 100  # points per curve
 
-        # Sensor positions: lot (M,)
+        # Field points: lot (M,)
         x = Vector(np.random.randn(M, 3), grade=1, metric=g)
 
-        # Wire points: lot (N, K)
+        # Curve points: lot (N, K)
         y = Vector(np.random.randn(N, K, 3), grade=1, metric=g)
 
         # Line elements: lot (N, K-1) via slicing
