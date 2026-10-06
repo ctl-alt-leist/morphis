@@ -46,6 +46,7 @@ from pydantic import BaseModel, ConfigDict
 
 from morphis.elements.vector import Vector
 from morphis.operations.factorization import spanning_vectors
+from morphis.visuals.projection import DEFAULT_PROJECTION, ProjectionConfig, basis_labels, project_blade
 from morphis.visuals.theme import Color
 
 
@@ -395,7 +396,8 @@ def create_quadvector_mesh(
     Args:
         origin: Origin point (nD, where n >= 4)
         u, v, w, x: Four spanning vectors (each nD)
-        projection_axes: Which 3 axes to project onto (e.g., (0,1,2) for e123)
+        projection_axes: Internal storage slots of the 3 axes to project onto,
+            already translated through the metric by the caller
         shaft_radius: Tube radius for edges
         face_opacity: Opacity for faces
 
@@ -523,7 +525,8 @@ def create_frame_mesh(
         origin: Origin point (nD)
         vectors: Frame vectors, shape (k, d)
         shaft_radius: Arrow shaft radius
-        projection_axes: For dim >= 4, which 3 axes to project onto
+        projection_axes: For dim >= 4, internal storage slots of the 3 axes to
+            project onto, already translated through the metric by the caller
         filled: If True, draw edges and faces of spanned shape
 
     Returns:
@@ -739,7 +742,8 @@ def create_blade_mesh(
         vectors: Spanning vectors (shape depends on grade)
         shaft_radius: Arrow shaft radius (for vectors/bivectors)
         edge_radius: Edge tube radius (for trivectors/quadvectors)
-        projection_axes: For grade >= 4, which 3 axes to project onto
+        projection_axes: For dim >= 4, internal storage slots of the 3 axes to
+            project onto, already translated through the metric by the caller
 
     Returns:
         (edges_mesh, faces_mesh, origin_marker_mesh)
@@ -965,7 +969,7 @@ def draw_blade(
             direction = b.data[:3] if len(b.data) >= 3 else array([*b.data, *[0.0] * (3 - len(b.data))])
             # Find dominant axis for default label
             if name is None:
-                dominant = int(argmax(np_abs(direction))) + 1
+                dominant = b.metric.to_user(int(argmax(np_abs(direction))))
                 name = f"e{dominant}"
             # Offset perpendicular to direction
             label_pos = origin + direction * 0.5 + array([0, -1, -1]) / norm(array([0, 1, 1])) * label_offset
@@ -976,11 +980,11 @@ def draw_blade(
             v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
             # Default label from dominant axes
             if name is None:
-                idx1 = int(argmax(np_abs(u))) + 1
-                idx2 = int(argmax(np_abs(v))) + 1
-                if idx1 > idx2:
-                    idx1, idx2 = idx2, idx1
-                name = f"e{idx1}{idx2}"
+                axis_u = b.metric.to_user(int(argmax(np_abs(u))))
+                axis_v = b.metric.to_user(int(argmax(np_abs(v))))
+                if axis_u > axis_v:
+                    axis_u, axis_v = axis_v, axis_u
+                name = f"e{axis_u}{axis_v}"
             normal = cross(u, v)
             if norm(normal) > 1e-10:
                 normal = normal / norm(normal)
@@ -993,7 +997,7 @@ def draw_blade(
             v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
             w = w[:3] if len(w) >= 3 else array([*w, *[0.0] * (3 - len(w))])
             if name is None:
-                name = "e123"
+                name = "e" + "".join(str(b.metric.to_user(slot)) for slot in range(3))
             label_pos = origin + (u + v + w) / 2 - array([1, 1, 1]) / norm(array([1, 1, 1])) * label_offset * 3
         else:
             label_pos = origin
@@ -1058,7 +1062,7 @@ def draw_coordinate_basis(
     if labels is not None:
         names = list(labels)
     else:
-        names = [r"$\mathbf{e}_1$", r"$\mathbf{e}_2$", r"$\mathbf{e}_3$"]
+        names = list(basis_labels(DEFAULT_PROJECTION))
 
     label_actors = []
 
@@ -1373,7 +1377,6 @@ def render_vector(
     For d > 3: Projects to 3D using specified or default projection.
     Handles collection dimensions by rendering multiple arrows.
     """
-    from morphis.visuals.projection import ProjectionConfig, project_blade
 
     if blade.grade != 1:
         raise ValueError(f"render_vector requires grade-1, got {blade.grade}")
@@ -1424,7 +1427,6 @@ def render_bivector(
 
     For d > 3: Projects to 3D first.
     """
-    from morphis.visuals.projection import ProjectionConfig, project_blade
 
     if blade.grade != 2:
         raise ValueError(f"render_bivector requires grade-2, got {blade.grade}")
@@ -1582,7 +1584,6 @@ def render_trivector(
 
     For d > 3: Projects to 3D first.
     """
-    from morphis.visuals.projection import ProjectionConfig, project_blade
 
     if blade.grade != 3:
         raise ValueError(f"render_trivector requires grade-3, got {blade.grade}")

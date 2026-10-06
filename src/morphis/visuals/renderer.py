@@ -36,7 +36,7 @@ class TrackedObject(BaseModel):
     faces_actor: Any | None  # pv.Actor | None
     origin_actor: Any | None  # pv.Actor | None
     opacity: float = 1.0
-    projection_axes: tuple[int, int, int] | None = None  # For nD -> 3D projection
+    projection_axes: tuple[int, int, int] | None = None  # Internal storage slots for nD -> 3D projection
     filled: bool = False  # For frames: whether to show edges and faces
     model: Any | None = None  # VisualModel reference for grade=-2
     model_opacity: float = 1.0  # Model-specific opacity
@@ -130,7 +130,8 @@ class Renderer:
             vectors: Spanning vectors (shape depends on grade), or vertices for models
             color: RGB color tuple (0-1 range), or None for auto
             opacity: Initial opacity [0, 1]
-            projection_axes: For nD blades, which 3 axes to project onto
+            projection_axes: For nD blades, internal storage slots of the 3 axes
+                to project onto (translated through the metric by the caller)
             filled: For frames, whether to show edges and faces of spanned shape
             model: VisualModel reference (required for grade=-2)
             model_opacity: Model-specific opacity setting (for grade=-2)
@@ -235,7 +236,8 @@ class Renderer:
             origin: New origin point
             vectors: New spanning vectors (or vertices for models)
             opacity: New opacity (or None to keep current)
-            projection_axes: For nD blades, which 3 axes to project onto
+            projection_axes: For nD blades, internal storage slots of the 3 axes
+                to project onto (translated through the metric by the caller)
         """
         if obj_id not in self._objects:
             return

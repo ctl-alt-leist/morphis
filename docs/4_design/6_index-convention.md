@@ -64,6 +64,15 @@ replaces that one table without touching any call site.
 - **`.on[...]`** — geometric component access. `v.on[1]` is the x component;
   `B.on[1, 2]` is the `e_12` component of a bivector, with antisymmetry
   (`B.on[2, 1] == -B.on[1, 2]`) preserved through the translation.
+- **Visualization and projection** — `Scene(projection=...)`,
+  `Scene.set_projection`, `Animation.set_projection`, `ProjectionConfig.axes`,
+  and `get_projection_axes` take and report user-facing geometric indices.
+  The default projection is `(1, 2, 3)`, x y z in every signature. Each element
+  translates the axes through its own metric at projection time
+  (`to_internal_multi`), so `Scene.set_projection((2, 3, 4))` shows `e_2 e_3
+  e_4` of a 4D Euclidean element and index 0 raises for it. Basis labels are
+  built from the same indices, and `draw_blade` default names use `to_user`.
+  Renderer and mesh helpers below this boundary take internal slots.
 - **Display** — when a labeled printer (`3 e_1 + ...`) is added, blade labels
   should be produced via `to_user` so nothing leaks a 0-based storage index. The
   current printer shows the raw component array and needs no translation.

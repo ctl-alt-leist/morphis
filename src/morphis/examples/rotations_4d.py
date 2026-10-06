@@ -56,7 +56,7 @@ def create_scene():
     scene = Scene(
         frame_rate=FRAME_RATE,
         theme="obsidian",
-        projection=(0, 1, 2),
+        projection=(1, 2, 3),
     )
     scene.add(F, color=RED, filled=True)
     scene.fade_in(F, t=0.0, duration=DURATION_FADE_IN)
@@ -91,7 +91,7 @@ def create_scene():
             t += dt
 
     # Switch to e234 projection
-    scene.set_projection((1, 2, 3))
+    scene.set_projection((2, 3, 4))
 
     # Last two rotations in e234 projection
     for b in [b1, b2]:

@@ -58,16 +58,16 @@ src/morphis/
 │   └── docgen.py               # API documentation generator
 │
 ├── visuals/                     # Visualization
-│   ├── __init__.py             # Public API, window size constants
-│   ├── scene.py                # Scene - unified visualization (recommended)
-│   ├── canvas.py               # Low-level 3D canvas
-│   ├── loop.py                 # Animation class (legacy)
-│   ├── renderer.py             # Blade rendering utilities
-│   ├── theme.py                # Color themes
-│   ├── effects.py              # Visual effects (FadeIn, FadeOut)
+│   ├── __init__.py             # Public API exports
+│   ├── scene.py                # Scene - static and live-animated visualization
+│   ├── canvas.py               # Immediate-mode 3D canvas
+│   ├── loop.py                 # Animation - recording, playback, GIF/MP4 export
+│   ├── renderer.py             # Actor management for Animation
+│   ├── theme.py                # Color themes, window sizes
+│   ├── effects.py              # Visual effects (FadeIn, FadeOut, Hold)
 │   ├── contexts.py             # PGA-specific rendering
 │   ├── operations.py           # Operation visualization
-│   ├── projection.py           # Dimension projection
+│   ├── projection.py           # nD -> 3D projection via Metric index translation
 │   ├── model.py                # VisualModel for 3D meshes
 │   ├── text.py                 # Text annotations
 │   ├── backends/               # Rendering backend abstraction

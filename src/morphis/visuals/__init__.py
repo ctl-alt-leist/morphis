@@ -5,16 +5,18 @@ Provides 3D visualization tools for geometric algebra objects including
 blades, frames, surfaces, and their transformations. Built on PyVista/VTK.
 
 Main classes:
-- Scene: Unified interface for static and animated visualization (NEW)
+- Scene: Unified interface for static and animated visualization
 - Animation: Real-time animation loop with recording support
 - Canvas: High-level 3D drawing surface
 - Text: 3D text annotations
 
+Projection axes and basis labels use user-facing geometric indices, translated
+through each element's Metric: (1, 2, 3) is x, y, z in every signature.
+
 For PGA-specific visualization, see the contexts submodule.
 """
 
-# New unified interface
-# Core visualization (legacy, still supported)
+# Core drawing surface
 from morphis.visuals.canvas import Canvas as Canvas, ModelStyle as ModelStyle
 
 # Context-aware visualization (PGA)

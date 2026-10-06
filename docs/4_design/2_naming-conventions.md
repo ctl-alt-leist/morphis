@@ -34,11 +34,13 @@ This document defines the naming conventions used throughout the morphis codebas
 
 | Function | Returns | Description |
 |----------|---------|-------------|
-| `basis_vector(index, metric)` | Vector | Single basis vector $\mathbf{e}_i$ |
-| `basis_vectors(metric)` | tuple[Vector, ...] | All basis vectors $(\mathbf{e}_0, \ldots, \mathbf{e}_{d - 1})$ |
-| `basis_element(indices, metric)` | Vector | Basis k-vector $\mathbf{e}_{i_1} \wedge \cdots \wedge \mathbf{e}_{i_k}$ |
+| `basis_vector(index, metric)` | Vector | Single basis vector $\mathbf{e}_n$ |
+| `basis_vectors(metric)` | tuple[Vector, ...] | All basis vectors in index order: $(\mathbf{e}_1, \ldots, \mathbf{e}_d)$ for Euclidean, $(\mathbf{e}_0, \ldots, \mathbf{e}_{d - 1})$ for Lorentzian and PGA |
+| `basis_element(indices, metric)` | Vector | Basis k-vector $\mathbf{e}_{n_1} \wedge \cdots \wedge \mathbf{e}_{n_k}$ |
 | `geometric_basis(metric)` | dict[int, tuple] | Complete basis by grade |
-| `pseudoscalar(metric)` | Vector | Highest grade basis element $\mathbf{e}_{01\ldots(d - 1)}$ |
+| `pseudoscalar(metric)` | Vector | Highest grade basis element, $\mathbf{e}_{12\ldots d}$ for Euclidean, $\mathbf{e}_{01\ldots(d - 1)}$ for Lorentzian and PGA |
+
+Indices are user-facing geometric indices; see [Index Convention](6_index-convention.md).
 
 ### Metric Constructors
 

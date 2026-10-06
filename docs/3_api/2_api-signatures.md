@@ -1113,6 +1113,12 @@ class Scene:
     @property
     def frame_rate(self): ...
 
+    @property
+    def projection(self): ...
+
+    @property
+    def basis_labels(self): ...
+
     def __init__(self, projection: 'tuple[int, ...] | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (1280, 800), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True, auto_camera: 'bool' = True)
         """Initialize self.  See help(type(self)) for accurate signature."""
 
@@ -1201,10 +1207,10 @@ class ModelStyle(BaseModel):
 class Canvas:
     """3D visualization canvas with theme support and automatic color cycling."""
 
-    def __init__(self, theme: 'str | Theme' = Theme(name='obsidian', background=(0.12, 0.13, 0.14), e1=(0.85, 0.35, 0.3), e2=(0.4, 0.75, 0.45), e3=(0.35, 0.5, 0.9), palette=Palette(colors=((0.95, 0.55, 0.45), (0.55, 0.8, 0.7), (0.9, 0.75, 0.4), (0.5, 0.65, 0.9), (0.85, 0.5, 0.7), (0.45, 0.8, 0.85))), accent=(0.95, 0.85, 0.4), muted=(0.45, 0.47, 0.5), label=(0.82, 0.84, 0.86)), title: 'str | None' = None, size: 'tuple[int, int]' = (1200, 900), show_basis: 'bool' = True, basis_axes: 'tuple[int, int, int]' = (0, 1, 2))
+    def __init__(self, theme: 'str | Theme' = Theme(name='obsidian', background=(0.12, 0.13, 0.14), e1=(0.85, 0.35, 0.3), e2=(0.4, 0.75, 0.45), e3=(0.35, 0.5, 0.9), palette=Palette(colors=((0.95, 0.55, 0.45), (0.55, 0.8, 0.7), (0.9, 0.75, 0.4), (0.5, 0.65, 0.9), (0.85, 0.5, 0.7), (0.45, 0.8, 0.85))), accent=(0.95, 0.85, 0.4), muted=(0.45, 0.47, 0.5), label=(0.82, 0.84, 0.86)), title: 'str | None' = None, size: 'tuple[int, int]' = (1200, 900), show_basis: 'bool' = True, basis_axes: 'tuple[int, int, int]' = (1, 2, 3))
         """Initialize self.  See help(type(self)) for accurate signature."""
 
-    def basis(self, scale: 'float' = 1.0, axes: 'tuple[int, int, int]' = (0, 1, 2), labels: 'bool' = True)
+    def basis(self, scale: 'float' = 1.0, axes: 'tuple[int, int, int]' = (1, 2, 3), labels: 'bool' = True)
         """Draw coordinate axes at origin using PyVista's native axes."""
 
     def set_basis_axes(self, axes: 'tuple[int, int, int]')
@@ -1316,6 +1322,15 @@ class ProjectionConfig(BaseModel):
 **Functions:**
 
 ```python
+def validate_projection_axes(axes: tuple[int, ...]) -> tuple[int, int, int]
+    """Check that projection axes are exactly three integers and return them as a tuple."""
+
+def projection_slots(axes: tuple[int, ...], metric: metric.Metric) -> tuple[int, ...]
+    """Translate user-facing projection axes to internal storage slots."""
+
+def basis_labels(axes: tuple[int, ...]) -> tuple[str, ...]
+    """Basis-axis labels for user-facing geometric indices."""
+
 def project_vector(blade: vector.Vector, config: projection.ProjectionConfig) -> vector.Vector
     """Project a vector blade to lower dimension."""
 
@@ -1332,7 +1347,7 @@ def project_blade(blade: vector.Vector, config: projection.ProjectionConfig | No
     """Project a blade to lower dimension for visualization."""
 
 def get_projection_axes(blade: vector.Vector, config: projection.ProjectionConfig | None = None) -> tuple[int, ...]
-    """Get the axes that would be used for projection."""
+    """Get the user-facing geometric indices that would be used for projection."""
 ```
 
 
