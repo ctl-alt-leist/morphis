@@ -38,5 +38,8 @@ jobs:
       - name: Set up Python
         run: uv python install
 
+      - name: Set up headless display
+        uses: pyvista/setup-headless-display-action@v5
+
       - name: Test
         run: uv run --extra dev pytest src/ -v
