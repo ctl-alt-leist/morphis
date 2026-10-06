@@ -38,14 +38,16 @@ class RenderBackend(Protocol):
         size: tuple[int, int],
         theme: "Theme",
         show_basis: bool = True,
+        window: bool = True,
     ) -> None:
         """
-        Initialize the rendering window.
+        Initialize the renderer.
 
         Args:
-            size: Window size (width, height)
+            size: Image size (width, height)
             theme: Visual theme for colors
             show_basis: Whether to show coordinate basis
+            window: Open an on-screen window; False renders off-screen only
         """
         ...
 
@@ -93,6 +95,22 @@ class RenderBackend(Protocol):
         Args:
             object_id: ID from add_mesh
             vertices: New vertex positions (N, 3)
+        """
+        ...
+
+    def replace_mesh(
+        self,
+        object_id: str,
+        vertices: NDArray,
+        faces: NDArray,
+    ) -> None:
+        """
+        Replace a mesh's vertices and connectivity, for geometry whose topology may change.
+
+        Args:
+            object_id: ID from add_mesh
+            vertices: New vertex positions (N, 3)
+            faces: New face connectivity in indexed format
         """
         ...
 
@@ -372,6 +390,10 @@ class RenderBackend(Protocol):
         Returns:
             RGB image array (H, W, 3)
         """
+        ...
+
+    def export_obj(self, path: str) -> None:
+        """Write the current scene geometry as a Wavefront OBJ file."""
         ...
 
     def show(self, interactive: bool = True) -> None:

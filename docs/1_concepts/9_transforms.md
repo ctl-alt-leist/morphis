@@ -6,11 +6,15 @@ Geometric algebra provides a unified framework for all orthogonal transformation
 
 Transformations in geometric algebra act via:
 
-$$\mathbf{x}' = M \mathbf{x} \tilde{M}$$
+```math
+\mathbf{x}' = M \mathbf{x} \tilde{M}
+```
 
 or for reflections:
 
-$$\mathbf{x}' = -\mathbf{n} \mathbf{x} \mathbf{n}$$
+```math
+\mathbf{x}' = -\mathbf{n} \mathbf{x} \mathbf{n}
+```
 
 This pattern:
 - Preserves geometric structure (grade, norm)
@@ -28,7 +32,9 @@ x_transformed = transform(x, M)  # M * x * ~M
 
 A reflection through the hyperplane perpendicular to unit vector $\mathbf{n}$:
 
-$$\mathbf{v}' = -\mathbf{n} \mathbf{v} \mathbf{n}$$
+```math
+\mathbf{v}' = -\mathbf{n} \mathbf{v} \mathbf{n}
+```
 
 Properties:
 - **Involution**: Two reflections give identity
@@ -43,15 +49,15 @@ Any orthogonal transformation in $d$ dimensions factors as at most $d$ reflectio
 
 A **rotor** is an even versor satisfying $R \tilde{R} = 1$. It represents rotation:
 
-$$
+```math
 v' = R v \tilde{R}
-$$
+```
 
 ### Construction from Bivector
 
-$$
-R = e^{-b\theta/2} = \cos(\theta/2) - \sin(\theta/2) \, \hat{b}
-$$
+```math
+R = e^{-b\theta/2} = \cos(\theta/2) - \sin(\theta/2) \hat{b}
+```
 
 where $\hat{b}$ is the unit bivector defining the rotation plane.
 
@@ -75,15 +81,17 @@ v_rotated = R * e1 * ~R  # e1 -> e2
 
 The rotation action expands to:
 
-$$
-x' = x + \sin(\theta) \, b \cdot x + (1 - \cos(\theta)) \, b \cdot (b \cdot x)
-$$
+```math
+x' = x + \sin(\theta) b \cdot x + (1 - \cos(\theta)) b \cdot (b \cdot x)
+```
 
 ### Two Reflections = One Rotation
 
 A rotor equals the product of two reflection vectors:
 
-$$R = \mathbf{n}_2 \mathbf{n}_1$$
+```math
+R = \mathbf{n}_2 \mathbf{n}_1
+```
 
 The rotation angle is twice the angle between the reflection planes.
 
@@ -91,7 +99,9 @@ The rotation angle is twice the angle between the reflection planes.
 
 In $d$ dimensions, there are $\binom{d}{2}$ independent rotation planes. In 4D:
 
-$$\{\mathbf{e}_{12}, \mathbf{e}_{13}, \mathbf{e}_{14}, \mathbf{e}_{23}, \mathbf{e}_{24}, \mathbf{e}_{34}\}$$
+```math
+\{\mathbf{e}_{12}, \mathbf{e}_{13}, \mathbf{e}_{14}, \mathbf{e}_{23}, \mathbf{e}_{24}, \mathbf{e}_{34}\}
+```
 
 A general 4D rotation may involve multiple simultaneous planes (double rotation).
 
@@ -115,7 +125,9 @@ In Projective Geometric Algebra, translation is a versor transformation.
 
 For translation by vector $\mathbf{t}$:
 
-$$T = e^{-\mathbf{t}_0/2} = 1 - \frac{1}{2}t^m \mathbf{e}_{0m}$$
+```math
+T = e^{-\mathbf{t}_0/2} = 1 - \frac{1}{2}t^m \mathbf{e}_{0m}
+```
 
 where $\mathbf{e}_{0m}$ are degenerate bivectors (involving the ideal direction $\mathbf{e}_0$).
 
@@ -143,11 +155,15 @@ p_translated = T * p * ~T
 
 A **motor** combines rotation and translation in PGA:
 
-$$M = RT$$
+```math
+M = RT
+```
 
 or via line exponential:
 
-$$M = e^{-\ell\,θ/2}$$
+```math
+M = e^{-\ell θ/2}
+```
 
 where $\ell$ is a line (bivector in PGA).
 
@@ -166,7 +182,9 @@ M = R * T  # Rotate after translate (different result!)
 
 Rotation and translation do not commute:
 
-$$RT \neq TR$$
+```math
+RT \neq TR
+```
 
 "Rotate then translate" differs from "translate then rotate."
 
@@ -176,7 +194,9 @@ PGA embeds $d$-dimensional Euclidean space in a $(d + 1)$-dimensional Clifford a
 
 ### Metric Structure
 
-$$g = \text{diag}(0, 1, 1, \ldots, 1)$$
+```math
+g = \text{diag}(0, 1, 1, \ldots, 1)
+```
 
 The $\mathbf{e}_0$ direction is **ideal** (at infinity).
 
@@ -184,7 +204,9 @@ The $\mathbf{e}_0$ direction is **ideal** (at infinity).
 
 A Euclidean point $\mathbf{x} = (x^1, \ldots, x^d)$ embeds as:
 
-$$\mathbf{p} = \mathbf{e}_0 + x^m \mathbf{e}_m$$
+```math
+\mathbf{p} = \mathbf{e}_0 + x^m \mathbf{e}_m
+```
 
 ```python
 from morphis.transforms import point, euclidean
@@ -203,7 +225,9 @@ coords = euclidean(p)  # [1, 2, 3]
 
 A direction (point at infinity):
 
-$$\mathbf{d} = v^m \mathbf{e}_m$$
+```math
+\mathbf{d} = v^m \mathbf{e}_m
+```
 
 No $\mathbf{e}_0$ component.
 
@@ -217,10 +241,14 @@ is_direction(d)  # True
 ### Geometric Constructors
 
 **Line through two points**:
-$$\ell = \mathbf{p} \wedge \mathbf{q}$$
+```math
+\ell = \mathbf{p} \wedge \mathbf{q}
+```
 
 **Plane through three points**:
-$$\pi = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}$$
+```math
+\pi = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
+```
 
 ```python
 from morphis.transforms import line, plane
@@ -232,10 +260,14 @@ p = plane(p1, p2, p3)
 ### Incidence Predicates
 
 **Collinearity** (points on a line):
-$$\mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r} = 0$$
+```math
+\mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r} = 0
+```
 
 **Point on line**:
-$$\mathbf{p} \wedge \ell = 0$$
+```math
+\mathbf{p} \wedge \ell = 0
+```
 
 ```python
 from morphis.transforms import are_collinear, point_on_line
@@ -247,10 +279,14 @@ point_on_line(p, l)
 ### Distance Functions
 
 **Point to point**:
-$$d(\mathbf{p}, \mathbf{q}) = |\mathbf{p} \wedge \mathbf{q}| / (w(\mathbf{p}) \cdot w(\mathbf{q}))$$
+```math
+d(\mathbf{p}, \mathbf{q}) = |\mathbf{p} \wedge \mathbf{q}| / (w(\mathbf{p}) \cdot w(\mathbf{q}))
+```
 
 **Point to line**:
-$$d(\mathbf{p}, \ell) = |\mathbf{p} \wedge \ell| / |\ell|$$
+```math
+d(\mathbf{p}, \ell) = |\mathbf{p} \wedge \ell| / |\ell|
+```
 
 ```python
 from morphis.transforms import distance_point_to_point, distance_point_to_line

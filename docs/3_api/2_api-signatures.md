@@ -1081,6 +1081,24 @@ class SceneData:
 
 
 ```python
+class Shape:
+    """One drawable piece of an element's depiction."""
+
+    def __init__(self, kind: 'str', geometry: 'dict[str, NDArray]', opacity: 'float' = 1.0) -> None
+        """Initialize self.  See help(type(self)) for accurate signature."""
+```
+
+
+```python
+class Part:
+    """A backend object drawing one Shape."""
+
+    def __init__(self, backend_id: 'str', kind: 'str', opacity: 'float') -> None
+        """Initialize self.  See help(type(self)) for accurate signature."""
+```
+
+
+```python
 class SceneEffect(BaseModel):
     """Effect wrapper that uses string element IDs."""
 
@@ -1105,7 +1123,7 @@ class TrackedElement(BaseModel):
 
 ```python
 class Scene:
-    """Unified visualization interface for static and animated scenes."""
+    """Unified visualization interface for static, live, and recorded scenes."""
 
     @property
     def theme(self): ...
@@ -1114,15 +1132,18 @@ class Scene:
     def frame_rate(self): ...
 
     @property
+    def window(self): ...
+
+    @property
     def projection(self): ...
 
     @property
     def basis_labels(self): ...
 
-    def __init__(self, projection: 'tuple[int, ...] | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (1280, 800), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True, auto_camera: 'bool' = True)
+    def __init__(self, projection: 'tuple[int, ...] | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (1280, 800), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True, auto_camera: 'bool' = True, window: 'bool' = True)
         """Initialize self.  See help(type(self)) for accurate signature."""
 
-    def add(self, element: 'Element', representation: 'str | None' = None, color: 'Color | None' = None, opacity: 'float' = 1.0, **kwargs) -> 'str'
+    def add(self, element: 'Element', color: 'Color | None' = None, opacity: 'float' = 1.0, **kwargs) -> 'str'
         """Add an element to the scene."""
 
     def remove(self, element_id: 'str') -> 'None'
@@ -1156,10 +1177,13 @@ class Scene:
         """Schedule a fade-out effect for an element."""
 
     def capture(self, t: 'float') -> 'None'
-        """Render current state at time t (live mode)."""
+        """Redraw every element from its current state at time t."""
+
+    def record(self, path: 'str | Path', frame_rate: 'float | None' = None) -> 'Iterator[Recording]'
+        """Record every capture inside the block to a video or GIF."""
 
     def show(self) -> 'None'
-        """Wait for user to close window."""
+        """Show the window and wait for the user to close it; an off-screen scene has nothing to show."""
 
     def close(self) -> 'None'
         """Close the scene and clean up."""
@@ -1169,6 +1193,25 @@ class Scene:
 
     def save(self, path: 'str | Path') -> 'None'
         """Save scene to file."""
+```
+
+
+### `morphis.visuals.recording`
+
+*Recording*
+
+```python
+class Recording:
+    """A video or GIF being written, one frame at a time."""
+
+    def __init__(self, path: 'str | Path', frame_rate: 'float')
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def append(self, image: 'NDArray') -> 'None'
+        """Append one RGB (or RGBA) image of shape (height, width, 3 or 4)."""
+
+    def close(self) -> 'None'
+        """Finalize the file."""
 ```
 
 
@@ -1477,88 +1520,6 @@ def render_with_dual(blade: vector.Vector, canvas: canvas.Canvas | None = None, 
 ```
 
 
-### `morphis.visuals.loop`
-
-*Animation - Observer and Recorder*
-
-```python
-class Snapshot(BaseModel):
-    """State of all tracked objects at a specific time."""
-
-    def __init__(self, /, **data: 'Any') -> 'None'
-        """Create a new model by parsing and validating input data from keyword arguments."""
-```
-
-
-```python
-class AnimationTrack(BaseModel):
-    """Animation-specific tracking info for a blade, frame, or model."""
-
-    def __init__(self, /, **data: 'Any') -> 'None'
-        """Create a new model by parsing and validating input data from keyword arguments."""
-```
-
-
-```python
-class Animation:
-    """Animation observer and recorder."""
-
-    @property
-    def observer(self): ...
-
-    def __init__(self, frame_rate: int = 60, theme: str | theme.Theme = 'obsidian', size: tuple[int, int] = (1800, 1350), show_basis: bool = True, auto_camera: bool = True, fps: int | None = None)
-        """Initialize self.  See help(type(self)) for accurate signature."""
-
-    def watch(self, *targets: vector.Vector | frame.Frame | model.VisualModel, color: tuple[float, float, float] | None = None, filled: bool = False, opacity: float = 1.0) -> int | list[int]
-        """Register one or more blades, frames, or models to observe."""
-
-    def unwatch(self, *targets: vector.Vector | frame.Frame | model.VisualModel)
-        """Stop watching one or more blades, frames, or models."""
-
-    def set_vectors(self, blade: vector.Vector, vectors: NDArray, numpy.dtype[~_ScalarT]], origin: NDArray, numpy.dtype[~_ScalarT]] | None = None)
-        """Set the spanning vectors for a blade directly."""
-
-    def set_projection(self, axes: tuple[int, int, int], labels: tuple[str, str, str] | None = None)
-        """Set the coordinate projection for the canvas."""
-
-    def fade_in(self, target: vector.Vector | frame.Frame, t: float, duration: float)
-        """Schedule a fade-in effect."""
-
-    def fade_out(self, target: vector.Vector | frame.Frame, t: float, duration: float)
-        """Schedule a fade-out effect."""
-
-    def start(self, live: bool = False)
-        """Start an animation session."""
-
-    def capture(self, t: float)
-        """Capture the current state of all tracked objects at time t."""
-
-    def finish(self)
-        """End an animation session (live mode)."""
-
-    def play(self, loop: bool = False)
-        """Play back recorded snapshots (batch mode)."""
-
-    def save(self, filename: str, loop: bool = True)
-        """Save the animation to a file."""
-
-    def camera(self, position=None, focal_point=None)
-        """Set camera position and/or focal point."""
-
-    def set_basis_labels(self, labels: tuple[str, str, str])
-        """Set custom labels for the coordinate basis axes."""
-
-    def close(self)
-        """Close the animation window."""
-
-    def track(self, *targets: vector.Vector | frame.Frame | model.VisualModel, color: tuple[float, float, float] | None = None, filled: bool = False, opacity: float = 1.0) -> int | list[int]
-        """Register one or more blades, frames, or models to observe."""
-
-    def untrack(self, *targets: vector.Vector | frame.Frame | model.VisualModel)
-        """Stop watching one or more blades, frames, or models."""
-```
-
-
 ### `morphis.visuals.ink.sketch`
 
 *Sketch*
@@ -1627,7 +1588,7 @@ class Sketch:
 **Functions:**
 
 ```python
-def animate(build: 'Callable[[float], Sketch]', times: 'Sequence[float]', path: 'str | Path', fps: 'int' = 30, dpi: 'int' = 150) -> 'Path'
+def animate(build: 'Callable[[float], Sketch]', times: 'Sequence[float]', path: 'str | Path', frame_rate: 'float' = 30, dpi: 'int' = 150) -> 'Path'
     """Render an ink animation to a video or GIF."""
 ```
 
@@ -1768,81 +1729,5 @@ def format_multivector(M: 'MultiVector', precision: 'int' = 4) -> 'str'
 
 def format_frame(F: 'Frame', precision: 'int' = 4) -> 'str'
     """Format a Frame for display."""
-```
-
-
-### `morphis.utils.observer`
-
-*Observer - Watch and observe GA objects*
-
-```python
-class TrackedObject(BaseModel):
-    """Internal record for a tracked object."""
-
-    def __init__(self, /, **data: 'Any') -> 'None'
-        """Create a new model by parsing and validating input data from keyword arguments."""
-```
-
-
-```python
-class Observer:
-    """Observes GA objects by holding references to them."""
-
-    def __init__(self)
-        """Initialize self.  See help(type(self)) for accurate signature."""
-
-    def watch(self, *objects: base.Element, names: list[str] | None = None) -> 'Observer'
-        """Register one or more objects to observe."""
-
-    def unwatch(self, *objects: base.Element) -> 'Observer'
-        """Stop watching one or more objects."""
-
-    def clear(self) -> 'Observer'
-        """Stop tracking all objects."""
-
-    def get(self, obj_or_name: base.Element | str) -> numpy.ndarray | None
-        """Get the current data for a tracked object."""
-
-    def snapshot(self) -> dict[int, numpy.ndarray]
-        """Get current state of all tracked objects."""
-
-    def snapshot_named(self) -> dict[str, numpy.ndarray]
-        """Get current state of named objects only."""
-
-    def reset_baseline(self, *objects: base.Element) -> 'Observer'
-        """Reset the baseline (for diff computation) to current state."""
-
-    def diff(self, obj_or_name: base.Element | str) -> numpy.ndarray | None
-        """Compute difference from baseline for an object."""
-
-    def diff_norm(self, obj_or_name: base.Element | str) -> float | None
-        """Compute norm of difference from baseline."""
-
-    def objects(self) -> list[base.Element]
-        """Return list of all tracked objects."""
-
-    def ids(self) -> list[int]
-        """Return list of all tracked object IDs."""
-
-    def names(self) -> list[str]
-        """Return list of all named objects."""
-
-    def print_state(self, prefix: str = '')
-        """Print current state of all tracked objects (for debugging)."""
-
-    def spanning_vectors(self, obj_or_name: base.Element | str) -> tuple['Vector', ...] | None
-        """Get the spanning vectors for a tracked vec."""
-
-    def spanning_vectors_as_array(self, obj_or_name: base.Element | str) -> numpy.ndarray | None
-        """Get spanning vectors as a stacked numpy array."""
-
-    def capture_state(self, obj_or_name: base.Element | str) -> dict | None
-        """Capture complete visualization state for a tracked vec."""
-
-    def track(self, *objects: base.Element, names: list[str] | None = None) -> 'Observer'
-        """Register one or more objects to observe."""
-
-    def untrack(self, *objects: base.Element) -> 'Observer'
-        """Stop watching one or more objects."""
 ```
 

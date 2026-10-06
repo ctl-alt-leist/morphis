@@ -6,7 +6,11 @@ Visualizes a 4D frame rotating with projection to 3D:
 - Rotation in arbitrary bivector planes
 
 Run: uv run python -m morphis.examples.rotations_4d
+Record: uv run python -m morphis.examples.rotations_4d figures/rotations-4d/rotations-4d.gif
 """
+
+import sys
+from contextlib import nullcontext
 
 from numpy import array, diff, pi, sqrt
 from numpy.linalg import norm
@@ -32,11 +36,12 @@ def compute_delta_angles(duration: float, total_angle: float) -> list[float]:
     return list(diff([0.0] + angles))
 
 
-def create_scene():
+def create_scene(output: str | None = None) -> Scene:
     """
     Create the 4D frame rotation animation.
 
-    Returns configured Scene ready for play() or export().
+    Shown live in a window, or, given an output path (.gif or .mp4), recorded
+    off screen to that file.
     """
     # Create 4D basis
     g = euclidean_metric(4)
@@ -56,6 +61,7 @@ def create_scene():
     scene = Scene(
         frame_rate=FRAME_RATE,
         theme="obsidian",
+        window=output is None,
         projection=(1, 2, 3),
     )
     scene.add(F, color=RED, filled=True)
@@ -74,36 +80,41 @@ def create_scene():
     print(f"4 rotation phases: {DURATION_ROTATE}s each")
     print()
 
-    t = 0.0
-    dt = 1.0 / FRAME_RATE
+    recording = scene.record(output) if output else nullcontext()
+    with recording:
+        t = 0.0
+        dt = 1.0 / FRAME_RATE
 
-    # Fade in
-    for _ in range(int(DURATION_FADE_IN * FRAME_RATE) + 1):
-        scene.capture(t)
-        t += dt
-
-    # First two rotations in e123 projection
-    for b in [b1, b2]:
-        for d_angle in d_angles:
-            M = rotor(b, d_angle)
-            F.data[...] = F.transform(M).data
+        # Fade in
+        for _ in range(int(DURATION_FADE_IN * FRAME_RATE) + 1):
             scene.capture(t)
             t += dt
 
-    # Switch to e234 projection
-    scene.set_projection((2, 3, 4))
+        # First two rotations in e123 projection
+        for b in [b1, b2]:
+            for d_angle in d_angles:
+                M = rotor(b, d_angle)
+                F.data[...] = F.transform(M).data
+                scene.capture(t)
+                t += dt
 
-    # Last two rotations in e234 projection
-    for b in [b1, b2]:
-        for d_angle in d_angles:
-            M = rotor(b, d_angle)
-            F.data[...] = F.transform(M).data
-            scene.capture(t)
-            t += dt
+        # Switch to e234 projection
+        scene.set_projection((2, 3, 4))
+
+        # Last two rotations in e234 projection
+        for b in [b1, b2]:
+            for d_angle in d_angles:
+                M = rotor(b, d_angle)
+                F.data[...] = F.transform(M).data
+                scene.capture(t)
+                t += dt
 
     return scene
 
 
 if __name__ == "__main__":
-    scene = create_scene()
+    output = sys.argv[1] if len(sys.argv) > 1 else None
+    scene = create_scene(output)
+    if output:
+        print(f"Saved {output}")
     scene.show()

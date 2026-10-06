@@ -53,18 +53,16 @@ src/morphis/
 │
 ├── utils/                       # Utilities
 │   ├── __init__.py
-│   ├── observer.py             # Observer pattern for tracking objects
+│   ├── easing.py               # Easing curves for animation timing
 │   ├── pretty.py               # Pretty printing utilities
 │   └── docgen.py               # API documentation generator
 │
 ├── visuals/                     # Visualization
 │   ├── __init__.py             # Public API exports
-│   ├── scene.py                # Scene - static and live-animated visualization
+│   ├── scene.py                # Scene - static, live, and recorded visualization
+│   ├── recording.py            # Recording - shared .mp4 / .gif writer
 │   ├── canvas.py               # Immediate-mode 3D canvas
-│   ├── loop.py                 # Animation - recording, playback, GIF/MP4 export
-│   ├── renderer.py             # Actor management for Animation
 │   ├── theme.py                # Color themes, window sizes
-│   ├── effects.py              # Visual effects (FadeIn, FadeOut, Hold)
 │   ├── contexts.py             # PGA-specific rendering
 │   ├── operations.py           # Operation visualization
 │   ├── projection.py           # nD -> 3D projection via Metric index translation
@@ -74,9 +72,11 @@ src/morphis/
 │   │   ├── __init__.py
 │   │   ├── protocol.py         # Backend interface
 │   │   └── pyvista.py          # PyVista/VTK implementation
-│   └── drawing/
-│       ├── __init__.py
-│       └── vectors.py          # Vector/frame mesh generation
+│   ├── drawing/
+│   │   ├── __init__.py
+│   │   ├── blades.py           # Oriented disks and balls for bare blades
+│   │   └── vectors.py          # Vector/frame mesh generation
+│   └── ink/                    # Pen-and-ink conceptual figures
 │
 ├── examples/                    # Example scripts
 │   └── ...

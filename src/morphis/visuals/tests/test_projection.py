@@ -17,7 +17,6 @@ from numpy.testing import assert_allclose
 
 from morphis.elements import Vector, basis_vector, euclidean_metric, lorentzian_metric, pga_metric
 from morphis.visuals import ProjectionConfig, Scene, project_blade
-from morphis.visuals.loop import Animation
 from morphis.visuals.projection import (
     DEFAULT_PROJECTION,
     basis_labels,
@@ -236,39 +235,3 @@ class TestSceneProjection:
 
             loaded = Scene.load(path)
             assert loaded.projection == (2, 3, 4)
-
-
-# =============================================================================
-# Animation
-# =============================================================================
-
-
-class TestAnimationProjection:
-    def test_default_slots(self):
-        anim = Animation()
-        v = make_vector(POINT_4D, euclidean_metric(4))
-        assert anim._projection_slots(v) == (0, 1, 2)
-
-    def test_set_projection_slots_and_labels(self):
-        anim = Animation()
-        anim.set_projection((2, 3, 4))
-        v = make_vector(POINT_4D, euclidean_metric(4))
-        assert anim._projection_slots(v) == (1, 2, 3)
-        assert anim._basis_labels == basis_labels((2, 3, 4))
-
-    def test_euclidean_zero_raises(self):
-        anim = Animation()
-        anim.set_projection((0, 1, 2))
-        v = make_vector(POINT_4D, euclidean_metric(4))
-        with pytest.raises(IndexError):
-            anim._projection_slots(v)
-
-    def test_low_dim_needs_no_projection(self):
-        anim = Animation()
-        v = make_vector([1.0, 2.0, 3.0], euclidean_metric(3))
-        assert anim._projection_slots(v) is None
-
-    def test_custom_labels_override(self):
-        anim = Animation()
-        anim.set_projection((1, 2, 3), labels=("x", "y", "z"))
-        assert anim._basis_labels == ("x", "y", "z")

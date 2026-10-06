@@ -248,23 +248,31 @@ a^m b^n
 
 ### Equations
 
-Single line:
+These docs render on GitHub, whose markdown pass runs before the math renderer and strips a backslash before punctuation. Two rules follow.
 
-```latex
-$$\mathbf{B} = B^{mn} \mathbf{e}_{mn}$$
+Display math goes in a `math` fence, not `$$`, so that row breaks (`\\`), braces (`\{`), and environments such as `cases` and `aligned` reach the renderer intact:
+
+````markdown
+```math
+\mathbf{B} = B^{mn} \mathbf{e}_{mn}
 ```
+````
 
-Multi-line with `align`:
+Multi-line, aligned on the relation:
 
-```latex
-$$
-\begin{align}
+````markdown
+```math
+\begin{aligned}
     \mathbf{a} \wedge \mathbf{b}
-        &= \frac{1}{2} a^m b^n \, \varepsilon^{mn} \, \mathbf{e}_{mn} \\ \\
-        &= \frac{1}{2}(a^1 b^2 - a^2 b^1) \, \mathbf{e}_{12}
-\end{align}
-$$
+        &= \frac{1}{2} a^m b^n \varepsilon^{mn} \mathbf{e}_{mn} \\
+        &= \frac{1}{2}(a^1 b^2 - a^2 b^1) \mathbf{e}_{12}
+\end{aligned}
 ```
+````
+
+Piecewise definitions use `cases` inside a `math` fence, one branch per row.
+
+Inline math stays in `$...$`, with braces written `\lbrace` and `\rbrace` rather than `\{` and `\}`.
 
 ### Notation
 
@@ -278,11 +286,6 @@ $$
 | Levi-Civita | $\varepsilon^{mn...}$ |
 | Metric | $g_{ab}$ |
 
-### Thin Spaces
+### Spacing Commands
 
-Use `\,` before differentials and between adjacent terms:
-
-```latex
-\int dx \, f(x)
-a^m b^n \, \varepsilon^{mn}
-```
+Do not use `\,` or sized row breaks such as `\\[1em]`. GitHub drops the backslash from `\,` and leaves a stray comma, and it does not honor the sized break. An ordinary space separates terms, and a plain `\\` breaks rows.

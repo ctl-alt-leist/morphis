@@ -4,7 +4,7 @@ Save Scene Example
 Creates a static scene with basis vectors and a bivector, then saves it.
 
 Run: uv run python -m morphis.examples.save_scene
-View: morphis view figures/basis_bivector.scene
+View: morphis view figures/basis-bivector/basis-bivector.scene
 """
 
 from pathlib import Path
@@ -19,24 +19,24 @@ def main() -> None:
     g = euclidean_metric(3)
     e1, e2, e3 = basis_vectors(g)
 
-    # Create scene
-    scene = Scene(theme="obsidian")
+    # Create scene; it is saved, never shown, so it renders off screen
+    scene = Scene(theme="obsidian", window=False)
 
     # Add basis vectors
     scene.add(e1, color=RED)
     scene.add(e2, color=GREEN)
     scene.add(e3, color=BLUE)
 
-    # Add a bivector (e1 ∧ e2 plane)
+    # Add a bivector (e1 ∧ e2 plane), drawn as an oriented disk
     scene.add(e1 ^ e2, color=ORANGE)
 
     # Ensure figures directory exists
-    figures_dir = Path("figures")
-    figures_dir.mkdir(exist_ok=True)
+    figures_dir = Path("figures") / "basis-bivector"
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     # Save both formats
-    scene_path = figures_dir / "basis_bivector.scene"
-    obj_path = figures_dir / "basis_bivector.obj"
+    scene_path = figures_dir / "basis-bivector.scene"
+    obj_path = figures_dir / "basis-bivector.obj"
 
     scene.save(scene_path)
     scene.save(obj_path)

@@ -34,8 +34,8 @@ class Operator(IndexableMixin):
         (*out_lot, *in_lot, *out_geo, *in_geo)
 
     This matches the index ordering in G^{ab}_{mn} where:
-        - m is output lot index (e.g., sensor index)
-        - n is input lot index (e.g., source index)
+        - m is the output lot index (e.g., an evaluation point)
+        - n is the input lot index (e.g., a source point)
         - a, b are output geometric indices
         - (no input geometric indices for scalar input)
 

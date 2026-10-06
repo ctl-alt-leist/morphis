@@ -6,7 +6,9 @@ Duality operations map between vectors of complementary grades, revealing the de
 
 In any $d$-dimensional space, the **unit pseudoscalar** serves as the fundamental reference element:
 
-$$\mathbb{1} = \mathbf{e}_1 \wedge \mathbf{e}_2 \wedge \cdots \wedge \mathbf{e}_d$$
+```math
+\mathbb{1} = \mathbf{e}_1 \wedge \mathbf{e}_2 \wedge \cdots \wedge \mathbf{e}_d
+```
 
 This highest-grade element represents the oriented volume of the entire space and provides the algebraic foundation for all duality operations.
 
@@ -26,49 +28,49 @@ Complements map between grades $k$ and $(d - k)$ using only the **Levi-Civita sy
 
 For a grade-$k$ k-vector $b$:
 
-$$
-\bar{b}^{m_{k + 1} \ldots m_d} = b^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
-$$
+```math
+\bar{b}^{m_{k + 1} \ldots m_d} = b^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
+```
 
 ### Left Complement
 
-$$
-\underline{b}^{m_1 \ldots m_{d - k}} = \varepsilon_{m_1 \ldots m_d} \, b^{m_{d - k + 1} \ldots m_d}
-$$
+```math
+\underline{b}^{m_1 \ldots m_{d - k}} = \varepsilon_{m_1 \ldots m_d} b^{m_{d - k + 1} \ldots m_d}
+```
 
 ### Orthogonality
 
 Complements satisfy the fundamental orthogonality relationship:
 
-$$
+```math
 u \wedge \overline{u} = \mathbb{1}
-$$
+```
 
-$$
+```math
 \underline{u} \wedge u = \mathbb{1}
-$$
+```
 
 This reveals that a k-vector and its complement span the entire space with no overlap.
 
 ### Sign Relationship
 
-$$
-\underline{u} = (-1)^{\text{grade}(u) \cdot \text{antigrade}(u)} \, \overline{u}
-$$
+```math
+\underline{u} = (-1)^{\text{grade}(u) \cdot \text{antigrade}(u)} \overline{u}
+```
 
-where antigrade = $d - $ grade.
+where antigrade = $d -$ grade.
 
 ### Involution Property
 
 Complements are involutions—applying them twice returns the original:
 
-$$
+```math
 \overline{\overline{u}} = u
-$$
+```
 
-$$
+```math
 \underline{\underline{u}} = u
-$$
+```
 
 ```python
 from morphis.operations import right_complement, left_complement
@@ -95,17 +97,17 @@ This generalizes to higher dimensions:
 
 The **Hodge dual** is the metric-dependent counterpart to complements:
 
-$$
+```math
 \star v = G(\bar{v})
-$$
+```
 
 where $G$ applies the metric to raise/lower indices.
 
 In components:
 
-$$
-(\star v)^{m_{k + 1} \ldots m_d} = \frac{1}{k!} \, g^{m_{k + 1} n_{k + 1}} \cdots g^{m_d n_d} \, v^{m_1 \ldots m_k} \, \varepsilon_{m_1 \ldots m_d}
-$$
+```math
+(\star v)^{m_{k + 1} \ldots m_d} = \frac{1}{k!} g^{m_{k + 1} n_{k + 1}} \cdots g^{m_d n_d} v^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
+```
 
 The key distinction:
 - **Complement**: Uses only Levi-Civita symbol (metric-independent)
@@ -123,15 +125,15 @@ b_dual = hodge_dual(b)
 
 ### Grade Mapping
 
-$$
+```math
 \text{grade}(\star b) = d - \text{grade}(b)
-$$
+```
 
 ### Double Hodge Dual
 
-$$
-\star \star v = (-1)^{k(d - k)} \, \text{sgn}(g) \, v
-$$
+```math
+\star \star v = (-1)^{k(d - k)} \text{sgn}(g) v
+```
 
 where $\text{sgn}(g)$ is the sign of the metric determinant:
 - Euclidean: $\text{sgn}(g) = +1$
@@ -180,9 +182,9 @@ b_dual = hodge_dual(b)  # Requires metric
 
 The intersection (meet) of two subspaces can be computed using complements:
 
-$$
+```math
 u \vee v = \overline{\left(\overline{u} \wedge \overline{v}\right)}
-$$
+```
 
 This duality formula converts intersection to a wedge product in the complement space.
 
@@ -199,7 +201,9 @@ intersection = meet(u, v)
 
 The 3D cross product is secretly the Hodge dual of the wedge product:
 
-$$\mathbf{a} \times \mathbf{b} = \star(\mathbf{a} \wedge \mathbf{b})$$
+```math
+\mathbf{a} \times \mathbf{b} = \star(\mathbf{a} \wedge \mathbf{b})
+```
 
 This explains why the cross product only works in 3D—it requires the special coincidence that vectors and bivectors have the same dimension (both 3).
 

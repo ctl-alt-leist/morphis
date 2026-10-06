@@ -6,7 +6,9 @@ An **outermorphism** (or exomorphism) is a linear map between exterior algebras 
 
 An outermorphism $f: \bigwedge V \to \bigwedge W$ preserves the wedge product:
 
-$$f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})$$
+```math
+f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})
+```
 
 This has a profound consequence: if $A: V \to W$ is a linear map on grade-1 vectors, it extends **uniquely** to an outermorphism on all grades.
 
@@ -14,25 +16,31 @@ This has a profound consequence: if $A: V \to W$ is a linear map on grade-1 vect
 
 Given a linear map $A: V \to W$ on vectors, its **$k$-th exterior power** $\bigwedge^k A$ acts on grade-$k$ vectors:
 
-$$(\bigwedge^k A)(\mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{v}_k) = A(\mathbf{v}_1) \wedge A(\mathbf{v}_2) \wedge \cdots \wedge A(\mathbf{v}_k)$$
+```math
+(\bigwedge^k A)(\mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{v}_k) = A(\mathbf{v}_1) \wedge A(\mathbf{v}_2) \wedge \cdots \wedge A(\mathbf{v}_k)
+```
 
 ### Component Form
 
 For a $d \times d$ matrix $A^i{}_j$ and grade-$k$ k-vector $b^{m_1 \ldots m_k}$:
 
-$$
-(\bigwedge^k A)(b)^{i_1 \ldots i_k} = A^{i_1}{}_{m_1} \cdots A^{i_k}{}_{m_k} \, b^{m_1 \ldots m_k}
-$$
+```math
+(\bigwedge^k A)(b)^{i_1 \ldots i_k} = A^{i_1}{}_{m_1} \cdots A^{i_k}{}_{m_k} b^{m_1 \ldots m_k}
+```
 
 This is simply $k$ copies of $A$ contracting with the $k$ indices of the k-vector—a natural einsum operation.
 
 ### Special Cases
 
 **Scalars (grade 0)** are unchanged:
-$$(\bigwedge^0 A)(s) = s$$
+```math
+(\bigwedge^0 A)(s) = s
+```
 
 **Pseudoscalar (grade $d$)** scales by determinant:
-$$(\bigwedge^d A)(\mathbb{1}) = \det(A) \cdot \mathbb{1}$$
+```math
+(\bigwedge^d A)(\mathbb{1}) = \det(A) \cdot \mathbb{1}
+```
 
 This last property explains why the determinant represents volume scaling.
 
@@ -98,7 +106,9 @@ The exterior power is computed on-demand: $k$ copies of the vector map contract 
 
 Outermorphism composition corresponds to matrix multiplication:
 
-$$(f \circ g)|_{\text{grade-}k} = \bigwedge^k(AB)$$
+```math
+(f \circ g)|_{\text{grade-}k} = \bigwedge^k(AB)
+```
 
 where $A$ and $B$ are the vector maps of $f$ and $g$.
 
@@ -111,7 +121,9 @@ L_composed = L1 * L2  # L1(L2(x))
 
 The **sandwich product** by a versor $V$ defines an outermorphism:
 
-$$\mathbf{x} \mapsto V \mathbf{x} V^{-1}$$
+```math
+\mathbf{x} \mapsto V \mathbf{x} V^{-1}
+```
 
 For a rotor $R$, this gives a rotation. The fact that $R b \tilde{R}$ preserves grade for k-vectors is precisely because the sandwich product is an outermorphism when $V$ is a versor.
 
@@ -133,7 +145,7 @@ This approach:
 | Property              | Statement                                                              |
 | --------------------- | ---------------------------------------------------------------------- |
 | Wedge preservation    | $f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})$ |
-| Determined by grade-1 | $A_{V} \, \Rightarrow \, f$ on all grades                              |
+| Determined by grade-1 | $A_{V} \Rightarrow f$ on all grades                              |
 | Scalar invariance     | $f(s) = s$                                                             |
 | Determinant property  | $f(\mathbb{1}) = \det(A) \cdot \mathbb{1}$                             |
 | Composition           | $(f \circ g)_k = \bigwedge^k(AB)$                                      |

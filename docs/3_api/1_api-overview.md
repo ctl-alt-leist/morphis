@@ -51,8 +51,8 @@ Morphis uses Python's operator overloading to provide concise mathematical synta
 | -------- | ----------------- | ------------------------------------------------- |
 | `u ^ v`  | Wedge product     | Exterior product, creates higher-grade element    |
 | `u * v`  | Geometric product | Full Clifford product (for Vectors → MultiVector) |
-| `u << v` | Left contraction  | Interior product $u \, \lrcorner \, v$            |
-| `u >> v` | Right contraction | Interior product $u \, \llcorner \, v$            |
+| `u << v` | Left contraction  | Interior product $u \lrcorner v$            |
+| `u >> v` | Right contraction | Interior product $u \llcorner v$            |
 
 ```python
 from morphis.elements import basis_vectors, euclidean_metric
@@ -464,7 +464,26 @@ scene.set_projection((2, 3, 4))      # show e_2, e_3, e_4; labels follow
 scene.show()
 ```
 
-Each element translates the projection axes through its own metric, so `(1, 2, 3)` is x, y, z in every signature and index 0 raises `IndexError` for a Euclidean element. See [Visualization Architecture](../4_design/4_visuals_architecture.md).
+Each element translates the projection axes through its own metric, so `(1, 2, 3)` is x, y, z in every signature and index 0 raises `IndexError` for a Euclidean element.
+
+The Scene draws what it is handed: do the math outside, mutate the element, and capture. A bare bivector is drawn as an oriented disk (area |B|) and a trivector as an oriented ball (volume |T|); hand over a `Frame(u, v)` with `filled=True` to draw a specific u, v and their parallelogram.
+
+```python
+from morphis.transforms import rotor
+from morphis.visuals import Scene
+
+B = e1 ^ e2
+scene = Scene(window=False)  # off screen: no window, no wall-clock wait
+scene.add(B)
+
+with scene.record("figures/turning-plane/turning-plane.gif"):  # or .mp4
+    for t in times:
+        R = rotor(e1 ^ e3, 0.05)
+        B.data[...] = (R * B * ~R).data[2].data
+        scene.capture(t)
+```
+
+See [Visualization Architecture](../4_design/4_visuals_architecture.md).
 
 ### Ink Sketches
 

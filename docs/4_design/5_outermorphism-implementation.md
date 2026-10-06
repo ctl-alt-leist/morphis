@@ -4,11 +4,15 @@
 
 An **outermorphism** (or exomorphism) is a linear map $f: \bigwedge V \to \bigwedge W$ between exterior algebras that preserves the wedge product structure:
 
-$$f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})$$
+```math
+f(\mathbf{a} \wedge \mathbf{b}) = f(\mathbf{a}) \wedge f(\mathbf{b})
+```
 
 An outermorphism is **completely determined** by its action on grade-1 elements (vectors). Given a linear map $A: V \to W$ on vectors, the wedge-preservation rule forces the extension on a $k$-blade to be the wedge of the images:
 
-$$f(\mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{v}_k) = A(\mathbf{v}_1) \wedge A(\mathbf{v}_2) \wedge \cdots \wedge A(\mathbf{v}_k)$$
+```math
+f(\mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{v}_k) = A(\mathbf{v}_1) \wedge A(\mathbf{v}_2) \wedge \cdots \wedge A(\mathbf{v}_k)
+```
 
 This extended map is called the **$k$-th exterior power** of $A$, written $\bigwedge^k A$ or sometimes $A^{\wedge k}$.
 
@@ -16,22 +20,28 @@ This extended map is called the **$k$-th exterior power** of $A$, written $\bigw
 
 For a linear map $A: V \to W$ represented in bases as the matrix $A^p{}_q$, the action on vectors is:
 
-$$A(\mathbf{v})^p = A^p{}_q \, v^q$$
+```math
+A(\mathbf{v})^p = A^p{}_q v^q
+```
 
 The extension to grade-2 (bivectors) follows from the wedge-preservation property. For a bivector $\mathbf{b} = \mathbf{u} \wedge \mathbf{v}$:
 
-$$\begin{align}
+```math
+\begin{align}
 (\bigwedge^2 A)(\mathbf{b})^{mn}
     &= (A\mathbf{u} \wedge A\mathbf{v})^{mn} \\ \\
     &= (A\mathbf{u})^m (A\mathbf{v})^n - (A\mathbf{u})^n (A\mathbf{v})^m \\ \\
-    &= A^m{}_p \, u^p \, A^n{}_q \, v^q - A^n{}_p \, u^p \, A^m{}_q \, v^q \\ \\
-    &= A^m{}_p \, A^n{}_q \, (u^p v^q - u^q v^p) \\ \\
-    &= A^m{}_p \, A^n{}_q \, b^{pq}
-\end{align}$$
+    &= A^m{}_p u^p A^n{}_q v^q - A^n{}_p u^p A^m{}_q v^q \\ \\
+    &= A^m{}_p A^n{}_q (u^p v^q - u^q v^p) \\ \\
+    &= A^m{}_p A^n{}_q b^{pq}
+\end{align}
+```
 
 The pattern generalizes naturally. For a $k$-blade with components $b^{m_1 m_2 \cdots m_k}$:
 
-$$(\bigwedge^k A)(\mathbf{b})^{n_1 n_2 \cdots n_k} = A^{n_1}{}_{m_1} \, A^{n_2}{}_{m_2} \cdots A^{n_k}{}_{m_k} \, b^{m_1 m_2 \cdots m_k}$$
+```math
+(\bigwedge^k A)(\mathbf{b})^{n_1 n_2 \cdots n_k} = A^{n_1}{}_{m_1} A^{n_2}{}_{m_2} \cdots A^{n_k}{}_{m_k} b^{m_1 m_2 \cdots m_k}
+```
 
 The action is $k$ copies of $A$ contracting against the $k$ indices of the blade. The antisymmetry of $b$ propagates through to the output; no explicit antisymmetrization is required when the input is already a blade.
 
@@ -39,13 +49,17 @@ The action is $k$ copies of $A$ contracting against the $k$ indices of the blade
 
 When working with the **independent** components of $k$-blades (the $\binom{d}{k}$ basis elements), the exterior power $\bigwedge^k A$ becomes a $\binom{d}{k} \times \binom{d}{k}$ matrix whose entries are $k \times k$ minors of $A$:
 
-$$[\bigwedge^k A]_{PQ} = \det(A_{P,Q})$$
+```math
+[\bigwedge^k A]_{PQ} = \det(A_{P,Q})
+```
 
 where $P = (p_1, \ldots, p_k)$ and $Q = (q_1, \ldots, q_k)$ are ordered multi-indices, and $A_{P,Q}$ is the $k \times k$ submatrix of $A$ with rows $P$ and columns $Q$.
 
 For $k = d$ (the pseudoscalar), this reduces to a $1 \times 1$ matrix containing $\det(A)$:
 
-$$\bigwedge^d A = \det(A)$$
+```math
+\bigwedge^d A = \det(A)
+```
 
 The action on the pseudoscalar is multiplication by the determinant, which is the algebraic statement of the determinant's geometric role as a volume scaling factor.
 
@@ -53,7 +67,9 @@ The action on the pseudoscalar is multiplication by the determinant, which is th
 
 Scalars (grade-0 elements) are invariant under outermorphisms:
 
-$$(\bigwedge^0 A)(s) = s$$
+```math
+(\bigwedge^0 A)(s) = s
+```
 
 The convention $\bigwedge^0 V = \mathbb{R}$ identifies the grade-zero piece with the scalar field, and any linear map fixes scalars. Geometrically, scalars carry no directional content, so the linear transformation has nothing directional to change.
 
@@ -247,7 +263,9 @@ M_rotated = L * M         # every grade mapped; the scalar is unchanged
 
 The sandwich product $M \mathbf{x} \tilde{M}$ for a versor $M$ defines an outermorphism. The grade-1 action is:
 
-$$\mathbf{v} \mapsto M \mathbf{v} \tilde{M}$$
+```math
+\mathbf{v} \mapsto M \mathbf{v} \tilde{M}
+```
 
 The grade-1 action extends to all grades through the exterior power, and grade preservation under $M \mathbf{B} \tilde{M}$ is what identifies the sandwich product as an outermorphism whenever $M$ is a versor.
 

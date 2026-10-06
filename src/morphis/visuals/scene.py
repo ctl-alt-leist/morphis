@@ -1,9 +1,32 @@
 """
 Scene - Unified Visualization Interface
 
-Scene provides a single interface for both static and animated visualization.
-Live mode shows the animation in real-time. Export mode re-runs the animation
-to capture frames without delays.
+The Scene draws what it is handed. It holds references to the user's elements,
+and every capture(t) re-reads their current state and redraws them. All the
+mathematics of what the elements are doing (rotations, evolutions, simulations)
+happens outside the Scene; the only mathematics inside is depiction: projecting
+higher-dimensional elements to 3D, and turning each element into something
+drawable.
+
+    Vector, grade 1    arrows from an origin
+    Vector, grade 2    an oriented disk: area |B| in the bivector's plane, with a circulation arrow
+    Vector, grade 3    an oriented ball: volume |T|, with its handedness on the equator
+    Frame              its exact vectors as arrows, plus their parallelogram or
+                       parallelepiped when filled
+    Surface, VisualModel   the mesh, with vertices re-read every capture
+
+Depictions are stateless: each frame is computed from the element alone, so a
+smoothly changing element gives a smoothly changing picture.
+
+Recording wraps the capture loop:
+
+    with scene.record("figures/orbit/orbit.mp4"):
+        for t in times:
+            ...  # update elements
+            scene.capture(t)
+
+With window=False the Scene renders off screen and does not wait for wall-clock
+time, so recordings run as fast as frames render.
 """
 
 from __future__ import annotations
@@ -11,12 +34,14 @@ from __future__ import annotations
 import pickle
 import sys
 import time as time_module
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from numpy import array, zeros
+from numpy import array, ix_, zeros
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
@@ -25,17 +50,24 @@ from morphis.elements.frame import Frame
 from morphis.elements.metric import Metric
 from morphis.elements.vector import Vector
 from morphis.visuals.backends import get_backend
+from morphis.visuals.drawing.blades import oriented_ball, oriented_disk, pad_to_3d
 from morphis.visuals.projection import (
     DEFAULT_PROJECTION,
     basis_labels,
     projection_slots,
     validate_projection_axes,
 )
+from morphis.visuals.recording import Recording
 from morphis.visuals.theme import Color, Theme, get_theme
 
 
 if TYPE_CHECKING:
     from morphis.visuals.backends.protocol import RenderBackend
+
+
+# Opacity of filled surfaces relative to their element
+FILL_OPACITY = 0.3
+FRAME_FACE_OPACITY = 0.2
 
 
 @dataclass
@@ -47,6 +79,30 @@ class SceneData:
     projection: tuple[int, ...]  # User-facing geometric indices
     show_basis: bool
     elements: list[dict]
+
+
+@dataclass
+class Shape:
+    """
+    One drawable piece of an element's depiction.
+
+    kind selects the backend primitive: "arrows" (origins, directions), "mesh"
+    (vertices with fixed faces), "reshaped" (vertices and faces that may both
+    change), or "line" (a polyline).
+    """
+
+    kind: str
+    geometry: dict[str, NDArray]
+    opacity: float = 1.0
+
+
+@dataclass
+class Part:
+    """A backend object drawing one Shape."""
+
+    backend_id: str
+    kind: str
+    opacity: float
 
 
 class SceneEffect(BaseModel):
@@ -83,18 +139,19 @@ class TrackedElement(BaseModel):
 
     element_id: str
     element: Any  # Element instance
-    backend_ids: list[str]  # IDs from backend for actors
+    parts: dict[str, Any]  # shape name -> Part
     color: Color
     opacity: float
-    representation: str
-    extra: dict  # Additional settings
+    extra: dict  # Placement and style options given to add()
 
 
 class Scene:
     """
-    Unified visualization interface for static and animated scenes.
+    Unified visualization interface for static, live, and recorded scenes.
 
-    Live animation example:
+    The Scene draws what it is handed: mutate your elements, then capture.
+
+    Live animation:
         scene = Scene(theme="obsidian")
         scene.add(F, color=RED, filled=True)
         for t in times:
@@ -102,7 +159,15 @@ class Scene:
             scene.capture(t)
         scene.show()  # Wait for window close
 
-    Static example:
+    Recording (off screen, as fast as frames render):
+        scene = Scene(window=False)
+        scene.add(B)
+        with scene.record("figures/turn/turn.gif"):
+            for t in times:
+                B.data[...] = turned(t)
+                scene.capture(t)
+
+    Static:
         scene = Scene(theme="obsidian")
         scene.add(v, color=RED)
         scene.show()
@@ -128,6 +193,7 @@ class Scene:
         backend: str = "pyvista",
         show_basis: bool = True,
         auto_camera: bool = True,
+        window: bool = True,
     ):
         if isinstance(theme, str):
             theme = get_theme(theme)
@@ -138,6 +204,7 @@ class Scene:
         self._projection = DEFAULT_PROJECTION if projection is None else validate_projection_axes(projection)
         self._show_basis = show_basis
         self._auto_camera = auto_camera
+        self._window = window
 
         # Get backend but don't initialize yet (lazy)
         self._backend: RenderBackend = get_backend(backend)
@@ -151,6 +218,7 @@ class Scene:
         self._effects: list[SceneEffect] = []
         self._live_start_time: float | None = None
         self._first_capture = True
+        self._recording: Recording | None = None
 
     # =========================================================================
     # Properties
@@ -165,6 +233,11 @@ class Scene:
     def frame_rate(self) -> int:
         """Animation frame rate."""
         return self._frame_rate
+
+    @property
+    def window(self) -> bool:
+        """Whether the scene renders to an on-screen window (False renders off screen)."""
+        return self._window
 
     @property
     def projection(self) -> tuple[int, int, int]:
@@ -189,6 +262,7 @@ class Scene:
                 size=self._size,
                 theme=self._theme,
                 show_basis=self._show_basis,
+                window=self._window,
             )
             self._backend_initialized = True
 
@@ -205,7 +279,6 @@ class Scene:
     def add(
         self,
         element: Element,
-        representation: str | None = None,
         color: Color | None = None,
         opacity: float = 1.0,
         **kwargs,
@@ -214,11 +287,14 @@ class Scene:
         Add an element to the scene.
 
         Args:
-            element: The element to add (Vector, Frame, Surface, etc.)
-            representation: Visual representation type
+            element: Vector (grade 1, 2, or 3), Frame, Surface, or VisualModel
             color: RGB color tuple (uses palette if None)
             opacity: Opacity [0, 1]
-            **kwargs: Additional representation-specific options
+            **kwargs: Placement and style options:
+                origin: Where a single vector, disk, ball, or frame is drawn from
+                origins: One origin per lot entry, for elements with a lot
+                filled: For a Frame, also draw the parallelogram or parallelepiped
+                smooth_shading, show_edges: For meshes
 
         Returns:
             Element ID for later reference
@@ -228,18 +304,17 @@ class Scene:
         element_id = str(uuid4())
         color = color if color is not None else self._next_color()
 
-        if representation is None:
-            representation = self._default_representation(element)
-
-        backend_ids = self._create_visuals(element, representation, color, opacity, kwargs)
+        parts = {}
+        for name, shape in self._depict(element, kwargs).items():
+            backend_id = self._create_part(shape, color, opacity, kwargs)
+            parts[name] = Part(backend_id=backend_id, kind=shape.kind, opacity=shape.opacity)
 
         self._elements[element_id] = TrackedElement(
             element_id=element_id,
             element=element,
-            backend_ids=backend_ids,
+            parts=parts,
             color=color,
             opacity=opacity,
-            representation=representation,
             extra=kwargs,
         )
 
@@ -251,149 +326,144 @@ class Scene:
             return
 
         tracked = self._elements.pop(element_id)
-        for bid in tracked.backend_ids:
-            self._backend.remove(bid)
+        for part in tracked.parts.values():
+            self._backend.remove(part.backend_id)
 
-    def _default_representation(self, element: Element) -> str:
-        """Determine default representation for an element."""
+    # -------------------------------------------------------------------------
+    # Depiction: element state -> shapes (stateless)
+    # -------------------------------------------------------------------------
+
+    def _depict(self, element: Element, options: dict) -> dict[str, Shape]:
+        """
+        Depict an element's current state as named shapes.
+
+        The names and kinds depend only on the element's type, grade, and lot,
+        so the same element always yields the same set of shapes, frame after
+        frame; only the geometry changes.
+        """
         from morphis.elements.surface import Surface
+        from morphis.visuals.model import VisualModel
 
-        if isinstance(element, Surface):
-            return "mesh"
+        if isinstance(element, (Surface, VisualModel)):
+            shapes = {"mesh": Shape("mesh", {"vertices": element.vertices.data, "faces": element.faces})}
+
         elif isinstance(element, Frame):
-            return "arrows"
-        elif isinstance(element, Vector):
-            if element.grade == 1:
-                if element.lot and element.lot != ():
-                    return "arrows"
-                return "arrow"
-            elif element.grade == 2:
-                return "span"
-            else:
-                return "span"
-        return "points"
+            shapes = self._depict_frame(element, options)
 
-    def _create_visuals(
-        self,
-        element: Element,
-        representation: str,
-        color: Color,
-        opacity: float,
-        kwargs: dict,
-    ) -> list[str]:
-        """Create backend visuals for an element."""
-        from morphis.elements.surface import Surface
+        elif isinstance(element, Vector) and element.grade == 1:
+            shapes = self._depict_vectors(element, options)
 
-        backend_ids = []
+        elif isinstance(element, Vector) and element.grade in (2, 3):
+            shapes = self._depict_oriented(element, options)
 
-        if isinstance(element, Surface):
-            bid = self._backend.add_mesh(
-                element.vertices.data,
-                element.faces,
+        else:
+            raise ValueError(f"Scene cannot depict {type(element).__name__} of grade {getattr(element, 'grade', None)}")
+
+        return shapes
+
+    def _origins(self, element: Element, options: dict, count: int) -> NDArray:
+        """Projected origins for each lot entry (or the single element)."""
+        is_lot = count > 1 or bool(element.lot)
+        given = options.get("origins") if is_lot else options.get("origin")
+        raw = zeros((count, 3)) if given is None else array(given, dtype=float).reshape(count, -1)
+        origins = array([self._project_point(point, element.metric) for point in raw])
+
+        return origins
+
+    def _depict_vectors(self, element: Vector, options: dict) -> dict[str, Shape]:
+        directions = self._project_vectors(element.data, element.metric)
+        origins = self._origins(element, options, len(directions))
+
+        return {"arrows": Shape("arrows", {"origins": origins, "directions": directions})}
+
+    def _depict_oriented(self, element: Vector, options: dict) -> dict[str, Shape]:
+        """Oriented disks for bivectors, oriented balls for trivectors, one per lot entry."""
+        grade = element.grade
+        entries = element.data.reshape(-1, *element.data.shape[-grade:])
+        centers = self._origins(element, options, len(entries))
+
+        shapes = {}
+        for n, (components, center) in enumerate(zip(entries, centers, strict=True)):
+            projected = self._project_components(components, grade, element.metric)
+            depiction = oriented_disk(projected, center) if grade == 2 else oriented_ball(projected[0, 1, 2], center)
+            shapes[f"fill/{n}"] = Shape("mesh", {"vertices": depiction.surface, "faces": depiction.faces}, FILL_OPACITY)
+            shapes[f"rim/{n}"] = Shape("line", {"points": depiction.rim})
+            shapes[f"sense/{n}"] = Shape("mesh", {"vertices": depiction.head, "faces": depiction.head_faces})
+
+        return shapes
+
+    def _depict_frame(self, element: Frame, options: dict) -> dict[str, Shape]:
+        """The frame's exact vectors, and the shape they span when filled."""
+        from morphis.visuals.drawing.vectors import create_frame_mesh
+
+        origin = self._origins(element, options, 1)[0]
+        vectors = self._project_vectors(element.data, element.metric)
+        edges, faces, marker = create_frame_mesh(origin, vectors, filled=options.get("filled", False))
+
+        meshes = {"edges": (edges, 1.0), "faces": (faces, FRAME_FACE_OPACITY), "origin": (marker, 1.0)}
+        shapes = {
+            name: Shape("reshaped", {"vertices": mesh.points, "faces": mesh.faces}, opacity)
+            for name, (mesh, opacity) in meshes.items()
+            if mesh is not None
+        }
+
+        return shapes
+
+    # -------------------------------------------------------------------------
+    # Backend parts
+    # -------------------------------------------------------------------------
+
+    def _create_part(self, shape: Shape, color: Color, opacity: float, options: dict) -> str:
+        """Create the backend object for a shape."""
+        geometry = shape.geometry
+        alpha = opacity * shape.opacity
+
+        if shape.kind == "arrows":
+            backend_id = self._backend.add_arrows(
+                geometry["origins"], geometry["directions"], color=color, opacity=alpha
+            )
+
+        elif shape.kind == "line":
+            backend_id = self._backend.add_lines(geometry["points"], color=color, opacity=alpha)
+
+        else:
+            backend_id = self._backend.add_mesh(
+                geometry["vertices"],
+                geometry["faces"],
                 color=color,
-                opacity=opacity,
-                smooth_shading=kwargs.get("smooth_shading", True),
-                show_edges=kwargs.get("show_edges", False),
-            )
-            backend_ids.append(bid)
-
-        elif isinstance(element, Frame):
-            from morphis.visuals.drawing.vectors import create_frame_mesh
-
-            origin = kwargs.get("origin", zeros(3))
-            origin_3d = self._project_point(origin, element.metric)
-            vecs_3d = self._project_vectors(element.data, element.metric)
-
-            edges_mesh, faces_mesh, origin_mesh = create_frame_mesh(
-                origin_3d,
-                vecs_3d,
-                projection_axes=None,
-                filled=kwargs.get("filled", False),
+                opacity=alpha,
+                smooth_shading=options.get("smooth_shading", True),
+                show_edges=options.get("show_edges", False),
             )
 
-            mesh_types = []
+        return backend_id
 
-            if edges_mesh is not None:
-                bid = self._backend.add_mesh(
-                    edges_mesh.points,
-                    edges_mesh.faces,
-                    color=color,
-                    opacity=opacity,
-                    smooth_shading=True,
-                )
-                backend_ids.append(bid)
-                mesh_types.append("edges")
+    def _update_part(self, part: Part, shape: Shape) -> None:
+        """Move a backend object to a shape's current geometry."""
+        geometry = shape.geometry
 
-            if faces_mesh is not None:
-                bid = self._backend.add_mesh(
-                    faces_mesh.points,
-                    faces_mesh.faces,
-                    color=color,
-                    opacity=opacity * 0.2,
-                    smooth_shading=True,
-                )
-                backend_ids.append(bid)
-                mesh_types.append("faces")
+        if part.kind == "arrows":
+            self._backend.update_arrows(part.backend_id, geometry["origins"], geometry["directions"])
 
-            if origin_mesh is not None:
-                bid = self._backend.add_mesh(
-                    origin_mesh.points,
-                    origin_mesh.faces,
-                    color=color,
-                    opacity=opacity,
-                    smooth_shading=True,
-                )
-                backend_ids.append(bid)
-                mesh_types.append("origin")
+        elif part.kind == "line":
+            self._backend.update_lines(part.backend_id, geometry["points"])
 
-            kwargs["_mesh_types"] = mesh_types
+        elif part.kind == "reshaped":
+            self._backend.replace_mesh(part.backend_id, geometry["vertices"], geometry["faces"])
 
-        elif isinstance(element, Vector):
-            if element.grade == 1:
-                data = element.data
-                if element.lot and element.lot != ():
-                    origins = kwargs.get("origins", zeros((len(data), 3)))
-                    vecs_3d = self._project_vectors(data, element.metric)
-                    origins_3d = self._project_vectors(origins, element.metric)
+        else:
+            self._backend.update_mesh(part.backend_id, geometry["vertices"])
 
-                    bid = self._backend.add_arrows(
-                        origins_3d,
-                        vecs_3d,
-                        color=color,
-                        opacity=opacity,
-                    )
-                    backend_ids.append(bid)
-                else:
-                    origin = kwargs.get("origin", zeros(3))
-                    origin_3d = self._project_point(origin, element.metric)
-                    vec_3d = self._project_point(data, element.metric)
+    def _redraw(self, tracked: TrackedElement) -> None:
+        """Redraw an element from its current state."""
+        shapes = self._depict(tracked.element, tracked.extra)
+        for name, part in tracked.parts.items():
+            if name in shapes:
+                self._update_part(part, shapes[name])
 
-                    bid = self._backend.add_arrows(
-                        origin_3d,
-                        vec_3d,
-                        color=color,
-                        opacity=opacity,
-                    )
-                    backend_ids.append(bid)
-
-            elif element.grade >= 2:
-                from morphis.operations.factorization import spanning_vectors
-
-                factors = spanning_vectors(element)
-                origin = kwargs.get("origin", zeros(3))
-                origin_3d = self._project_point(origin, element.metric)
-                vecs = array([self._project_point(f.data, element.metric) for f in factors])
-
-                bid = self._backend.add_span(
-                    origin_3d,
-                    vecs,
-                    color=color,
-                    opacity=opacity * 0.3 if element.grade == 2 else opacity * 0.2,
-                    filled=kwargs.get("filled", True),
-                )
-                backend_ids.append(bid)
-
-        return backend_ids
+    # -------------------------------------------------------------------------
+    # Projection of components
+    # -------------------------------------------------------------------------
 
     def _project_point(self, point: NDArray, metric: Metric) -> NDArray:
         """
@@ -414,12 +484,20 @@ class Scene:
         return result
 
     def _project_vectors(self, vectors: NDArray, metric: Metric) -> NDArray:
-        """Project multiple vectors to 3D."""
+        """Project vectors of shape (..., dim) to an array of shape (k, 3)."""
         vectors = array(vectors, dtype=float)
-        if vectors.ndim == 1:
-            result = self._project_point(vectors, metric).reshape(1, 3)
+        flat = vectors.reshape(-1, vectors.shape[-1])
+        result = array([self._project_point(v, metric) for v in flat])
+
+        return result
+
+    def _project_components(self, components: NDArray, grade: int, metric: Metric) -> NDArray:
+        """Project the components of one grade-2 or grade-3 element to 3D."""
+        if metric.dim <= 3:
+            result = pad_to_3d(components, grade)
         else:
-            result = array([self._project_point(v, metric) for v in vectors])
+            slots = list(projection_slots(self._projection, metric))
+            result = components[ix_(*([slots] * grade))]
 
         return result
 
@@ -439,6 +517,8 @@ class Scene:
             ValueError: if axes is not exactly three integers.
             IndexError: if an axis is out of range for the metric of any
                 element of dimension greater than 3 already in the scene.
+
+        Every element already in the scene is redrawn under the new axes.
         """
         axes = validate_projection_axes(axes)
 
@@ -452,6 +532,9 @@ class Scene:
 
         if self._backend_initialized:
             self._backend.set_basis_labels(self.basis_labels)
+            for tracked in self._elements.values():
+                self._redraw(tracked)
+            self._backend.render()
 
     # =========================================================================
     # Camera
@@ -575,35 +658,33 @@ class Scene:
         return current.evaluate(t)
 
     # =========================================================================
-    # Animation
+    # Animation and Recording
     # =========================================================================
 
     def capture(self, t: float) -> None:
         """
-        Render current state at time t (live mode).
+        Redraw every element from its current state at time t.
 
-        Shows window on first call, then syncs to real-time.
+        With a window, the first capture opens it and later captures keep pace
+        with wall-clock time. Off screen, captures run as fast as they render.
+        Inside record(), each capture also appends one frame.
         """
         self._ensure_backend()
 
-        # Exit early if window was closed
-        if self._backend.is_closed():
+        if self._window and self._backend.is_closed():
             return
 
-        # Show window on first capture
         if self._first_capture:
-            self._backend.show(interactive=False)
-            if self._auto_camera:
-                self._backend.reset_camera()
-            _bring_window_to_front()
+            self._open()
             self._live_start_time = time_module.time()
-            self._first_capture = False
 
-        # Sync visuals with current element state
         self._sync_visuals(t)
 
-        # Wait for real-time sync
-        if self._live_start_time is not None:
+        if self._recording is not None:
+            self._recording.append(self._backend.capture_frame())
+
+        # Keep pace with wall-clock time when shown live
+        if self._window and self._live_start_time is not None:
             target_time = self._live_start_time + t
             while time_module.time() < target_time:
                 if self._backend.is_closed():
@@ -611,98 +692,62 @@ class Scene:
                 self._backend.process_events()
                 time_module.sleep(0.001)
 
+    @contextmanager
+    def record(self, path: str | Path, frame_rate: float | None = None) -> Iterator[Recording]:
+        """
+        Record every capture inside the block to a video or GIF.
+
+        The suffix picks the format: .mp4 (H.264) or .gif (looping). The file
+        is finalized when the block exits.
+
+            with scene.record("figures/orbit/orbit.mp4"):
+                for t in times:
+                    ...
+                    scene.capture(t)
+
+        Args:
+            path: Output file, ending in .mp4 or .gif
+            frame_rate: Frames per second; defaults to the scene's frame rate
+
+        Yields:
+            The Recording, whose frame_count tells how many frames were written
+        """
+        recording = Recording(path, frame_rate or self._frame_rate)
+        self._recording = recording
+        try:
+            yield recording
+        finally:
+            self._recording = None
+            recording.close()
+
+    def _open(self) -> None:
+        """First render: open the window (if any) and frame the camera."""
+        if self._window:
+            self._backend.show(interactive=False)
+            _bring_window_to_front()
+        if self._auto_camera:
+            self._backend.reset_camera()
+        self._first_capture = False
+
     def _sync_visuals(self, t: float) -> None:
-        """Synchronize backend visuals with current element state."""
-        from morphis.elements.surface import Surface
-
+        """Redraw every element from its current state, with its opacity at time t."""
         for element_id, tracked in self._elements.items():
-            element = tracked.element
+            self._redraw(tracked)
 
-            # Compute opacity (faces get 0.2 multiplier)
             base_opacity = self._compute_opacity(element_id, t) * tracked.opacity
-            mesh_types = tracked.extra.get("_mesh_types", [])
-            for idx, bid in enumerate(tracked.backend_ids):
-                mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
-                if mesh_type == "faces":
-                    self._backend.set_opacity(bid, base_opacity * 0.2)
-                else:
-                    self._backend.set_opacity(bid, base_opacity)
-
-            if isinstance(element, Surface):
-                if tracked.backend_ids:
-                    self._backend.update_mesh(
-                        tracked.backend_ids[0],
-                        element.vertices.data,
-                    )
-
-            elif isinstance(element, Frame):
-                from morphis.visuals.drawing.vectors import create_frame_mesh
-
-                origin = tracked.extra.get("origin", zeros(3))
-                origin_3d = self._project_point(origin, element.metric)
-                vecs_3d = self._project_vectors(element.data, element.metric)
-
-                edges_mesh, faces_mesh, _ = create_frame_mesh(
-                    origin_3d,
-                    vecs_3d,
-                    projection_axes=None,
-                    filled=tracked.extra.get("filled", False),
-                )
-
-                mesh_types = tracked.extra.get("_mesh_types", [])
-                for idx, bid in enumerate(tracked.backend_ids):
-                    mesh_type = mesh_types[idx] if idx < len(mesh_types) else None
-                    actor = self._backend.get_actor(bid)
-                    if actor is None:
-                        continue
-
-                    if mesh_type == "edges" and edges_mesh is not None:
-                        actor.mapper.SetInputData(edges_mesh)
-                    elif mesh_type == "faces" and faces_mesh is not None:
-                        actor.mapper.SetInputData(faces_mesh)
-
-            elif isinstance(element, Vector) and element.grade == 1:
-                if element.lot and element.lot != ():
-                    origins = tracked.extra.get("origins", zeros((len(element.data), 3)))
-                    vecs_3d = self._project_vectors(element.data, element.metric)
-                    origins_3d = self._project_vectors(origins, element.metric)
-
-                    if tracked.backend_ids:
-                        self._backend.update_arrows(
-                            tracked.backend_ids[0],
-                            origins_3d,
-                            vecs_3d,
-                        )
-                else:
-                    origin = tracked.extra.get("origin", zeros(3))
-                    origin_3d = self._project_point(origin, element.metric)
-                    vec_3d = self._project_point(element.data, element.metric)
-
-                    if tracked.backend_ids:
-                        self._backend.update_arrows(
-                            tracked.backend_ids[0],
-                            origin_3d.reshape(1, 3),
-                            vec_3d.reshape(1, 3),
-                        )
+            for part in tracked.parts.values():
+                self._backend.set_opacity(part.backend_id, base_opacity * part.opacity)
 
         self._backend.render()
 
     def show(self) -> None:
-        """Wait for user to close window."""
+        """Show the window and wait for the user to close it; an off-screen scene has nothing to show."""
         self._ensure_backend()
 
-        if self._backend.is_closed():
-            return
-
-        # If we haven't shown the window yet, show it now
-        if self._first_capture:
-            self._backend.show(interactive=False)
-            if self._auto_camera:
-                self._backend.reset_camera()
-            _bring_window_to_front()
-            self._first_capture = False
-
-        self._backend.wait_for_close()
+        if self._window and not self._backend.is_closed():
+            if self._first_capture:
+                self._open()
+            self._backend.wait_for_close()
 
     def close(self) -> None:
         """Close the scene and clean up."""
@@ -757,8 +802,7 @@ class Scene:
                     "element": t.element,
                     "color": t.color,
                     "opacity": t.opacity,
-                    "representation": t.representation,
-                    "extra": {k: v for k, v in t.extra.items() if not k.startswith("_")},
+                    "extra": t.extra,
                 }
                 for t in self._elements.values()
             ],
@@ -769,15 +813,16 @@ class Scene:
     def _save_obj(self, path: Path) -> None:
         """Save as Wavefront OBJ."""
         self._ensure_backend()
-        self._backend._plotter.export_obj(str(path))
+        self._backend.export_obj(str(path))
 
     @classmethod
-    def load(cls, path: str | Path) -> Scene:
+    def load(cls, path: str | Path, window: bool = True) -> Scene:
         """
         Load a scene from a .scene file.
 
         Args:
             path: Path to the .scene file
+            window: Open on screen (the default) or render off screen
 
         Returns:
             Scene ready to display with show()
@@ -795,6 +840,7 @@ class Scene:
             size=data.size,
             projection=data.projection,
             show_basis=data.show_basis,
+            window=window,
         )
 
         for elem_data in data.elements:
@@ -802,7 +848,6 @@ class Scene:
                 elem_data["element"],
                 color=elem_data["color"],
                 opacity=elem_data["opacity"],
-                representation=elem_data["representation"],
                 **elem_data["extra"],
             )
 

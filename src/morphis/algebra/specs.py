@@ -23,7 +23,7 @@ class VectorSpec(BaseModel):
 
     Attributes:
         grade: Grade of the k-vector (0=scalar, 1=vector, 2=bivector, etc.)
-        lot: Shape of lot dimensions (batch/sensor/time axes)
+        lot: Shape of lot dimensions (batch, sample, or time axes)
         dim: Dimension of the underlying vector space
 
     Examples:

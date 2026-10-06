@@ -6,7 +6,7 @@ embodying the transformation and adaptation of geometric structures across diffe
 essential nature.
 
 <p align="center">
-  <img src="figures/rotations-4d.gif" alt="4D rotations animation" width="400">
+  <img src="figures/rotations-4d/rotations-4d.gif" alt="4D rotations animation" width="400">
 </p>
 
 <p align="center" width="500">
@@ -84,10 +84,10 @@ morphis/
 │   │   └── tests/
 │   ├── transforms/     # Rotors, translators, PGA, motor constructors
 │   │   └── tests/
-│   ├── visuals/        # PyVista rendering, animation, themes
+│   ├── visuals/        # PyVista rendering and recording, ink sketches, themes
 │   │   └── drawing/    # Vector mesh generation
 │   ├── examples/       # Runnable demos
-│   └── utils/          # Easing functions, observers, pretty printing
+│   └── utils/          # Easing functions, pretty printing
 ├── docs/               # Design documents
 ├── pyproject.toml      # Project configuration
 ├── Makefile            # Development commands

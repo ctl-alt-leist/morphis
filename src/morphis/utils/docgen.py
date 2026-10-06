@@ -362,13 +362,13 @@ MODULE_GROUPS = {
         "description": "Visualization and rendering tools.",
         "modules": [
             "morphis.visuals.scene",
+            "morphis.visuals.recording",
             "morphis.visuals.canvas",
             "morphis.visuals.theme",
             "morphis.visuals.projection",
             "morphis.visuals.drawing.vectors",
             "morphis.visuals.contexts",
             "morphis.visuals.operations",
-            "morphis.visuals.loop",
             "morphis.visuals.ink.sketch",
             "morphis.visuals.ink.animate",
             "morphis.visuals.ink.depiction",
@@ -381,7 +381,6 @@ MODULE_GROUPS = {
         "description": "Helper utilities.",
         "modules": [
             "morphis.utils.pretty",
-            "morphis.utils.observer",
         ],
     },
 }

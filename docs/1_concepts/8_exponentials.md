@@ -6,19 +6,19 @@ The exponential map is the bridge connecting Lie algebras to Lie groups. In geom
 
 For a k-vector $b$ where $b^2 = \lambda$ is scalar, the exponential follows from the Taylor series:
 
-$$
+```math
 e^{b} = 1 + b + \frac{b^2}{2!} + \frac{b^3}{3!} + \cdots
-$$
+```
 
 This series telescopes into a closed form based on the sign of $b^2$:
 
-$$
+```math
 e^{b} = \begin{cases}
-\cosh\sqrt{\lambda} + \dfrac{b}{\sqrt{\lambda}} \sinh\sqrt{\lambda} & \text{if } \lambda > 0 \text{ (hyperbolic)} \\[1em]
-\cos\sqrt{-\lambda} + \dfrac{b}{\sqrt{-\lambda}} \sin\sqrt{-\lambda} & \text{if } \lambda < 0 \text{ (trigonometric)} \\[1em]
+\cosh\sqrt{\lambda} + \dfrac{b}{\sqrt{\lambda}} \sinh\sqrt{\lambda} & \text{if } \lambda > 0 \text{ (hyperbolic)} \\
+\cos\sqrt{-\lambda} + \dfrac{b}{\sqrt{-\lambda}} \sin\sqrt{-\lambda} & \text{if } \lambda < 0 \text{ (trigonometric)} \\
 1 + b & \text{if } \lambda = 0 \text{ (nilpotent)}
 \end{cases}
-$$
+```
 
 ## Metric Signature Dependence
 
@@ -46,9 +46,9 @@ Unlike matrix exponentials which require Padé approximation or eigendecompositi
 
 The Taylor series naturally separates:
 
-$$
+```math
 e^{b} = \underbrace{\left(1 + \frac{\lambda}{2!} + \frac{\lambda^2}{4!} + \cdots\right)}_{\cos\sqrt{-\lambda}} + b \underbrace{\left(1 + \frac{\lambda}{3!} + \frac{\lambda^2}{5!} + \cdots\right)}_{\sin(\sqrt{-\lambda})/\sqrt{-\lambda}}
-$$
+```
 
 The computation requires:
 1. One geometric product to compute $b^2$
@@ -67,15 +67,15 @@ R = exp_vector(b)  # Returns MultiVector
 
 A **rotor** for rotation by angle $\theta$ in the plane defined by unit bivector $\hat{b}$:
 
-$$
-R = e^{-\hat{b}\theta/2} = \cos(\theta/2) - \sin(\theta/2) \, \hat{b}
-$$
+```math
+R = e^{-\hat{b}\theta/2} = \cos(\theta/2) - \sin(\theta/2) \hat{b}
+```
 
 The **half-angle** appears because the sandwich product applies the rotation twice:
 
-$$
+```math
 v' = R v \tilde{R}
-$$
+```
 
 ```python
 from morphis.transforms import rotor
@@ -97,9 +97,9 @@ v_rotated = R * e1 * ~R  # e1 becomes e2
 
 The **logarithm** extracts the generator from a versor. For rotor $R = a + b$ where $a$ is the scalar part and $b$ is the bivector part:
 
-$$
+```math
 \log R = \arctan2(|b|, a) \cdot \frac{b}{|b|}
-$$
+```
 
 The result is a bivector whose:
 - Direction defines the rotation plane
@@ -119,7 +119,9 @@ R_recovered = exp_vector(b_generator)
 
 Smooth interpolation between rotors uses the exponential/logarithm:
 
-$$R(t) = R_0 \, e^{t \log(R_0^{-1} R_1)}$$
+```math
+R(t) = R_0 e^{t \log(R_0^{-1} R_1)}
+```
 
 This **slerp** (spherical linear interpolation):
 - Maintains constant angular velocity
@@ -144,9 +146,9 @@ Linear interpolation of rotor components, by contrast, doesn't preserve unit mag
 
 An elegant property: rotor composition approximately equals bivector addition:
 
-$$
+```math
 e^{b_1} e^{b_2} \approx e^{b_1 + b_2}
-$$
+```
 
 **Exact when**: $[b_1, b_2] = 0$ (commuting bivectors)
 
@@ -158,11 +160,15 @@ This provides an additive parameterization of rotations, useful for optimization
 
 In Projective Geometric Algebra, degenerate bivectors square to zero:
 
-$$\mathbf{t}^2 = 0$$
+```math
+\mathbf{t}^2 = 0
+```
 
 The exponential truncates to a linear term:
 
-$$T = e^{-\mathbf{t}/2} = 1 - \frac{1}{2}\mathbf{t}$$
+```math
+T = e^{-\mathbf{t}/2} = 1 - \frac{1}{2}\mathbf{t}
+```
 
 This **translator** implements pure translation via the sandwich product.
 
@@ -180,11 +186,15 @@ T_composed = T1 * T2  # = translator(d1 + d2)
 
 A **motor** combines rotation and translation:
 
-$$M = RT$$
+```math
+M = RT
+```
 
 or equivalently via the exponential of a line:
 
-$$M = e^{-\ell\,θ/2}$$
+```math
+M = e^{-\ell θ/2}
+```
 
 where $\ell$ is a PGA line (bivector + bivector).
 
@@ -202,15 +212,15 @@ M = rotation_about_point(center, b, angle)
 
 The relationship between bivectors and rotors is a specific instance of the exponential map from a Lie algebra to its Lie group:
 
-$$
+```math
 \exp: \mathfrak{so}(n) \to \text{SO}(n)
-$$
+```
 
 The bivector space $\bigwedge^2 V$ with the commutator product is the Lie algebra $\mathfrak{so}(V)$:
 
-$$
+```math
 [b_1, b_2] = \frac{1}{2}(b_1 b_2 - b_2 b_1)
-$$
+```
 
 This Lie algebra structure governs:
 - Composition of rotations
