@@ -10,9 +10,9 @@ The **wedge product** (exterior product) constructs higher-grade Vectors by comb
 
 For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$, the wedge product $u \wedge v$ is a grade-$(j + k)$ k-vector:
 
-$$
-(u \wedge v)^{m_1 \ldots m_{j + k}} = \frac{1}{j! \, k!} \, u^{[m_1 \ldots m_j} v^{m_{j + 1} \ldots m_{j + k}]}
-$$
+```math
+(u \wedge v)^{m_1 \ldots m_{j + k}} = \frac{1}{j! k!} u^{[m_1 \ldots m_j} v^{m_{j + 1} \ldots m_{j + k}]}
+```
 
 where brackets denote antisymmetrization.
 
@@ -20,25 +20,33 @@ where brackets denote antisymmetrization.
 
 **Anticommutativity:**
 
-$$
-u \wedge v = (-1)^{jk} \, v \wedge u
-$$
+```math
+u \wedge v = (-1)^{jk} v \wedge u
+```
 
 For grade-1 vectors:
 
-$$\mathbf{u} \wedge \mathbf{v} = -\mathbf{v} \wedge \mathbf{u}$$
+```math
+\mathbf{u} \wedge \mathbf{v} = -\mathbf{v} \wedge \mathbf{u}
+```
 
 **Nilpotency:**
 
-$$\mathbf{v} \wedge \mathbf{v} = 0$$
+```math
+\mathbf{v} \wedge \mathbf{v} = 0
+```
 
 Linear dependence:
 
-$$\mathbf{u} = \alpha \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0$$
+```math
+\mathbf{u} = \alpha \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
+```
 
 **Associativity:**
 
-$$(\mathbf{a} \wedge \mathbf{b}) \wedge \mathbf{c} = \mathbf{a} \wedge (\mathbf{b} \wedge \mathbf{c})$$
+```math
+(\mathbf{a} \wedge \mathbf{b}) \wedge \mathbf{c} = \mathbf{a} \wedge (\mathbf{b} \wedge \mathbf{c})
+```
 
 ### Usage in Morphis
 
@@ -73,9 +81,9 @@ The **interior product** (contraction) reduces grade by contracting indices usin
 
 For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$ with $j \leq k$:
 
-$$
+```math
 (u \lrcorner v)^{n_1 \ldots n_{k - j}} = u^{m_1 \ldots m_j} v_{m_1 \ldots m_j}^{\ \ \ \ \ \ \ \ n_1 \ldots n_{k - j}}
-$$
+```
 
 Result grade: $k - j$
 
@@ -83,9 +91,9 @@ When $j > k$: $u \lrcorner v = 0$
 
 ### Right Contraction
 
-$$
+```math
 (u \llcorner v)^{m_1 \ldots m_{j - k}} = u_{n_1 \ldots n_k}^{m_1 \ldots m_{j - k}} v^{n_1 \ldots n_k}
-$$
+```
 
 Result grade: $j - k$
 
@@ -120,7 +128,9 @@ The interior product $v \lrcorner b$ gives the component of $b$ "perpendicular" 
 
 For grade-1 vectors, the **dot product** extracts the scalar (symmetric) part:
 
-$$\mathbf{u} \cdot \mathbf{v} = g_{ab} u^a v^b$$
+```math
+\mathbf{u} \cdot \mathbf{v} = g_{ab} u^a v^b
+```
 
 This equals the full interior product when both operands are grade-1.
 
@@ -136,7 +146,9 @@ The **geometric product** is the fundamental operation of Clifford algebra, comb
 
 ### For Vectors (Grade-1)
 
-$$\mathbf{a} \mathbf{b} = \mathbf{a} \cdot \mathbf{b} + \mathbf{a} \wedge \mathbf{b}$$
+```math
+\mathbf{a} \mathbf{b} = \mathbf{a} \cdot \mathbf{b} + \mathbf{a} \wedge \mathbf{b}
+```
 
 The symmetric part gives the dot product (scalar), the antisymmetric part gives the wedge product (bivector).
 
@@ -144,9 +156,9 @@ The symmetric part gives the dot product (scalar), the antisymmetric part gives 
 
 For general multivectors, the geometric product distributes over grades:
 
-$$
+```math
 MN = \sum_{r,s} \sum_{t = |r-s|}^{r+s} \langle M_r N_s \rangle_t
-$$
+```
 
 where $M_r = \langle M \rangle_r$ and the sum over $t$ has step 2 (parity preservation).
 
@@ -176,41 +188,41 @@ M = geometric(e1, e2)
 
 **Associativity:**
 
-$$
+```math
 (MN)P = M(NP)
-$$
+```
 
 **Distributivity:**
 
-$$
+```math
 M(N + P) = MN + MP
-$$
+```
 
 **Not commutative (in general):**
 
-$$
+```math
 MN \neq NM
-$$
+```
 
 ### Relationship to Other Products
 
 The wedge and interior products can be extracted from the geometric product. For k-vectors $u$ and $v$ of grades $j$ and $k$:
 
-$$
+```math
 u \wedge v = \langle uv \rangle_{j + k}
-$$
+```
 
-$$
+```math
 u \cdot v = \langle uv \rangle_{|j - k|}
-$$
+```
 
 ## The Antiwedge Product (Meet)
 
 The **antiwedge** (regressive product, meet) finds the intersection of subspaces. For k-vectors $u$ and $v$:
 
-$$
+```math
 u \vee v = \overline{\left(\overline{u} \wedge \overline{v}\right)}
-$$
+```
 
 where $\overline{\phantom{x}}$ denotes the complement.
 
@@ -226,15 +238,15 @@ intersection = meet(u, v)
 
 The **commutator product**:
 
-$$
+```math
 [M, N] = \frac{1}{2}(MN - NM)
-$$
+```
 
 The **anticommutator product**:
 
-$$
+```math
 \{M, N\} = \frac{1}{2}(MN + NM)
-$$
+```
 
 ```python
 from morphis.operations import commutator, anticommutator
@@ -249,9 +261,9 @@ The commutator of bivectors generates the Lie algebra structure of rotations.
 
 The **scalar product** extracts only the grade-0 part of the geometric product:
 
-$$
+```math
 M * N = \langle MN \rangle_0
-$$
+```
 
 ```python
 from morphis.operations import scalar_product

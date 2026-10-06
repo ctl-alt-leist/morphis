@@ -6,11 +6,15 @@ This document establishes the mathematical structures underlying geometric algeb
 
 We begin with a finite-dimensional real vector space $V$ of dimension $d$. The **dual space** $V^*$ consists of all linear functionals $\omega: V \to \mathbb{R}$. The natural pairing between $V$ and $V^*$ is given by evaluation:
 
-$$\langle \omega, v \rangle = \omega(v)$$
+```math
+\langle \omega, v \rangle = \omega(v)
+```
 
-Given a basis $\{\mathbf{e}_m\}$ for $V$, there exists a unique **dual basis** $\{\mathbf{e}^m\}$ for $V^*$ satisfying:
+Given a basis $\lbrace \mathbf{e}_m \rbrace$ for $V$, there exists a unique **dual basis** $\lbrace \mathbf{e}^m \rbrace$ for $V^*$ satisfying:
 
-$$\mathbf{e}^m(\mathbf{e}_n) = \delta^m_n$$
+```math
+\mathbf{e}^m(\mathbf{e}_n) = \delta^m_n
+```
 
 In morphis, the dimension is determined by the `Metric`:
 
@@ -39,7 +43,9 @@ This convention emphasizes that a bivector is still a vector (in $\bigwedge^2 V$
 
 Morphis uses **1-based indexing** for Euclidean basis vectors, matching standard mathematical notation:
 
-$$\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3 \quad \leftrightarrow \quad x, y, z$$
+```math
+\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3 \quad \leftrightarrow \quad x, y, z
+```
 
 The index 0 is reserved for special directions that extend Euclidean space:
 
@@ -75,7 +81,9 @@ negative). See the design note on the index convention for the full rules.
 
 A **$(p,q)$-tensor** lives in the space $V^{\otimes p} \otimes (V^*)^{\otimes q}$, with $p$ contravariant indices (upstairs) and $q$ covariant indices (downstairs). In components relative to a basis:
 
-$$T = T^{m_1 \ldots m_p}_{n_1 \ldots n_q} \, \mathbf{e}_{m_1} \otimes \cdots \otimes \mathbf{e}_{m_p} \otimes \mathbf{e}^{n_1} \otimes \cdots \otimes \mathbf{e}^{n_q}$$
+```math
+T = T^{m_1 \ldots m_p}_{n_1 \ldots n_q} \mathbf{e}_{m_1} \otimes \cdots \otimes \mathbf{e}_{m_p} \otimes \mathbf{e}^{n_1} \otimes \cdots \otimes \mathbf{e}^{n_q}
+```
 
 The `Tensor` class in morphis stores tensors with this structure:
 
@@ -92,17 +100,23 @@ Under a change of basis $\mathbf{e}_m' = R^n_m \mathbf{e}_n$, tensor components 
 
 The **exterior algebra** $\bigwedge V$ consists of completely antisymmetric tensors:
 
-$$\bigwedge V = \bigoplus_{k=0}^{d} \bigwedge^k V$$
+```math
+\bigwedge V = \bigoplus_{k=0}^{d} \bigwedge^k V
+```
 
 The $k$-th exterior power $\bigwedge^k V$ has dimension $\binom{d}{k}$. Elements of $\bigwedge^k V$ are called **$k$-vectors** (or homogeneous multivectors of grade $k$).
 
 The **wedge product** of vectors:
 
-$$\mathbf{a} \wedge \mathbf{b} = \mathbf{a} \otimes \mathbf{b} - \mathbf{b} \otimes \mathbf{a}$$
+```math
+\mathbf{a} \wedge \mathbf{b} = \mathbf{a} \otimes \mathbf{b} - \mathbf{b} \otimes \mathbf{a}
+```
 
 In components:
 
-$$(\mathbf{a} \wedge \mathbf{b})^{mn} = a^m b^n - a^n b^m$$
+```math
+(\mathbf{a} \wedge \mathbf{b})^{mn} = a^m b^n - a^n b^m
+```
 
 The wedge product is:
 - **Anticommutative**: $\mathbf{a} \wedge \mathbf{b} = -\mathbf{b} \wedge \mathbf{a}$
@@ -137,34 +151,34 @@ The antisymmetry constraint $b^{\ldots m \ldots n \ldots} = -b^{\ldots n \ldots 
 
 The basis k-vectors $\mathbf{e}_{mn\ldots}$ are conventionally written as antisymmetric:
 
-$$
+```math
 \mathbf{e}_{mn} = \mathbf{e}_m \wedge \mathbf{e}_n = -\mathbf{e}_{nm}
-$$
+```
 
 However, in computation we need a concrete representation. Morphis uses an **ordered basis** with antisymmetry carried on the components. We write:
 
-$$
+```math
 \mathbf{e}^{<}_{mn} \quad \text{(ordered basis, indices satisfy } m < n \text{)}
-$$
+```
 
 Any k-vector can then be expressed in two equivalent ways:
 
-$$
+```math
 b = b^{mn} \mathbf{e}_{mn}
   = \tilde{b}^{mn} \mathbf{e}^{<}_{mn}
-$$
+```
 
 where the "symmetric" components $b^{mn}$ are used with the unordered (conceptual) basis, and the antisymmetric components $\tilde{b}^{mn}$ incorporate the full alternating structure:
 
-$$
-\tilde{b}^{mn} = b^{mn} \, \varepsilon^{mn}
-$$
+```math
+\tilde{b}^{mn} = b^{mn} \varepsilon^{mn}
+```
 
 The $k$-index antisymmetric symbol $\varepsilon^{m_1 \ldots m_k}$ automatically handles sign changes from index ordering. For a bivector in 2D:
 
-$$
-b = \frac{1}{2}(u^1 v^2 - u^2 v^1) \, \mathbf{e}_{12}
-$$
+```math
+b = \frac{1}{2}(u^1 v^2 - u^2 v^1) \mathbf{e}_{12}
+```
 
 The factor $\frac{1}{2}$ ensures proper normalization, while the antisymmetric combination arises from the Levi-Civita structure.
 

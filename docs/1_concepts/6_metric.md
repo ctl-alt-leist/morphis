@@ -6,7 +6,9 @@ The metric introduces measurement into geometric algebra—lengths, angles, volu
 
 The **metric tensor** $g_{ab}$ emerges from the inner products of basis vectors:
 
-$$g_{ab} = \mathbf{e}_a \cdot \mathbf{e}_b$$
+```math
+g_{ab} = \mathbf{e}_a \cdot \mathbf{e}_b
+```
 
 This symmetric bilinear form encodes all geometric information about how vectors relate metrically:
 - **Euclidean**: $g_{ab} = \delta_{ab}$ (identity matrix)
@@ -37,22 +39,22 @@ g.signature  # (3, 0, 0)  (positive, negative, zero)
 
 The metric extends from vectors to all grades. For grade-$k$ k-vectors:
 
-$$
-(u_k \cdot v_k) = \frac{1}{k!} \, u^{m_1 \ldots m_k} v^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
-$$
+```math
+(u_k \cdot v_k) = \frac{1}{k!} u^{m_1 \ldots m_k} v^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+```
 
 For bivectors specifically:
 
-$$
+```math
 \mathbf{e}_{ij} \cdot \mathbf{e}_{kl} = g_{ik}g_{jl} - g_{il}g_{jk}
                                     = \begin{vmatrix} g_{ik} & g_{il} \\ g_{jk} & g_{jl} \end{vmatrix}
-$$
+```
 
 The determinant structure generalizes to all grades:
 
-$$
+```math
 (u_1 \wedge \cdots \wedge u_k) \cdot (v_1 \wedge \cdots \wedge v_k) = \det(u_i \cdot v_j)
-$$
+```
 
 ## Norms and Forms
 
@@ -60,9 +62,9 @@ $$
 
 For a grade-$k$ k-vector $b$, the **quadratic form** is the metric inner product with itself:
 
-$$
-\text{form}(b) = \frac{1}{k!} \, b^{m_1 \ldots m_k} b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
-$$
+```math
+\text{form}(b) = \frac{1}{k!} b^{m_1 \ldots m_k} b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+```
 
 The factorial prevents overcounting due to antisymmetry.
 
@@ -95,9 +97,9 @@ For non-Euclidean metrics:
 
 For complex (phasor) k-vectors, the **Hermitian form** uses complex conjugation:
 
-$$
-\text{hermitian\_form}(b) = \frac{1}{k!} \, \overline{b^{m_1 \ldots m_k}} \, b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
-$$
+```math
+\text{hermitian\_form}(b) = \frac{1}{k!} \overline{b^{m_1 \ldots m_k}} b^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
+```
 
 This always returns real values for real metrics.
 
@@ -111,15 +113,15 @@ mag = hermitian_norm(b)
 
 ### Unit Vectors and Zero Vectors
 
-$$
+```math
 \hat{b} = \frac{b}{\|b\|}
-$$
+```
 
 Zero k-vectors return zero when normalized (handled safely):
 
-$$
+```math
 \text{unit}(0) = 0
-$$
+```
 
 ## Bulk and Weight (PGA)
 
@@ -140,7 +142,9 @@ where $G$ is the metric exomorphism and $\mathbb{G}$ is the anti-metric exomorph
 
 ### Weight Product Vanishing
 
-$$\mathbf{a}_{\circ} \wedge \mathbf{b}_{\circ} = 0$$
+```math
+\mathbf{a}_{\circ} \wedge \mathbf{b}_{\circ} = 0
+```
 
 Weight components, being purely directional, cannot span higher-dimensional spaces by themselves.
 
@@ -157,10 +161,14 @@ w = weight(p) # Directional part
 The metric connects $V$ to $V^*$ via index raising and lowering:
 
 **Lowering** (musical flat $\flat$):
-$$\mathbf{v}^\flat = g(\mathbf{v}, \cdot) \in V^*, \quad v_m = g_{mn} v^n$$
+```math
+\mathbf{v}^\flat = g(\mathbf{v}, \cdot) \in V^*, \quad v_m = g_{mn} v^n
+```
 
 **Raising** (musical sharp $\sharp$):
-$$\omega^\sharp = g^{-1}(\omega, \cdot) \in V, \quad \omega^m = g^{mn} \omega_n$$
+```math
+\omega^\sharp = g^{-1}(\omega, \cdot) \in V, \quad \omega^m = g^{mn} \omega_n
+```
 
 where $g^{mn}$ is the inverse metric satisfying $g^{mp} g_{pn} = \delta^m_n$.
 
@@ -181,11 +189,15 @@ These operations require the metric:
 
 The metric induces an **exomorphism** $G$ that extends metric relationships from vectors to all grades while preserving exterior product structure:
 
-$$G(\mathbf{a} \wedge \mathbf{b}) = G(\mathbf{a}) \wedge G(\mathbf{b})$$
+```math
+G(\mathbf{a} \wedge \mathbf{b}) = G(\mathbf{a}) \wedge G(\mathbf{b})
+```
 
 The metric exomorphism satisfies:
 
-$$GG = \det(g) \, \mathbf{I}$$
+```math
+GG = \det(g) \mathbf{I}
+```
 
 This relationship ensures invertibility (when the metric is non-degenerate).
 
