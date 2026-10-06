@@ -51,8 +51,8 @@ Morphis uses Python's operator overloading to provide concise mathematical synta
 | -------- | ----------------- | ------------------------------------------------- |
 | `u ^ v`  | Wedge product     | Exterior product, creates higher-grade element    |
 | `u * v`  | Geometric product | Full Clifford product (for Vectors → MultiVector) |
-| `u << v` | Left contraction  | Interior product $u \, \lrcorner \, v$            |
-| `u >> v` | Right contraction | Interior product $u \, \llcorner \, v$            |
+| `u << v` | Left contraction  | Interior product $u \lrcorner v$            |
+| `u >> v` | Right contraction | Interior product $u \llcorner v$            |
 
 ```python
 from morphis.elements import basis_vectors, euclidean_metric
