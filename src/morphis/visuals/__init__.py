@@ -6,7 +6,6 @@ blades, frames, surfaces, and their transformations. Built on PyVista/VTK.
 
 Main classes:
 - Scene: Unified interface for static and animated visualization
-- Animation: Real-time animation loop with recording support
 - Canvas: High-level 3D drawing surface
 - Text: 3D text annotations
 
@@ -40,16 +39,6 @@ from morphis.visuals.drawing.vectors import (
     render_vector as render_vector,
     visualize_blade as visualize_blade,
 )
-
-# Effects
-from morphis.visuals.effects import (
-    Effect as Effect,
-    FadeIn as FadeIn,
-    FadeOut as FadeOut,
-    Hold as Hold,
-    compute_opacity as compute_opacity,
-)
-from morphis.visuals.loop import Animation as Animation
 from morphis.visuals.model import VisualModel as VisualModel
 
 # Operation visualization
@@ -66,7 +55,7 @@ from morphis.visuals.projection import (
     ProjectionConfig as ProjectionConfig,
     project_blade as project_blade,
 )
-from morphis.visuals.renderer import Renderer as Renderer
+from morphis.visuals.recording import Recording as Recording
 from morphis.visuals.scene import Scene as Scene
 
 # Text annotations
