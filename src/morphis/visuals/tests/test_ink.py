@@ -329,3 +329,18 @@ class TestAnimation:
 
         assert path.exists()
         assert path.stat().st_size > 0
+
+
+# =============================================================================
+# Fonts
+# =============================================================================
+
+
+class TestFonts:
+    def test_missing_font_falls_back(self):
+        from morphis.visuals.ink.fonts import FALLBACK_FONT, font_settings
+
+        settings = font_settings("No Such Typeface Anywhere")
+
+        assert settings["font.family"] == FALLBACK_FONT
+        assert settings["mathtext.it"] == f"{FALLBACK_FONT}:style=italic"
