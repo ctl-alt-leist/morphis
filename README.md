@@ -84,10 +84,10 @@ morphis/
 │   │   └── tests/
 │   ├── transforms/     # Rotors, translators, PGA, motor constructors
 │   │   └── tests/
-│   ├── visuals/        # PyVista rendering, animation, themes
+│   ├── visuals/        # PyVista rendering and recording, ink sketches, themes
 │   │   └── drawing/    # Vector mesh generation
 │   ├── examples/       # Runnable demos
-│   └── utils/          # Easing functions, observers, pretty printing
+│   └── utils/          # Easing functions, pretty printing
 ├── docs/               # Design documents
 ├── pyproject.toml      # Project configuration
 ├── Makefile            # Development commands

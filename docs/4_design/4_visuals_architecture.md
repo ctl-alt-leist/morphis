@@ -2,26 +2,45 @@
 
 A bird's-eye view of the `morphis.visuals` subpackage.
 
+## The Principle: The Scene Draws What It Is Handed
+
+Visualization is kept separate from the mathematics it shows. The user does all the mathematics (rotations, translations, evolutions, simulations, operations) on morphis elements, outside the visuals. The Scene holds references to those elements, and every `capture(t)` re-reads their current state and redraws them. Nothing in `morphis.visuals` transforms, evolves, or simulates an element.
+
+The only mathematics inside visuals is **depiction**: projecting higher-dimensional elements to 3D (see Projection), and turning each kind of element into something drawable:
+
+| Element handed to the Scene | Drawn as |
+|-----------------------------|----------|
+| `Vector`, grade 1 | arrows from an origin (one per lot entry) |
+| `Vector`, grade 2 | an **oriented disk**: area \|B\| in the bivector's plane, rim, and a circulation arrowhead |
+| `Vector`, grade 3 | an **oriented ball**: volume \|T\|, with an equator and arrowhead showing handedness |
+| `Frame` | its exact vectors as arrows; with `filled=True`, also the parallelogram or parallelepiped they span |
+| `Surface`, `VisualModel` | the mesh, with its vertices re-read every capture |
+
+Higher grades raise `ValueError`.
+
+**Why disks, not parallelograms.** A bivector has a plane, a magnitude, and an orientation, but no shape: infinitely many pairs (u, v) give the same u ∧ v. Drawing a bare bivector as a parallelogram would invent factors it does not carry, and any rule that picks them from B alone must jump somewhere, since no direction can be chosen continuously in every plane through the origin (the hairy-ball theorem). The disk carries exactly what B carries and is symmetric in its plane, so a smoothly turning bivector gives a smoothly turning disk. When a specific u ∧ v is meant, hand the Scene those vectors as a `Frame(u, v)` with `filled=True`; it then draws that u, that v, and their parallelogram, following them exactly.
+
+**Stateless depiction.** Each frame is computed from the element alone; the Scene stores no memory of earlier frames. The one choice that needs a direction, where the circulation arrowhead sits on a disk's rim, uses the rim point farthest along world +z. That point depends only on the plane and changes continuously with it, except when the plane faces +z head-on (a horizontal disk), where it falls back to +x. A ball's equator lies in the horizontal plane; its arrowhead runs counterclockwise about +z for T > 0 (right-handed, like e₁₂₃) and clockwise for T < 0. The geometry lives in `drawing/blades.py` (`oriented_disk`, `oriented_ball`) as plain arrays.
+
 ## Module Structure
 
 ```
 src/morphis/visuals/
 ├── __init__.py       # Public API exports
-├── scene.py          # Scene: static and live-animated visualization
-├── loop.py           # Animation: observer/recorder with playback and GIF/MP4 export
-├── renderer.py       # Renderer: PyVista actor management used by Animation
+├── scene.py          # Scene: static, live, and recorded visualization
+├── recording.py      # Recording: the shared .mp4 / .gif writer
 ├── canvas.py         # Canvas: immediate-mode drawing primitives
 ├── model.py          # VisualModel: mesh whose vertices are GA Vectors
 ├── text.py           # Text, TextStyle: 3D text annotations (data only)
 ├── theme.py          # Colors, palettes, themes, window sizes
-├── effects.py        # Scheduled effects (FadeIn, FadeOut, Hold)
 ├── projection.py     # nD -> 3D projection, index translation, basis labels
 ├── contexts.py       # PGA interpretation (points, lines, planes)
 ├── operations.py     # Meet, join, and dual visualizations
 ├── backends/         # Rendering backend abstraction used by Scene
 │   ├── protocol.py   # RenderBackend protocol
 │   └── pyvista.py    # PyVistaBackend implementation
-├── drawing/          # Mesh generation and blade rendering
+├── drawing/          # Depiction geometry and meshes
+│   ├── blades.py     # Oriented disks (bivectors) and balls (trivectors)
 │   └── vectors.py    # Arrow, span, frame, tesseract meshes; draw/render helpers
 ├── ink/              # Pen-and-ink conceptual figures (matplotlib)
 │   ├── sketch.py     # Sketch: records marks in 3D, renders them to the page
@@ -31,7 +50,7 @@ src/morphis/visuals/
 │   ├── camera.py     # Camera: orbiting view, orthographic or perspective
 │   ├── theme.py      # InkTheme: paper, ink, graphite, accents, font
 │   └── fonts.py      # Font registration, including .ttc italic faces
-└── tests/            # test_scene.py, test_projection.py, test_model.py, test_ink.py
+└── tests/            # test_scene*.py, test_projection.py, test_model.py, test_ink.py
 ```
 
 ## Layer Overview
@@ -39,30 +58,38 @@ src/morphis/visuals/
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  High-Level API                                             │
-│  Scene, Animation, Canvas                                   │
+│  Scene (live and recorded), Canvas                          │
 │  contexts (PGA), operations (meet/join/dual)                │
 ├─────────────────────────────────────────────────────────────┤
-│  Projection                                                 │
-│  user geometric indices -> Metric -> internal storage slots │
-├──────────────────────────────┬──────────────────────────────┤
-│  Backend Abstraction (Scene) │  Renderer (Animation)        │
-│  RenderBackend, PyVista      │  actor tracking              │
-├──────────────────────────────┴──────────────────────────────┤
-│  Drawing Primitives (drawing/vectors.py)                    │
-│  create_blade_mesh(), create_frame_mesh(), arrow and spans  │
+│  Depiction                                                  │
+│  projection: user indices -> Metric -> storage slots        │
+│  drawing/blades.py: oriented disks and balls                │
+├─────────────────────────────────────────────────────────────┤
+│  Backend Abstraction                                        │
+│  RenderBackend protocol, PyVistaBackend                     │
 ├─────────────────────────────────────────────────────────────┤
 │  PyVista / VTK                                              │
-│  Plotter, meshes, actors                                    │
 └─────────────────────────────────────────────────────────────┘
+
+            Recording (.mp4 / .gif): shared by Scene and ink
 ```
 
-Scene talks to the backend protocol. Animation predates the backend layer and drives PyVista through `Renderer`. Canvas, `contexts.py`, and `operations.py` draw directly on a PyVista `Plotter`. The `ink` subpackage is a separate path: it projects through its own camera and draws pen strokes and stipple with matplotlib, for conceptual figures rather than shaded 3D scenes.
+Scene talks only to the backend protocol. Canvas, `contexts.py`, and `operations.py` draw directly on a PyVista `Plotter`. The `ink` subpackage is a separate path for conceptual figures rather than shaded 3D scenes: it projects through its own camera and draws pen strokes and stipple with matplotlib.
 
-## Core Components
+## Two Ways to Draw
 
-### Scene (`scene.py`)
+| | Scene | Ink sketch |
+|---|---|---|
+| For | shaded 3D scenes, live or recorded | pen-and-ink conceptual figures |
+| Renderer | PyVista/VTK through `RenderBackend` | matplotlib |
+| Motion | mutate elements, then `capture(t)` | `build(t)` returns the figure at time t |
+| Output | window; `record()` to .mp4 / .gif; `save()` to .scene / .obj | `save()` to PNG/SVG/PDF; `animate()` to .mp4 / .gif |
+| Size | pixels (`size=(1280, 800)`) | inches (`size=(8, 6)`) at a dpi |
+| Frame rate | `frame_rate` | `frame_rate` |
 
-The main interface for both static and animated visualization.
+Both keep the mathematics outside the drawing.
+
+## Scene (`scene.py`)
 
 ```python
 from morphis.visuals import Scene, RED
@@ -72,50 +99,44 @@ scene = Scene(theme="obsidian")
 scene.add(v, color=RED)
 scene.show()
 
-# Live animation
+# Live animation: the math happens outside, the Scene redraws
 scene = Scene(theme="obsidian")
 scene.add(F, color=RED, filled=True)
 scene.fade_in(F, t=0.0, duration=0.5)
-
 for t in times:
-    F.data[...] = transform(t)
-    scene.capture(t)  # Renders live, syncs to real time
+    F.data[...] = F.transform(rotor(b, d_angle)).data
+    scene.capture(t)
+scene.show()
 
-scene.show()  # Wait for window close
+# Recording, off screen and as fast as frames render
+scene = Scene(window=False)
+scene.add(B)
+with scene.record("figures/turn/turn.mp4"):
+    for t in times:
+        B.data[...] = turned(t)
+        scene.capture(t)
 ```
 
-**Constructor:** `Scene(projection=None, theme="obsidian", size=(1280, 800), frame_rate=30, backend="pyvista", show_basis=True, auto_camera=True)`. The backend is created at construction and initialized lazily on the first `add()`, `camera()`, `capture()`, or `show()`.
+**Constructor:** `Scene(projection=None, theme="obsidian", size=(1280, 800), frame_rate=30, backend="pyvista", show_basis=True, auto_camera=True, window=True)`. The backend is created at construction and initialized lazily on the first `add()`, `camera()`, `capture()`, or `show()`. With `window=False` it renders off screen: no window opens, `capture` does not wait for wall-clock time, and `show()` does nothing.
 
 **Key methods:**
-- `add(element, representation=None, color=None, opacity=1.0, **kwargs)`: add an element, returns an element ID
-- `remove(element_id)`: remove an element
-- `set_projection(axes)`: choose the three geometric indices shown (see Projection below)
-- `capture(t)`: render the current state at time `t` and wait for wall-clock time `t`
+- `add(element, color=None, opacity=1.0, **options)`: add an element; returns an element ID. Options: `origin` (single element), `origins` (one per lot entry), `filled` (Frame), `smooth_shading` and `show_edges` (meshes)
+- `remove(element_id)`
+- `capture(t)`: redraw every element from its current state; with a window, keep pace with wall-clock time `t`; inside `record()`, append one frame
+- `record(path, frame_rate=None)`: context manager; every capture inside the block becomes a frame of `path` (.mp4 or .gif), finalized on exit, even if the block raises. The frame rate defaults to the scene's. Yields the `Recording`, whose `frame_count` and `written_count` tell what was captured and written
+- `set_projection(axes)`: choose the three geometric indices shown; every element already in the scene is redrawn under the new axes
 - `show()`: show the window and block until it is closed
 - `fade_in(element, t, duration)`, `fade_out(element, t, duration)`: schedule opacity effects
 - `camera(position, focal_point, up)`, `reset_camera()`, `set_clipping_range(near, far)`
 - `add_light(...)`, `remove_light(light_id)`, `clear_lights()`
-- `save(path)`, `Scene.load(path)`: persist and restore (see below)
+- `save(path)`, `Scene.load(path, window=True)`: persist and restore
 - `close()`, `is_closed()`
 
-**Properties:** `theme`, `frame_rate`, `projection` (user-facing indices), `basis_labels`.
+**Properties:** `theme`, `frame_rate`, `window`, `projection` (user-facing indices), `basis_labels`.
 
-**Supported elements:**
+**Update path.** Each element's depiction is a fixed set of named shapes (for a bivector: `fill/0`, `rim/0`, `sense/0`), determined by its type, grade, and lot. `add()` creates one backend object per shape. `capture(t)` recomputes the shapes from the element's current data and moves each backend object to its new geometry (`update_arrows`, `update_lines`, `update_mesh`, or `replace_mesh` when the topology can change, as for frames), then applies effect opacity.
 
-| Element | Default representation | Backend call |
-|---------|------------------------|--------------|
-| `Surface` | mesh | `add_mesh` |
-| `Frame` | arrows (plus faces when `filled=True`) | `add_mesh` via `create_frame_mesh` |
-| `Vector`, grade 1 | arrow (arrows for a lot) | `add_arrows` |
-| `Vector`, grade ≥ 2 | span of its factored vectors | `add_span` |
-
-`Text` and `VisualModel` are not drawn by Scene yet. `VisualModel` is supported by `Animation` and `Canvas.model()`.
-
-**Update path:** `capture(t)` calls `_sync_visuals(t)`, which recomputes effect opacity for every element and re-reads the geometry of `Surface`, `Frame`, and grade-1 `Vector` elements. Grade ≥ 2 vectors are factored once in `add()`; their geometry does not refresh on `capture()`, only their opacity does.
-
-**Design principle:** Scene keeps references to the user's elements rather than copies. Animation happens live during `capture()` calls; nothing is recorded.
-
-### Projection (`projection.py`)
+## Projection (`projection.py`)
 
 Elements of dimension greater than 3 are projected onto three axes for display. Projection axes are **user-facing geometric indices**, the same indices accepted by `basis_vector` and `.on[...]` (see [Index Convention](6_index-convention.md)):
 
@@ -147,71 +168,15 @@ Module contents:
 
 The `"principal"` method (also used when `axes` is `None`) picks the internal slots with the largest components, and `get_projection_axes` reports them back through `Metric.to_user`.
 
-Below the projection layer, `Renderer`, `create_blade_mesh`, `create_frame_mesh`, and `create_quadvector_mesh` take a `projection_axes` argument of **internal storage slots**. Their callers (Scene, Animation) translate through the metric first; the drawing code does only array math.
+Below the projection layer, `create_blade_mesh`, `create_frame_mesh`, and `create_quadvector_mesh` take a `projection_axes` argument of **internal storage slots**. Their callers translate through the metric first; the drawing code does only array math. Scene projects the components itself before depicting: grade-1 points take the components at the projection slots, and grade-2 and grade-3 components take the sub-array at those slots on every axis.
 
-### Animation (`loop.py`)
+## Recording (`recording.py`)
 
-An observer and recorder. It reads the state of watched objects at each `capture(t)` and either renders immediately (live mode) or stores snapshots for later playback and export.
+`Recording(path, frame_rate)` is the one writer behind `Scene.record` and `ink.animate`. Frames go in as RGB image arrays; the suffix picks the format, `.mp4` (H.264 via imageio-ffmpeg) or `.gif` (looping). It is a context manager that finalizes the file on exit.
 
-```python
-anim = Animation(frame_rate=60, theme="obsidian")
-anim.watch(F, color=RED)
-anim.start()             # batch mode; start(live=True) renders as it goes
-for t in times:
-    F.data[...] = transform(t)
-    anim.capture(t)
-anim.play()              # or anim.save("rotation.gif") / "rotation.mp4"
-```
+GIF frame delays are whole centiseconds, and browsers slow any delay under 20 ms, so a GIF plays at most 50 frames per second. The writer uses the nearest delay of at least 20 ms and, when frames arrive faster, keeps the frames that fall on the GIF's own ticks, so the clip keeps its real duration. Video writes every frame at the given rate.
 
-**Key methods:** `watch(*targets)`, `unwatch(*targets)`, `set_vectors(blade, vectors, origin)`, `set_projection(axes, labels=None)`, `fade_in`, `fade_out`, `start(live)`, `capture(t)`, `finish()`, `play(loop)`, `save(filename, loop)`, `camera(position, focal_point)`, `set_basis_labels(labels)`, `close()`.
-
-Animation accepts `Vector`, `Frame`, and `VisualModel` targets. Blades are factored into spanning vectors on every capture (via `morphis.utils.observer.Observer`), so animated bivectors and trivectors do refresh here. `set_projection` follows the same index convention as Scene: user indices are translated per object through its metric at capture time, and the generated labels use the same indices.
-
-### Renderer (`renderer.py`)
-
-Low-level actor management for Animation. Tracks one set of actors per object ID and rebuilds meshes through `create_blade_mesh` / `create_frame_mesh` on `update_object`. It has no knowledge of geometric algebra, time, or effects.
-
-### Canvas (`canvas.py`)
-
-Immediate-mode drawing on a PyVista plotter: `arrow`, `arrows`, `curve`, `curves`, `point`, `points`, `plane`, `model`, `camera`, `show`, `screenshot`. Used by `drawing/vectors.py` render helpers, `contexts.py`, and `operations.py`.
-
-```python
-canvas = Canvas(theme="obsidian")
-canvas.arrow([0, 0, 0], [1, 0, 0])
-canvas.show()
-```
-
-`Canvas(basis_axes=(1, 2, 3))` and `set_basis_axes(axes)` take user-facing geometric indices and label the axes with the same numbers (`(2, 4, 5)` gives e2, e4, e5). Canvas holds no metric, so it does not range-check these indices.
-
-### VisualModel (`model.py`)
-
-A mesh whose vertices are a lot of grade-1 `Vector`s in 3D, with triangle faces. It is an `Element`, so GA transforms (`apply_similarity`, rotors, motors) act on its vertices directly. A cached PyVista mesh shares the vertex buffer; `sync_mesh()` refreshes it at capture boundaries. Load with `VisualModel.from_file(path)` or `VisualModel.from_mesh(polydata)`.
-
-### Text (`text.py`)
-
-`Text` holds a string, a 3D position, and font settings; `TextStyle` holds reusable styling. The backend protocol has `add_text` / `update_text`, though Scene does not yet route `Text` to them.
-
-### Effects (`effects.py`)
-
-Declarative opacity schedules: `FadeIn`, `FadeOut`, `Hold`, and `compute_opacity(effects, object_id, t)`. Animation uses these classes. Scene keeps its own lightweight `SceneEffect`, keyed by element ID, with the same fade semantics.
-
-### PGA Context (`contexts.py`)
-
-Interprets PGA blades as geometric entities and draws them on a Canvas:
-
-| Grade | Interpretation | Rendering |
-|-------|---------------|-----------|
-| 1     | Point/direction | Sphere |
-| 2     | Line | Extended segment |
-| 3     | Plane | Transparent surface |
-
-Entry points: `visualize_pga_blade`, `visualize_pga_scene`, `render_pga_point`, `render_pga_line`, `render_pga_plane`, `is_pga_context`.
-
-### Operation Visualization (`operations.py`)
-
-`render_join`, `render_meet`, `render_meet_join`, and `render_with_dual` draw the inputs and the result of an operation together on a Canvas, styled by `OperationStyle`. Each accepts an optional `ProjectionConfig` for blades of dimension greater than 3.
-
-### Ink Sketches (`ink/`)
+## Ink Sketches (`ink/`)
 
 Pen-and-ink conceptual figures in the style of a hand-drawn monograph illustration: an organic enclosing space shaded with stipple, and vectors, planes, curves, construction lines, and labels drawn inside it. Output is a static image (PNG, SVG, PDF).
 
@@ -245,11 +210,49 @@ sketch.save("figures/example.png")
 
 **Themes and fonts.** `INK` (white paper), `PARCHMENT` (warm), and `CHALKBOARD` (inverted) share muted accents (blue, red, green, sepia, violet, ochre). Text and mathtext are set in the theme's `font` (default Palatino). System families shipped as `.ttc` collections expose only their upright face to matplotlib, so `fonts.py` extracts each face once to `~/.cache/morphis/fonts` and registers it, making the italic available to math.
 
-**Animation.** `animate(build, times, path)` renders one sketch per time, where `build(t)` constructs the scene from the true geometry at time t. All frames share one page rectangle (the union of every frame's bounds, fitted to the aspect), so still parts stay registered. Each space and mark draws its stipple and pen wobble from its own seeded stream, keyed by the order it was added, so a mark looks the same in every frame even as other marks move or change depth order. The suffix picks the format: `.mp4` (H.264 via imageio-ffmpeg) or `.gif`. Expensive true-geometry work that does not depend on t, such as a whole orbit, should be computed once and reused across frames.
+**Animation.** `animate(build, times, path, frame_rate=30)` renders one sketch per time, where `build(t)` constructs the figure from the true geometry at time t. This mirrors the Scene principle: the math happens in `build`, outside the drawing. All frames share one page rectangle (the union of every frame's bounds, fitted to the aspect), so still parts stay registered. Each space and mark draws its stipple and pen wobble from its own seeded stream, keyed by the order it was added, so a mark looks the same in every frame even as other marks move or change depth order. Frames go through the shared `Recording` (see Recording), so `.mp4` and `.gif` behave exactly as they do for `Scene.record`. Expensive true-geometry work that does not depend on t, such as a whole orbit, should be computed once and reused across frames.
 
 Not yet integrated with `Scene`: there is no ink `RenderBackend`, and hidden-line dashing is per mark rather than per segment.
 
-### Theme System (`theme.py`)
+## Other Components
+
+### Canvas (`canvas.py`)
+
+Immediate-mode drawing on a PyVista plotter: `arrow`, `arrows`, `curve`, `curves`, `point`, `points`, `plane`, `model`, `camera`, `show`, `screenshot`. Used by `drawing/vectors.py` render helpers, `contexts.py`, and `operations.py`.
+
+```python
+canvas = Canvas(theme="obsidian")
+canvas.arrow([0, 0, 0], [1, 0, 0])
+canvas.show()
+```
+
+`Canvas(basis_axes=(1, 2, 3))` and `set_basis_axes(axes)` take user-facing geometric indices and label the axes with the same numbers (`(2, 4, 5)` gives e2, e4, e5). Canvas holds no metric, so it does not range-check these indices.
+
+### VisualModel (`model.py`)
+
+A mesh whose vertices are a lot of grade-1 `Vector`s in 3D, with triangle faces. It is an `Element`, so GA transforms (`apply_similarity`, rotors, motors) act on its vertices directly, outside the Scene. `Scene.add(model)` draws the mesh and every capture re-reads the vertices. Load with `VisualModel.from_file(path)` or `VisualModel.from_mesh(polydata)`.
+
+### Text (`text.py`)
+
+`Text` holds a string, a 3D position, and font settings; `TextStyle` holds reusable styling. The backend protocol has `add_text` / `update_text`, though Scene does not yet route `Text` to them.
+
+### PGA Context (`contexts.py`)
+
+Interprets PGA blades as geometric entities and draws them on a Canvas:
+
+| Grade | Interpretation | Rendering |
+|-------|---------------|-----------|
+| 1     | Point/direction | Sphere |
+| 2     | Line | Extended segment |
+| 3     | Plane | Transparent surface |
+
+Entry points: `visualize_pga_blade`, `visualize_pga_scene`, `render_pga_point`, `render_pga_line`, `render_pga_plane`, `is_pga_context`.
+
+### Operation Visualization (`operations.py`)
+
+`render_join`, `render_meet`, `render_meet_join`, and `render_with_dual` draw the inputs and the result of an operation together on a Canvas, styled by `OperationStyle`. Each accepts an optional `ProjectionConfig` for blades of dimension greater than 3.
+
+## Theme System (`theme.py`)
 
 Four built-in themes:
 
@@ -276,22 +279,23 @@ LARGE = (1920, 1200)
 DEFAULT_SIZE = MEDIUM
 ```
 
-Scene defaults to `MEDIUM`. Canvas defaults to `(1200, 900)` and Animation to `(1800, 1350)`.
+Scene defaults to `MEDIUM`; Canvas defaults to `(1200, 900)`.
 
-### Backend Abstraction (`backends/`)
+## Backend Abstraction (`backends/`)
 
 Scene renders through a pluggable backend obtained with `get_backend(name)`. The `RenderBackend` protocol:
 
 ```python
 class RenderBackend(Protocol):
     # Lifecycle
-    def initialize(size, theme, show_basis=True): ...
+    def initialize(size, theme, show_basis=True, window=True): ...
     def close(): ...
 
     # Objects (add_* returns an object ID)
     def add_mesh(vertices, faces, color, opacity=1.0, smooth_shading=True, show_edges=False): ...
     def update_mesh(object_id, vertices): ...
-    def add_arrows(origins, directions, color, opacity=1.0, tip_length=0.1, tip_radius=0.03, shaft_radius=0.015): ...
+    def replace_mesh(object_id, vertices, faces): ...
+    def add_arrows(origins, directions, color, opacity=1.0, ...): ...
     def update_arrows(object_id, origins, directions): ...
     def add_points(positions, color, opacity=1.0, point_size=5.0): ...
     def update_points(object_id, positions): ...
@@ -311,6 +315,7 @@ class RenderBackend(Protocol):
     # Rendering and window
     def render(): ...
     def capture_frame() -> NDArray: ...
+    def export_obj(path): ...
     def show(interactive=True): ...
     def process_events(): ...
     def is_closed() -> bool: ...
@@ -323,21 +328,22 @@ class RenderBackend(Protocol):
     def clear_lights(): ...
 ```
 
-Only `PyVistaBackend` is implemented. Labels passed to `set_basis_labels` before `initialize` are used when the basis is first drawn. Two Scene paths still reach past the protocol into PyVista: Frame updates use `PyVistaBackend.get_actor` and the VTK mapper, and `save("*.obj")` uses the backend's plotter directly.
+Only `PyVistaBackend` is implemented. Labels passed to `set_basis_labels` before `initialize` are used when the basis is first drawn. Scene uses nothing outside the protocol.
 
-### Saving and Loading Scenes
+## Saving and Loading Scenes
 
 ```python
 scene.save("demo.scene")  # Pickle format, reloadable
 scene.save("demo.obj")    # Wavefront OBJ, opens in macOS Preview
 
-scene = Scene.load("demo.scene")
+scene = Scene.load("demo.scene")              # on screen
+scene = Scene.load("demo.scene", window=False)  # off screen, e.g. to record or export
 scene.show()
 ```
 
 | Extension | Format | Use case |
 |-----------|--------|----------|
-| `.scene` | Pickle of `SceneData` | Reloadable with theme, size, projection (user indices), basis flag, and per-element color, opacity, representation, options |
+| `.scene` | Pickle of `SceneData` | Reloadable with theme, size, projection (user indices), basis flag, and per-element color, opacity, and options |
 | `.obj` | Wavefront OBJ | View in 3D apps (macOS Preview, Blender, etc.) |
 
 **CLI viewing:**
@@ -348,23 +354,23 @@ morphis view demo.scene
 
 ## Rendering Flow
 
-### Live Animation (Scene)
+### Live and Recorded (Scene)
 
 ```
 User code                         Scene
     │                               │
     │  scene.add(element)           │
-    ├──────────────────────────────►│ Projects through element.metric
-    │                               │ Creates backend visuals
+    ├──────────────────────────────►│ Depicts the element, creates backend objects
     │                               │
-    │  element.data[...] = new      │
+    │  element.data[...] = new      │   (the math, outside the Scene)
     │  scene.capture(t)             │
-    ├──────────────────────────────►│ Updates opacity from effects
-    │                               │ Re-projects surfaces, frames, grade-1 vectors
-    │                               │ Waits for real time, processes events
+    ├──────────────────────────────►│ Re-depicts every element from its current state
+    │                               │ Moves backend objects, applies effect opacity
+    │                               │ Inside record(): appends a frame
+    │                               │ With a window: waits for wall-clock t
     │                               │
     │  scene.show()                 │
-    ├──────────────────────────────►│ Waits for window close
+    ├──────────────────────────────►│ Waits for window close (window only)
 ```
 
 ### Static Display
@@ -374,30 +380,21 @@ scene.add(element)  →  Creates visuals
 scene.show()        →  Blocking show, waits for close
 ```
 
-### Recorded Animation (Animation)
-
-```
-anim.watch(target)     →  Track by id(target)
-anim.start()           →  Begin session (batch or live)
-anim.capture(t)        →  Snapshot (origin, vectors, opacity, slots) per object
-anim.play() / save()   →  Replay snapshots through Renderer or an off-screen plotter
-```
-
 ## Design Decisions
 
-1. **Scene as the main interface:** one class for static and live-animated scenes.
+1. **The Scene draws what it is handed:** no transformation, simulation, or evolution inside visuals; depiction only.
 
-2. **No snapshot storage in Scene:** animation happens live; Animation is the tool for recording and export.
+2. **Stateless depiction:** each frame is computed from the element alone, so pictures follow elements continuously and nothing is remembered between frames.
 
-3. **Backend abstraction:** Scene depends on the `RenderBackend` protocol, not on PyVista directly.
+3. **Bare blades are drawn by their invariants:** an oriented disk for a bivector and an oriented ball for a trivector; a specific factorization is drawn by handing over a `Frame`.
 
-4. **Metric-routed projection:** projection axes and basis labels use user-facing geometric indices, translated per element through its `Metric`. No visuals code converts indices with an ad-hoc offset.
+4. **Recording wraps the capture loop:** `with scene.record(path):` around ordinary captures, with one writer shared by Scene and ink.
 
-5. **Standard window sizes:** consistent sizing across examples.
+5. **Backend abstraction:** Scene depends on the `RenderBackend` protocol only.
 
-6. **Real-time sync:** `capture(t)` waits for wall-clock time `t`.
+6. **Metric-routed projection:** projection axes and basis labels use user-facing geometric indices, translated per element through its `Metric`. No visuals code converts indices with an ad-hoc offset.
 
-7. **Clean window close:** windows close without Ctrl-C.
+7. **Real-time sync on screen, full speed off screen:** with a window, `capture(t)` waits for wall-clock time `t`; with `window=False` it does not.
 
 8. **Truth separate from depiction (ink):** figures keep objects in their true space and state every unfaithful drawing choice in one `Depiction` plus explicit placements.
 
@@ -407,7 +404,9 @@ anim.play() / save()   →  Replay snapshots through Renderer or an off-screen p
 |-----------|-----------|
 | New theme | `THEMES` dict in `theme.py` |
 | New backend | Implement `RenderBackend`, register in `backends/__init__.py` |
-| New element type | `Scene._default_representation()`, `_create_visuals()`, `_sync_visuals()` |
+| New element type | `Scene._depict()`: return named `Shape`s for it |
+| New depiction geometry | `drawing/blades.py` (plain arrays, no renderer) |
+| New output format | `recording.py` |
 | New projection method | `projection.py` (keep user indices at the API, slots below it) |
 | New ink mark | A recorder method on `Sketch`, a `LAYERS` entry, and a `_render_<kind>` method |
 | New ink theme | An `InkTheme` in `ink/theme.py`, added to `INK_THEMES` |
