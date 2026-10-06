@@ -325,7 +325,7 @@ class TestAnimation:
         assert (reference != second).sum() < 0.01 * second.size
 
     def test_gif(self, tmp_path):
-        path = animate(moving_sketch, [0.0, 0.5, 1.0], tmp_path / "motion.gif", fps=10, dpi=40)
+        path = animate(moving_sketch, [0.0, 0.5, 1.0], tmp_path / "motion.gif", frame_rate=10, dpi=40)
 
         assert path.exists()
         assert path.stat().st_size > 0

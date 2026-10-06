@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     if is_animation:
         times = linspace(0.0, PERIOD, int(DURATION * FRAME_RATE), endpoint=False)
-        path = animate(lambda t: create_sketch(theme, t), times, output, fps=FRAME_RATE)
+        path = animate(lambda t: create_sketch(theme, t), times, output, frame_rate=FRAME_RATE)
     else:
         path = create_sketch(theme).save(output)
 
