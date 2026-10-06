@@ -78,3 +78,8 @@ figures/scratch/
 
 # macOS metadata; listed again here so it beats the figures/ exception above
 **/.DS_Store
+
+# Personal notes written for Claude to read; never tracked
+comments.md
+notes.md
+_notes/
