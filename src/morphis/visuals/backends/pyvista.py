@@ -69,8 +69,9 @@ class PyVistaBackend:
         size: tuple[int, int],
         theme: Theme,
         show_basis: bool = True,
+        window: bool = True,
     ) -> None:
-        """Initialize the rendering window."""
+        """Initialize the renderer, on screen or off screen."""
         from pyvista import Plotter
 
         self._theme = theme
@@ -78,7 +79,7 @@ class PyVistaBackend:
         self._show_basis = show_basis
         self._window_closed = False
 
-        self._plotter = Plotter(off_screen=False)
+        self._plotter = Plotter(off_screen=not window)
         self._plotter.set_background(theme.background)
         self._plotter.window_size = size
 
@@ -153,28 +154,15 @@ class PyVistaBackend:
         if tracked.extra.get("mesh"):
             tracked.extra["mesh"].points = vertices
 
-    def set_mesh_data(self, object_id: str, mesh: "PolyData") -> None:
-        """
-        Replace entire mesh data (vertices + topology).
+    def replace_mesh(self, object_id: str, vertices: NDArray, faces: NDArray) -> None:
+        """Replace a mesh's vertices and connectivity."""
+        from pyvista import PolyData
 
-        Use this when the mesh structure changes, not just vertex positions.
-        For frames, the arrow geometry is procedurally generated and needs
-        complete replacement when direction vectors change.
-        """
-        if object_id not in self._objects:
-            return
-
-        tracked = self._objects[object_id]
-        if tracked.actors:
+        if object_id in self._objects:
+            tracked = self._objects[object_id]
+            mesh = PolyData(array(vertices, dtype=float), faces)
             tracked.actors[0].mapper.SetInputData(mesh)
             tracked.extra["mesh"] = mesh
-
-    def get_actor(self, object_id: str) -> Any | None:
-        """Get the primary VTK actor for an object."""
-        if object_id not in self._objects:
-            return None
-        tracked = self._objects[object_id]
-        return tracked.actors[0] if tracked.actors else None
 
     # =========================================================================
     # Arrow Operations
@@ -205,12 +193,16 @@ class PyVistaBackend:
         actors = []
         arrow_meshes = []
 
+        # One slot per arrow; a zero-length arrow keeps an empty slot so updates stay aligned
         for origin, direction in zip(origins, directions, strict=False):
-            arrow_mesh = self._create_arrow_mesh(origin, direction, shaft_radius, tip_length, tip_radius)
-            if arrow_mesh is not None:
-                actor = self._plotter.add_mesh(arrow_mesh, color=color, opacity=opacity, smooth_shading=True)
-                actors.append(actor)
-                arrow_meshes.append(arrow_mesh)
+            arrow_mesh = self._create_arrow_mesh(origin, direction)
+            actor = (
+                self._plotter.add_mesh(arrow_mesh, color=color, opacity=opacity, smooth_shading=True)
+                if arrow_mesh is not None
+                else None
+            )
+            actors.append(actor)
+            arrow_meshes.append(arrow_mesh)
 
         self._objects[object_id] = TrackedObject(
             object_id=object_id,
@@ -241,12 +233,21 @@ class PyVistaBackend:
             origins = origins.reshape(1, -1)
             directions = directions.reshape(1, -1)
 
-        # Update each arrow mesh
-        meshes = tracked.extra.get("meshes", [])
-        for idx, (origin, direction, _mesh) in enumerate(zip(origins, directions, meshes, strict=False)):
+        # Rebuild each arrow; slots appear and disappear as arrows gain and lose length
+        for slot, (origin, direction) in enumerate(zip(origins, directions, strict=False)):
             new_mesh = self._create_arrow_mesh(origin, direction)
-            if new_mesh is not None and tracked.actors[idx] is not None:
-                tracked.actors[idx].mapper.SetInputData(new_mesh)
+            actor = tracked.actors[slot] if slot < len(tracked.actors) else None
+
+            if new_mesh is not None and actor is not None:
+                actor.mapper.SetInputData(new_mesh)
+            elif new_mesh is not None:
+                actor = self._plotter.add_mesh(
+                    new_mesh, color=tracked.color, opacity=tracked.opacity, smooth_shading=True
+                )
+                tracked.actors[slot] = actor
+            elif actor is not None:
+                self._plotter.remove_actor(actor)
+                tracked.actors[slot] = None
 
         tracked.extra["origins"] = origins.copy()
         tracked.extra["directions"] = directions.copy()
@@ -677,6 +678,11 @@ class PyVistaBackend:
         """Capture current frame as image."""
         self._ensure_plotter()
         return self._plotter.screenshot(return_img=True)
+
+    def export_obj(self, path: str) -> None:
+        """Write the current scene geometry as a Wavefront OBJ file."""
+        self._ensure_plotter()
+        self._plotter.export_obj(path)
 
     def show(self, interactive: bool = True) -> None:
         """Display the scene."""
