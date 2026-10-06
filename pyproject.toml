@@ -1,6 +1,6 @@
 [project]
 name = "morphis"
-version = "0.15.1"
+version = "0.16.0"
 description = "A unified mathematical framework for geometric computation"
 readme = "README.md"
 license = "MIT"
