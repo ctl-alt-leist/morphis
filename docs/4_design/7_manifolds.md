@@ -130,8 +130,9 @@ $$
 Every real vector of such a space has a complex reading: `v.amplitudes` returns
 the $n$ mode amplitudes $v^m + i \, v^{\dot m}$, just as `.on[...]` returns real
 components, and `Vector.from_amplitudes(z, metric)` builds the real vector from
-them. The amplitude carries no normalization factor by default; the convention
-that places $1 / \sqrt{2}$ in the basis is an option. Holomorphic maps are
+them. The amplitude carries no normalization factor; under the ket convention,
+which places $1 / \sqrt{2}$ in the basis, the ket amplitudes are these divided by
+$\sqrt{2}$. Holomorphic maps are
 written in ordinary complex arithmetic and land as real vectors.
 
 The vocabulary follows the Kähler appendix:
@@ -140,13 +141,16 @@ The vocabulary follows the Kähler appendix:
 |-------------|------|
 | $\mathbf{J}$ | `structure_bivector(metric)` |
 | $J$ | `complex_structure(metric)`, an `Operator` |
-| $\cos θ = \mathbf{b} \cdot \mathbf{J}$ | `kahler_angle(b, J)` |
+| $v \mapsto v \lrcorner \mathbf{B}$ | `contraction_map(B)`, for any bivector |
+| $θ$, with $\cos θ = \mathbf{b} \cdot \mathbf{J}$ | `kahler_angle(b, J)` |
 | $J \mathbf{b} = \mathbf{b}$ | `is_complex(b, J)` |
 | $\mathbf{J} \lrcorner \mathbf{b} = 0$ | `is_isotropic(b, J)` |
 | isotropic of grade $n$ | `is_lagrangian(b, J)` |
 
 `kahler_angle` accepts a 2-blade or a tangent frame, so it applies to a surface
-without building its blade.
+without building its blade. Every function that takes $\mathbf{J}$ defaults to
+the one the metric declares and accepts any other, and every one broadcasts
+over the lot.
 
 ## Topology
 

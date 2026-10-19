@@ -293,11 +293,18 @@ class Operator(IndexableMixin):
         if x.grade != self.input_spec.grade:
             raise ValueError(f"Input grade {x.grade} doesn't match spec grade {self.input_spec.grade}")
 
-        if x.data.shape != self.input_shape:
-            raise ValueError(f"Input shape {x.data.shape} doesn't match expected {self.input_shape}")
+        # A vector map with no lot of its own acts pointwise, so it broadcasts
+        # over whatever lot the input carries
+        is_pointwise = self.is_outermorphism and self.input_spec.collection == 0 and self.output_spec.collection == 0
 
-        # Apply using einsum
-        result_data = einsum(self._forward_sig, self.data, x.data)
+        if is_pointwise:
+            result_data = einsum("ab, ...b -> ...a", self.data, x.data)
+
+        else:
+            if x.data.shape != self.input_shape:
+                raise ValueError(f"Input shape {x.data.shape} doesn't match expected {self.input_shape}")
+
+            result_data = einsum(self._forward_sig, self.data, x.data)
 
         return Vector(
             data=result_data,

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Sequence
 
-from numpy import asarray, broadcast_shapes, integer, stack, zeros
+from numpy import asarray, broadcast_shapes, integer, iscomplexobj, stack, zeros
 from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
@@ -364,6 +364,59 @@ class Vector(IndexableMixin, Tensor):
             grade=self.grade,
             metric=self.metric,
         )
+
+    @property
+    def amplitudes(self) -> NDArray:
+        """
+        The mode amplitudes v^m + i v^ṁ of a real vector in a space with modes.
+
+        This is the complex reading of complex dimensions, one amplitude per
+        mode, with no normalization factor. Under the ket convention, where
+        e_m = |e_m⟩ / √2, the ket amplitudes are these divided by √2.
+
+        Returns:
+            Complex array of shape (*lot, n_modes)
+
+        Raises:
+            ValueError: If the vector is not grade-1 or the metric has no modes
+            TypeError: If the coefficients are complex, since complex
+                coefficients and complex dimensions are distinct structures
+        """
+        metric = self.metric
+        if self.grade != 1 or metric.n_modes == 0:
+            raise ValueError("amplitudes are defined for grade-1 vectors of a space with modes")
+
+        if iscomplexobj(self.data):
+            raise TypeError("amplitudes read real components; this vector already has complex coefficients")
+
+        modes = range(1, metric.n_modes + 1)
+        representative = self.data[..., [metric.to_internal(m) for m in modes]]
+        partner = self.data[..., [metric.to_internal(Dot(m)) for m in modes]]
+
+        result = representative + 1j * partner
+
+        return result
+
+    @classmethod
+    def from_amplitudes(cls, amplitudes, metric: Metric) -> "Vector":
+        """
+        The real vector with mode amplitudes z^m = v^m + i v^ṁ.
+
+        Inverse of `amplitudes`. The last axis of the input runs over modes and
+        any leading axes become the lot.
+        """
+        amplitudes = asarray(amplitudes)
+        if metric.n_modes == 0 or amplitudes.shape[-1] != metric.n_modes:
+            raise ValueError(f"expected {metric.n_modes} amplitudes per vector for {metric!r}")
+
+        modes = range(1, metric.n_modes + 1)
+        data = zeros(amplitudes.shape[:-1] + (metric.dim,))
+        data[..., [metric.to_internal(m) for m in modes]] = amplitudes.real
+        data[..., [metric.to_internal(Dot(m)) for m in modes]] = amplitudes.imag
+
+        result = cls(data, grade=1, metric=metric)
+
+        return result
 
     # =========================================================================
     # Indexing (implements IndexableMixin interface)

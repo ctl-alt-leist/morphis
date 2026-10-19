@@ -11,29 +11,31 @@ g_{ab} = \mathbf{e}_a \cdot \mathbf{e}_b
 ```
 
 This symmetric bilinear form encodes all geometric information about how vectors relate metrically:
-- **Euclidean**: $g_{ab} = \delta_{ab}$ (identity matrix)
+- **Euclidean**: $g_{ab} = δ_{ab}$ (identity matrix)
 - **Minkowski**: signature $(+,-,-,-)$ or $(-,+,+,+)$
 - **Degenerate (PGA)**: some diagonal entries are zero
 
+A space is declared by its blocks, which fix the storage order and the label of
+every direction (see the index convention in `docs/4_design/`):
+
 ```python
-from morphis.elements import euclidean_metric, pga_metric, lorentzian_metric
+from morphis.elements import metric
 
-# Euclidean 3D: diag(1, 1, 1)
-g = euclidean_metric(3)
+g = metric(space=3)                                     # diag(1, 1, 1), labels 1, 2, 3
+h = metric(space=3, projective=1)                       # diag(0, 1, 1, 1), labels 0, 1, 2, 3
+η = metric(time=1, space=3)                             # diag(1, -1, -1, -1), labels 0, 1, 2, 3
+η_plus = metric(time=1, space=3, convention="mostly plus")  # diag(-1, 1, 1, 1)
+k = metric(modes=2)                                     # ℂ² as ℝ⁴, labels 1, 1̇, 2, 2̇
 
-# PGA 3D: diag(0, 1, 1, 1) in 4D ambient space
-# Basis: e0 (ideal direction), e1, e2, e3
-h = pga_metric(3)
-
-# Minkowski 4D: diag(-1, 1, 1, 1)
-# Basis: e0 (time), e1, e2, e3
-eta = lorentzian_metric(4)
-
-# Access properties
-g.dim        # 3
-g.tensor     # The metric matrix
-g.signature  # (3, 0, 0)  (positive, negative, zero)
+g.dim          # 3
+g.data         # the metric matrix
+η.signature    # (1, 3, 0): counts of positive, negative, zero eigenvalues
+η.convention   # "mostly minus"
+k.labels       # (1, Dot(1), 2, Dot(2))
 ```
+
+`euclidean_metric(d)`, `pga_metric(d)`, and `lorentzian_metric(d)` are
+shorthands for the first three.
 
 ## Extended Inner Products
 

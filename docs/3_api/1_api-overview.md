@@ -309,6 +309,9 @@ y = L.apply(v)  # explicit method
 L_composed = L1 * L2  # L1(L2(x))
 ```
 
+A grade-1 to grade-1 operator with no lot of its own acts pointwise, so it
+applies to a Vector of any lot.
+
 ### Inversion
 
 ```python
@@ -415,6 +418,27 @@ B = log_versor(R)     # rotor → bivector
 
 # Interpolation
 R_mid = slerp(R0, R1, 0.5)  # halfway rotation
+```
+
+### Complex Structure
+
+In a space with modes, `metric(modes=n)`, directions pair as `e_m` and `e_ṁ`:
+
+```python
+from morphis.elements import Dot, Vector, basis_vector, metric
+from morphis.operations import complex_structure, is_lagrangian, kahler_angle, structure_bivector
+
+g = metric(modes=2)                       # labels 1, Dot(1), 2, Dot(2)
+J = structure_bivector(g)                 # e_1 ∧ e_1̇ + e_2 ∧ e_2̇
+J_map = complex_structure(g)              # v ↦ v ⌋ J, an outermorphism
+
+e1, e2 = basis_vector(1, g), basis_vector(2, g)
+J_map(e1)                                 # e_1̇
+kahler_angle(e1 ^ J_map(e1))              # 0: a conjugate plane
+is_lagrangian(e1 ^ e2)                    # True
+
+v = Vector.from_amplitudes([0.6, 0.8j], g)
+v.amplitudes                              # [0.6, 0.8j]: v^m + i v^ṁ, no factor
 ```
 
 ### Frame Operations

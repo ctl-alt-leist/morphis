@@ -466,3 +466,40 @@ For outermorphisms $f$ and $g$ with vector maps $A$ and $B$:
 ```
 
 Composition of outermorphisms corresponds to matrix multiplication of their vector maps.
+
+## Complex Structure
+
+In a space with modes the structure bivector and its map are:
+
+```math
+\begin{aligned}
+\mathbf{J} &= \mathbf{e}_m \wedge \mathbf{e}_{\dot m} \\ \\
+J(\mathbf{v}) &= \mathbf{v} \lrcorner \mathbf{J}
+\end{aligned}
+```
+
+### Structure
+
+- $J \mathbf{e}_m = \mathbf{e}_{\dot m}$ and $J \mathbf{e}_{\dot m} = -\mathbf{e}_m$
+- $J^2 = (-1)^k$ on grade $k$
+- $J \mathbf{e}_{12} = \mathbf{e}_{\dot 1 \dot 2}$
+- $\mathbf{J}^{\wedge n} / n! = \mathbb{1}$
+
+### Blade Classes
+
+- complex: $J \mathbf{b} = \mathbf{b}$, true for $\mathbf{e}_{1 \dot 1}$, for $\mathbf{v} \wedge J \mathbf{v}$, and for $\mathbb{1}$; never for odd grade
+- isotropic: $\mathbf{J} \lrcorner \mathbf{b} = 0$, true for every vector
+- Lagrangian: isotropic of grade $n$, such as $\mathbf{e}_{12}$, with $\mathbf{e}_{12} \wedge J \mathbf{e}_{12} = -\mathbb{1}$
+
+### Kähler Angle
+
+For a unit 2-blade, $\cos θ = \mathbf{b} \cdot \mathbf{J}$:
+
+- $θ(\mathbf{e}_{1 \dot 1}) = 0$, $θ(\mathbf{e}_{\dot 1 1}) = π$, $θ(\mathbf{e}_{12}) = π / 2$
+- $θ(\mathbf{e}_1 \wedge (\cos α \, \mathbf{e}_{\dot 1} + \sin α \, \mathbf{e}_2)) = α$
+- a tangent frame and its blade give the same angle
+
+### Amplitudes
+
+- $z^m = v^m + i \, v^{\dot m}$, with no normalization factor
+- multiplication by $i$ is $J$: $(J \mathbf{v})$ has amplitudes $i z$

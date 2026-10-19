@@ -262,6 +262,9 @@ class Vector(IndexableMixin, Tensor):
     def imag(self): ...
 
     @property
+    def amplitudes(self): ...
+
+    @property
     def collection(self): ...
 
     @property
