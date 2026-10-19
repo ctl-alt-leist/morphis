@@ -30,7 +30,7 @@ point to infinity, leaving 3 × 5 = 15.
 
 The figures build the surface in stages:
 
-    patch     one patch beside its coordinate rectangle
+    patch     one patch above its coordinate rectangle, a sample w joined to X(w)
     phases    the five patches with k_1 = 0, fanned around z_2 = 0
     atlas     all 25 patches, colored by k_1
     pinch     the welded surface shaded by how nearly the projection collapses
@@ -64,6 +64,12 @@ GRID = (33, 17)
 ANGLE = pi / 4
 
 CAMERA = Camera(azimuth=-35.0, elevation=25.0, distance=14.0, fov=15.0)
+
+# The patch stage: size of the w rectangle relative to its coordinates, its drop below the patch,
+# and the sample point w = ξ + iθ joined to its image
+DOMAIN_SCALE = 0.5
+DOMAIN_GAP = 0.12
+SAMPLE_COORDINATE = (0.55, 0.5)
 
 # Cells whose drawn shape is squeezed below this ratio s_min / s_max are tinted toward red
 COLLAPSE_SHADED = 0.25
@@ -157,20 +163,37 @@ def report(mesh: Mesh) -> None:
 
 
 def stage_patch(sketch: Sketch) -> None:
-    """One patch, k_1 = k_2 = 0, beside the rectangle of w that it is a map of."""
+    """One patch, k_1 = k_2 = 0, drawn above the rectangle of w that it is a map of."""
     patch = ATLAS.patches[0]
     mesh = patch.mesh(GRID)
-    sketch.surface(PROJECTION(mesh.vertices), mesh.cells.cells, colors="blue")
+    drawn = PROJECTION(mesh.vertices)
+    sketch.surface(drawn, mesh.cells.cells, colors="blue")
 
-    # The coordinate rectangle, laid flat to the left and scaled to the patch
+    # The coordinate rectangle, centered under the patch and a gap below it
+    lower, upper = drawn.min(axis=0), drawn.max(axis=0)
+    center = 0.5 * (lower + upper)
     sigma = patch.grid(GRID).reshape(-1, 2)
-    scale, (x, y, z) = 0.45, (-2.2, 0.0, -0.9)
-    flat = stack([scale * sigma[:, 0] + x, scale * sigma[:, 1] + y, 0 * sigma[:, 0] + z], axis=-1)
-    sketch.surface(flat, mesh.cells.cells, colors="sepia")
+    middle = 0.5 * (sigma.min(axis=0) + sigma.max(axis=0))
 
-    sketch.label(r"$w$", (x, y - 0.25, z), offset=(0, -8), size=16)
-    sketch.label(r"$\mathbf{X}(w)$", (1.3, 1.3, 0.5), offset=(18, 12), size=16)
-    sketch.line((x + 0.75, y + 0.35, z + 0.1), (-0.1, 0.3, 0.0), dashed=True, weight="fine")
+    def flat(point):
+        offset = DOMAIN_SCALE * (point - middle)
+        return stack(
+            [center[0] + offset[..., 0], center[1] + offset[..., 1], 0 * offset[..., 0] + lower[2] - DOMAIN_GAP],
+            axis=-1,
+        )
+
+    sketch.surface(flat(sigma), mesh.cells.cells, colors="sepia")
+
+    # One sample w and its image X(w), joined by a dashed line
+    sample = array(SAMPLE_COORDINATE)
+    base = flat(sample)
+    image = PROJECTION(patch(sample[None, :]))[0]
+    sketch.line(base, image, dashed=True, weight="fine")
+    sketch.point(base, radius=3.0)
+    sketch.point(image, radius=3.0)
+
+    sketch.label(r"$w$", base, offset=(-12, -10), size=16)
+    sketch.label(r"$\mathbf{X}(w)$", image, offset=(26, 8), size=16)
 
 
 def stage_phases(sketch: Sketch) -> None:
@@ -205,7 +228,7 @@ def stage_pinch(sketch: Sketch, mesh: Mesh) -> None:
 
 
 def create_sketch(stage: str, theme: str = "ink", mesh: Mesh | None = None) -> Sketch:
-    sketch = Sketch(camera=CAMERA, size=(8.0, 8.0) if stage != "patch" else (10.0, 6.0), seed=5, theme=theme)
+    sketch = Sketch(camera=CAMERA, size=(8.0, 8.0) if stage != "patch" else (7.0, 7.0), seed=5, theme=theme)
     mesh = mesh if mesh is not None else ATLAS.mesh(GRID, tolerance=1e-6)
 
     if stage == "patch":

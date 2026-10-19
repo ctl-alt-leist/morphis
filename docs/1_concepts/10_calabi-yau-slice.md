@@ -61,7 +61,7 @@ K = -\frac{\mathbf{k}_{11} \cdot \mathbf{k}_{11} + \mathbf{k}_{12} \cdot \mathbf
 
 The sheet is saddle-shaped at every point. Two points on its edge are special: $w = 0$, where $z_2 = 0$, and $w = i π/2$, where $z_1 = 0$. There the fifth root is not differentiable, and the next stage shows why.
 
-![The coordinate rectangle of w beside its image, one sheet of the curve](../../figures/higher-dimensional/calabi-yau-patch.png)
+![One sheet of the curve drawn above the coordinate rectangle of w, a sample point joined to its image](../../figures/higher-dimensional/calabi-yau-patch.png)
 
 **The code.** A `Patch` is the map, the domain, and the space. A complex coordinate is written with the imaginary unit, and the map receives $w$ itself and returns the two amplitudes:
 
