@@ -262,7 +262,7 @@ v.at[::2]     # every other in first dim → lot=(5, 5)
 
 ### Geometric Accessor (`.on`)
 
-Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric: Euclidean starts at 1, Lorentzian and PGA start at 0 (time or ideal direction). See [Index Convention](../4_design/6_index-convention.md).
+Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric's block layout: x is always 1, time and a leading projective direction are 0, and modes are labeled `1, Dot(1), 2, Dot(2), ...`. See [Index Convention](../4_design/6_index-convention.md).
 
 ```python
 # b has grade=2 in a Euclidean metric, so geo=(d, d)
@@ -271,7 +271,7 @@ b.on[1]       # row for e_1 → grade=1
 b.on[0]       # IndexError: index 0 is forbidden in Euclidean
 ```
 
-Each integer index reduces the grade by one. Geometric slices are not supported through `.on` (they raise `TypeError`); use the raw `.data` array for advanced geometric slicing.
+Each index reduces the grade by one. Geometric slices are not supported through `.on` (they raise `TypeError`); use the raw `.data` array for advanced geometric slicing.
 
 ---
 

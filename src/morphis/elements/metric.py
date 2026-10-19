@@ -1,209 +1,294 @@
 """
-Geometric Algebra - Metric and Context
+Geometric Algebra - Metric and Space
 
-The Metric class is the complete geometric context for GA objects. It contains:
-- data: The metric tensor g_{ab}
-- signature: The eigenvalue pattern (EUCLIDEAN, LORENTZIAN, DEGENERATE)
-- structure: The geometric interpretation (FLAT, PROJECTIVE, CONFORMAL, ROUND)
+The Metric is the complete geometric context for GA objects: the metric tensor
+g_{ab} together with the block layout of the space it acts on. A space is
+declared by its blocks,
 
-Every GA object requires a Metric. Operations between objects with different
-metrics raise ValueError.
+    metric(space=3)                          # Euclidean ℝ³
+    metric(space=3, projective=1)            # PGA
+    metric(time=1, space=3)                  # spacetime
+    metric(time=1, space=3, projective=1)    # spacetime PGA
+    metric(modes=2)                          # ℂ² as ℝ⁴
 
-Factory functions provide cached metrics for common configurations:
-- euclidean_metric(dim): Standard Euclidean VGA
-- pga_metric(dim): Projective GA for d-dimensional Euclidean space
-- lorentzian_metric(dim): Spacetime algebra
+and the layout fixes the storage order and the label of every direction. Every
+GA object requires a Metric; operations between objects with different metrics
+raise ValueError.
 """
 
 from __future__ import annotations
 
-from enum import Enum, auto
-from typing import Tuple
+from functools import cached_property, lru_cache
+from typing import Literal, NamedTuple
 
-from numpy import asarray, eye
+from numpy import array_equal, asarray, diag, sum as np_sum
+from numpy.linalg import eigvalsh
 from numpy.typing import NDArray
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
-class GASignature(Enum):
+# =============================================================================
+# Labels
+# =============================================================================
+
+
+class Dot(BaseModel):
     """
-    Metric signature: the pattern of eigenvalues.
+    The partner label ṁ of mode m in a space with complex dimensions.
 
-    Determines the metric structure of the underlying vector space.
-    - EUCLIDEAN: All positive eigenvalues (+, +, +, ...)
-    - LORENTZIAN: One timelike dimension (+, -, -, -) or (-, +, +, +)
-    - DEGENERATE: One null direction (0, +, +, ...)
-    """
-
-    EUCLIDEAN = auto()
-    LORENTZIAN = auto()
-    DEGENERATE = auto()
-
-    @classmethod
-    def from_tuple(cls, sig: Tuple[int, ...]) -> GASignature:
-        """
-        Infer signature type from metric signature tuple.
-
-        Returns DEGENERATE if any zeros, LORENTZIAN if any negatives,
-        otherwise EUCLIDEAN.
-        """
-        if any(s == 0 for s in sig):
-            return cls.DEGENERATE
-        elif any(s < 0 for s in sig):
-            return cls.LORENTZIAN
-        return cls.EUCLIDEAN
-
-
-# The geometric index base is a property of the signature: a signature with a
-# distinguished 0th direction (time in Lorentzian, the ideal/null direction in
-# degenerate/PGA) is indexed from 0; a purely spatial Euclidean algebra is
-# indexed from 1 so that e_1 is the first spatial direction (x). This table is
-# the single point tying a signature to its base index -- a future flexible
-# layout (multiple projective directions, custom slot labels) replaces it
-# without touching any call site that goes through Metric.to_internal / to_user.
-_SIGNATURE_BASE_INDEX: dict[GASignature, int] = {
-    GASignature.EUCLIDEAN: 1,
-    GASignature.LORENTZIAN: 0,
-    GASignature.DEGENERATE: 0,
-}
-
-
-class GAStructure(Enum):
-    """
-    Geometric structure: the interpretation of GA elements.
-
-    Determines how blades and multivectors are interpreted geometrically.
-    - FLAT: Standard GA (vectors, planes, volumes)
-    - PROJECTIVE: Ideal points, incidence geometry (PGA)
-    - CONFORMAL: Angles, circles, inversions (CGA)
-    - ROUND: Combined projective + conformal
+    A space declared with modes pairs each representative direction e_m with
+    its partner e_ṁ = J(e_m). The representative is labeled by the integer m
+    and the partner by Dot(m), so basis_vector(Dot(1), g) is e_1̇.
     """
 
-    FLAT = auto()
-    PROJECTIVE = auto()
-    CONFORMAL = auto()
-    ROUND = auto()
+    model_config = ConfigDict(frozen=True)
+
+    mode: int
+
+    def __init__(self, mode: int, /):
+        super().__init__(mode=mode)
+
+    def __str__(self) -> str:
+        return f"{self.mode}̇"
+
+    def __repr__(self) -> str:
+        return f"Dot({self.mode})"
+
+
+Label = int | Dot
+
+
+# =============================================================================
+# Blocks
+# =============================================================================
+
+
+BlockKind = Literal["time", "space", "projective", "modes"]
+
+
+class Block(NamedTuple):
+    """
+    A run of directions of one kind, in storage order.
+
+    A modes block of size n holds 2n directions, each mode adjacent to its
+    partner: 1, 1̇, 2, 2̇, ...
+    """
+
+    kind: BlockKind
+    size: int
+
+    @property
+    def dim(self) -> int:
+        """Number of directions the block contributes."""
+        return 2 * self.size if self.kind == "modes" else self.size
+
+
+Convention = Literal["mostly minus", "mostly plus"]
+
+_CONVENTIONS: tuple[str, ...] = ("mostly minus", "mostly plus")
+
+
+def _block_labels(blocks: tuple[Block, ...]) -> tuple[Label, ...]:
+    """
+    Label every direction of a block layout.
+
+    The first spatial direction is always 1. Time is 0. A projective direction
+    stored before the spatial block is 0; projective directions stored after it
+    continue the spatial count. Modes are labeled m and Dot(m).
+    """
+    n_spatial = sum(block.size for block in blocks if block.kind in ("space", "modes"))
+    seen_spatial = False
+    labels: list[Label] = []
+
+    for block in blocks:
+        if block.kind == "time":
+            labels.extend(range(1 - block.size, 1))
+
+        elif block.kind == "space":
+            labels.extend(range(1, block.size + 1))
+            seen_spatial = True
+
+        elif block.kind == "modes":
+            for m in range(1, block.size + 1):
+                labels.extend((m, Dot(m)))
+            seen_spatial = True
+
+        elif seen_spatial:
+            labels.extend(range(n_spatial + 1, n_spatial + block.size + 1))
+
+        else:
+            labels.extend(range(1 - block.size, 1))
+
+    return tuple(labels)
+
+
+# =============================================================================
+# Metric
+# =============================================================================
 
 
 class Metric(BaseModel):
     """
-    Complete geometric context: metric tensor + signature + structure.
-
-    The Metric is the single source of truth for geometric algebra operations.
-    It provides the inner product structure and semantic interpretation needed
-    for all computations.
+    Complete geometric context: the metric tensor and the block layout.
 
     Attributes:
-        data: The metric tensor g_{ab} as an NDArray
-        signature: The eigenvalue pattern (GASignature)
-        structure: The geometric interpretation (GAStructure)
+        data: The metric tensor g_{ab} in storage order
+        blocks: The block layout, in storage order
+
+    The layout determines the label of each direction (see `labels`), while the
+    tensor determines the geometry. Two metrics are equal when both agree, so
+    ℝ^{2,2} and ℝ^{1,3} are different spaces.
 
     Examples:
-        >>> m = euclidean_metric(3)  # 3D Euclidean VGA
-        >>> m.dim
-        3
-        >>> m.signature
-        GASignature.EUCLIDEAN
-        >>> m.structure
-        GAStructure.FLAT
-
-        >>> m = pga_metric(3)  # 3D PGA (4D underlying space)
-        >>> m.dim
-        4
-        >>> m.euclidean_dim
-        3
+        >>> g = metric(time=1, space=3)
+        >>> g.labels
+        (0, 1, 2, 3)
+        >>> g.signature
+        (1, 3, 0)
+        >>> metric(modes=2).labels
+        (1, Dot(1), 2, Dot(2))
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
 
     data: NDArray
-    signature: GASignature
-    structure: GAStructure
+    blocks: tuple[Block, ...]
 
     @field_validator("data", mode="before")
     @classmethod
     def _convert_to_array(cls, v):
         return asarray(v, dtype=float)
 
+    @field_validator("blocks", mode="before")
+    @classmethod
+    def _convert_blocks(cls, v):
+        return tuple(Block(*block) for block in v)
+
+    @model_validator(mode="after")
+    def _check_layout(self):
+        if self.data.ndim != 2 or self.data.shape[0] != self.data.shape[1]:
+            raise ValueError(f"metric tensor must be square, got shape {self.data.shape}")
+
+        if not array_equal(self.data, self.data.T):
+            raise ValueError("metric tensor must be symmetric")
+
+        n_directions = sum(block.dim for block in self.blocks)
+        if n_directions != self.dim:
+            raise ValueError(f"blocks describe {n_directions} directions but the tensor is {self.dim}-dimensional")
+
+        return self
+
+    # =========================================================================
+    # Shape of the Space
+    # =========================================================================
+
     @property
     def dim(self) -> int:
         """Dimension of the underlying vector space."""
         return self.data.shape[0]
 
-    @property
-    def euclidean_dim(self) -> int:
-        """
-        Working dimension (the 'natural' dimension for the GA flavor).
-
-        For PGA: dim - 1 (e.g., 3D PGA lives in 4D space)
-        For CGA: dim - 2 (e.g., 3D CGA lives in 5D space)
-        For VGA: dim (no extra dimensions)
-        """
-        if self.structure == GAStructure.PROJECTIVE:
-            return self.dim - 1
-        elif self.structure == GAStructure.CONFORMAL:
-            return self.dim - 2
-        return self.dim
+    def _count(self, kind: BlockKind) -> int:
+        return sum(block.size for block in self.blocks if block.kind == kind)
 
     @property
-    def signature_tuple(self) -> Tuple[int, ...]:
-        """The metric signature as a tuple of eigenvalues."""
-        return tuple(int(self.data[i, i]) for i in range(self.dim))
+    def n_time(self) -> int:
+        """Number of time directions."""
+        return self._count("time")
+
+    @property
+    def n_space(self) -> int:
+        """Number of real spatial directions (modes excluded)."""
+        return self._count("space")
+
+    @property
+    def n_projective(self) -> int:
+        """Number of projective (null) directions."""
+        return self._count("projective")
+
+    @property
+    def n_modes(self) -> int:
+        """Number of complex modes; each contributes two real directions."""
+        return self._count("modes")
+
+    @property
+    def is_projective(self) -> bool:
+        """True when the space carries a projective direction."""
+        return self.n_projective > 0
+
+    @cached_property
+    def kinds(self) -> tuple[BlockKind, ...]:
+        """The block kind of each direction, in storage order."""
+        kinds = tuple(block.kind for block in self.blocks for _ in range(block.dim))
+
+        return kinds
+
+    # =========================================================================
+    # Signature
+    # =========================================================================
+
+    @property
+    def signature(self) -> tuple[int, int, int]:
+        """
+        The inertia (p, q, r) of the tensor: counts of positive, negative, and
+        zero eigenvalues.
+        """
+        eigenvalues = eigvalsh(self.data)
+        scale = max(1.0, float(abs(eigenvalues).max(initial=0.0)))
+        tol = 1e-12 * scale
+        p = int(np_sum(eigenvalues > tol))
+        q = int(np_sum(eigenvalues < -tol))
+        r = self.dim - p - q
+
+        return (p, q, r)
+
+    @property
+    def convention(self) -> Convention | None:
+        """
+        The sign convention of a space with time: "mostly minus" when time
+        squares to +1, "mostly plus" when it squares to -1. None without time.
+        """
+        result = None
+        if self.n_time > 0:
+            time_slot = self.kinds.index("time")
+            result = "mostly minus" if self.data[time_slot, time_slot] > 0 else "mostly plus"
+
+        return result
 
     # =========================================================================
     # Geometric Index Convention
     # =========================================================================
     #
-    # Geometric components are addressed in a physics-style convention that
-    # depends only on the signature. Storage is always 0-based; these methods
-    # translate between the user-facing (physics) geometric index and the
-    # internal 0-based slot. They apply to geometric axes only -- lot
-    # (collection) axes are always standard 0-based Python indexing.
-    #
-    # Every geometric access point (.on, basis construction, display) goes
-    # through to_internal / to_user, so the signature -> base mapping in
-    # _SIGNATURE_BASE_INDEX is the single place that defines the convention.
+    # Storage is always 0-based. These methods translate between the label of
+    # a direction (its geometric index, as written on paper) and its storage
+    # slot. They apply to geometric axes only; lot axes are standard 0-based
+    # Python indexing. Every geometric access point (.on, basis construction,
+    # display) goes through them, so the block layout is the single place that
+    # defines the convention.
 
-    @property
-    def base_index(self) -> int:
+    @cached_property
+    def labels(self) -> tuple[Label, ...]:
+        """The label of each direction, in storage order."""
+        return _block_labels(self.blocks)
+
+    def to_internal(self, index: Label) -> int:
         """
-        First valid user-facing geometric index.
+        Convert a geometric index (a direction's label) to its storage slot.
 
-        Euclidean is purely spatial and indexed from 1, so e_1 is the first
-        spatial direction (x). Lorentzian and degenerate (PGA) each carry a
-        distinguished 0th direction -- time and the ideal/null direction
-        respectively -- and are indexed from 0, which keeps e_1 as the first
-        spatial direction in every signature.
+        Raises IndexError if no direction carries that label.
         """
-        return _SIGNATURE_BASE_INDEX[self.signature]
+        labels = self.labels
+        key = index if isinstance(index, Dot) else int(index)
+        if key not in labels:
+            shown = ", ".join(str(label) for label in labels)
+            raise IndexError(f"geometric index {key} is not a direction of {self!r}; valid indices are {shown}")
 
-    @property
-    def max_index(self) -> int:
-        """Last valid user-facing geometric index (inclusive)."""
-        return self.base_index + self.dim - 1
-
-    def to_internal(self, index: int) -> int:
-        """
-        Convert a user-facing geometric index to the internal 0-based slot.
-
-        Raises IndexError if the index is outside the valid range for this
-        metric's signature and dimension.
-        """
-        base = self.base_index
-        if not (base <= index <= base + self.dim - 1):
-            raise IndexError(
-                f"geometric index {index} out of range for {self.dim}-dimensional "
-                f"{self.signature.name.lower()} metric; valid indices are "
-                f"{base} to {base + self.dim - 1}"
-            )
-
-        internal = index - base
+        internal = labels.index(key)
 
         return internal
 
-    def to_user(self, internal: int) -> int:
+    def to_user(self, internal: int) -> Label:
         """
-        Convert an internal 0-based slot to the user-facing geometric index.
+        Convert a storage slot to the label of its direction.
 
         Raises IndexError if the slot is outside 0 to dim - 1.
         """
@@ -213,38 +298,45 @@ class Metric(BaseModel):
                 f"valid slots are 0 to {self.dim - 1}"
             )
 
-        user = internal + self.base_index
+        user = self.labels[internal]
 
         return user
 
-    def to_internal_multi(self, indices: Tuple[int, ...]) -> list[int]:
-        """Convert a tuple of user-facing geometric indices to internal slots."""
+    def to_internal_multi(self, indices: tuple[Label, ...]) -> list[int]:
+        """Convert a tuple of geometric indices to storage slots."""
         return [self.to_internal(n) for n in indices]
 
+    # =========================================================================
+    # Protocols
+    # =========================================================================
+
     def __getitem__(self, index):
-        """Index into the metric tensor: metric[a, b] -> g_{ab}."""
+        """Index into the metric tensor: metric[a, b] -> g_{ab} (storage slots)."""
         return self.data[index]
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype=None, copy=None):
         """NumPy array protocol for interoperability."""
         return self.data if dtype is None else self.data.astype(dtype)
 
     def __repr__(self) -> str:
-        sig_name = self.signature.name.lower()
-        struct_name = self.structure.name.lower()
-        return f"Metric({sig_name}.{struct_name}, dim={self.dim})"
+        blocks = ", ".join(f"{block.kind}={block.size}" for block in self.blocks)
+        convention = f"; {self.convention}" if self.convention is not None else ""
+
+        return f"Metric({blocks}{convention})"
+
+    __str__ = __repr__
 
     def __eq__(self, other: object) -> bool:
-        """
-        Two metrics are equal if they have the same signature, structure,
-        and dimension. The actual tensor values are determined by these.
-        """
+        """Two metrics are equal when their layouts and tensors agree."""
         if not isinstance(other, Metric):
             return NotImplemented
-        return self.signature == other.signature and self.structure == other.structure and self.dim == other.dim
+
+        result = self is other or (self.blocks == other.blocks and array_equal(self.data, other.data))
+
+        return result
 
     def __hash__(self) -> int:
-        return hash((self.signature, self.structure, self.dim))
+        return hash((self.blocks, self.data.tobytes()))
 
     def is_compatible(self, other: Metric) -> bool:
         """Check if two metrics are compatible for operations."""
@@ -256,15 +348,6 @@ class Metric(BaseModel):
         Merge metrics from multiple operands.
 
         All metrics must be identical. Raises ValueError if incompatible.
-
-        Args:
-            *metrics: Metrics to merge
-
-        Returns:
-            The common metric
-
-        Raises:
-            ValueError: If metrics are incompatible or none provided
         """
         if not metrics:
             raise ValueError("At least one metric required")
@@ -273,301 +356,103 @@ class Metric(BaseModel):
         for m in metrics[1:]:
             if not first.is_compatible(m):
                 raise ValueError(f"Incompatible metrics: {first} and {m}")
+
         return first
 
 
 # =============================================================================
-# Cached Factory Functions
+# Factories
 # =============================================================================
-
-_EUCLIDEAN_METRIC_CACHE: dict[int, Metric] = {}
-_PGA_METRIC_CACHE: dict[int, Metric] = {}
-_LORENTZIAN_METRIC_CACHE: dict[int, Metric] = {}
 
 
 def metric(
-    dim: int,
-    signature: str = "euclidean",
-    structure: str = "flat",
+    *,
+    time: int = 0,
+    space: int = 0,
+    projective: int = 0,
+    modes: int = 0,
+    convention: Convention = "mostly minus",
 ) -> Metric:
     """
-    Create a metric with specified signature and structure.
+    Declare a flat space by its blocks.
 
-    Unified interface for creating all metric types. This is the recommended
-    way to create metrics. Accepts flexible input with case-insensitive
-    matching and common aliases.
+    Storage follows the blocks in the order (time, space, projective), except
+    that a purely spatial space with a single projective direction is stored
+    (projective, space). Directions are labeled by position with the first
+    spatial direction always 1: time is 0, a leading projective direction is
+    0, and trailing projective directions continue the spatial count. Modes
+    take the place of the spatial block and are labeled 1, 1̇, 2, 2̇, ...
 
     Args:
-        dim: For flat/lorentzian structures, this is the total dimension.
-             For projective structure, this is the Euclidean dimension
-             (actual dimension will be dim+1).
-        signature: Metric signature (case-insensitive):
-            - "euclidean" or "Euclidean" (all positive)
-            - "lorentzian" or "Lorentzian" (one negative)
-            - "degenerate" or "Degenerate" (one zero - used for PGA)
-            - "spacetime" (alias for lorentzian)
-        structure: Geometric structure (case-insensitive):
-            - "flat" or "vga" (standard vector GA)
-            - "projective" or "pga" (projective GA)
-            - "conformal" or "cga" (conformal GA)
-            - "round" (combined projective + conformal)
+        time: Number of time directions (at most 1 for now)
+        space: Number of real spatial directions
+        projective: Number of projective (null) directions
+        modes: Number of complex modes, each two real directions
+        convention: Sign convention when time is present. "mostly minus" is
+            (+, -, -, -); "mostly plus" is (-, +, +, +). Without time, every
+            spatial direction squares to +1.
 
     Returns:
         Cached Metric instance
 
     Examples:
-        >>> m = metric(3)  # 3D Euclidean VGA (default)
-        >>> m = metric(3, "Euclidean", "Projective")  # 3D PGA (case-insensitive)
-        >>> m = metric(3, "euclidean", "pga")  # 3D PGA (using alias)
-        >>> m = metric(4, "spacetime")  # 4D Minkowski spacetime (alias)
-        >>> m = metric(3, "degenerate", "projective")  # 3D PGA (explicit)
+        >>> metric(space=3).labels
+        (1, 2, 3)
+        >>> metric(space=3, projective=1).labels
+        (0, 1, 2, 3)
+        >>> metric(time=1, space=3, projective=1).labels
+        (0, 1, 2, 3, 4)
+        >>> metric(time=1, space=3, convention="mostly plus").signature
+        (3, 1, 0)
     """
-    # Normalize to lowercase
-    signature = signature.lower()
-    structure = structure.lower()
+    return _metric(time, space, projective, modes, convention)
 
-    # Map string to enum with aliases
-    sig_map = {
-        "euclidean": GASignature.EUCLIDEAN,
-        "lorentzian": GASignature.LORENTZIAN,
-        "spacetime": GASignature.LORENTZIAN,  # Alias
-        "degenerate": GASignature.DEGENERATE,
-    }
 
-    struct_map = {
-        "flat": GAStructure.FLAT,
-        "vga": GAStructure.FLAT,  # Alias: Vector Geometric Algebra
-        "projective": GAStructure.PROJECTIVE,
-        "pga": GAStructure.PROJECTIVE,  # Alias: Projective Geometric Algebra
-        "conformal": GAStructure.CONFORMAL,
-        "cga": GAStructure.CONFORMAL,  # Alias: Conformal Geometric Algebra
-        "round": GAStructure.ROUND,
-    }
+@lru_cache(maxsize=None)
+def _metric(time: int, space: int, projective: int, modes: int, convention: str) -> Metric:
+    if convention not in _CONVENTIONS:
+        raise ValueError(f"Unknown convention {convention!r}; use one of {_CONVENTIONS}")
 
-    if signature not in sig_map:
-        raise ValueError(f"Unknown signature '{signature}'. Must be one of: {', '.join(sorted(set(sig_map.keys())))}")
+    if min(time, space, projective, modes) < 0:
+        raise ValueError("block sizes must be non-negative")
 
-    if structure not in struct_map:
-        raise ValueError(
-            f"Unknown structure '{structure}'. Must be one of: {', '.join(sorted(set(struct_map.keys())))}"
-        )
+    if time > 1:
+        raise NotImplementedError("spaces with more than one time direction are not supported yet")
 
-    sig_enum = sig_map[signature]
-    struct_enum = struct_map[structure]
+    if space > 0 and modes > 0:
+        raise ValueError("a space has either a real spatial block or modes, not both")
 
-    # Dispatch to appropriate factory
-    if sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.FLAT:
-        return euclidean_metric(dim)
-    elif sig_enum == GASignature.LORENTZIAN and struct_enum == GAStructure.FLAT:
-        return lorentzian_metric(dim)
-    elif sig_enum == GASignature.DEGENERATE and struct_enum == GAStructure.PROJECTIVE:
-        return pga_metric(dim)
-    elif sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.PROJECTIVE:
-        # Euclidean PGA is the same as degenerate projective
-        return pga_metric(dim)
-    elif sig_enum == GASignature.EUCLIDEAN and struct_enum == GAStructure.CONFORMAL:
-        return _cga_metric(dim)
+    if time + space + projective + modes == 0:
+        raise ValueError("a space needs at least one direction")
+
+    spatial = Block("modes", modes) if modes > 0 else Block("space", space)
+    if time == 0 and projective == 1:
+        order = (Block("projective", projective), spatial)
     else:
-        raise ValueError(
-            f"Unsupported metric combination: {signature}.{structure}. "
-            f"Available combinations: euclidean.flat, euclidean.projective, "
-            f"lorentzian.flat, degenerate.projective, euclidean.conformal"
-        )
+        order = (Block("time", time), spatial, Block("projective", projective))
+
+    blocks = tuple(block for block in order if block.size > 0)
+
+    time_sign = 1.0 if convention == "mostly minus" else -1.0
+    spatial_sign = -time_sign if time > 0 else 1.0
+    signs = {"time": time_sign, "space": spatial_sign, "modes": spatial_sign, "projective": 0.0}
+    squares = [signs[block.kind] for block in blocks for _ in range(block.dim)]
+
+    result = Metric(data=diag(squares), blocks=blocks)
+
+    return result
 
 
 def euclidean_metric(dim: int) -> Metric:
-    """
-    Get cached Euclidean metric for d-dimensional space.
-
-    Creates a VGA (vanilla geometric algebra) context with:
-    - Metric tensor: diag(1, 1, ..., 1)
-    - Signature: EUCLIDEAN
-    - Structure: FLAT
-
-    Note: Consider using the unified :func:`metric` function instead:
-    ``metric(dim)`` or ``metric(dim, "euclidean", "flat")``
-
-    Args:
-        dim: Vector space dimension
-
-    Returns:
-        Cached Metric instance
-
-    Examples:
-        >>> m = euclidean_metric(3)
-        >>> m.signature
-        GASignature.EUCLIDEAN
-        >>> m.dim
-        3
-    """
-    if dim not in _EUCLIDEAN_METRIC_CACHE:
-        _EUCLIDEAN_METRIC_CACHE[dim] = Metric(
-            data=eye(dim),
-            signature=GASignature.EUCLIDEAN,
-            structure=GAStructure.FLAT,
-        )
-    return _EUCLIDEAN_METRIC_CACHE[dim]
+    """Euclidean ℝ^dim, the same as metric(space=dim)."""
+    return metric(space=dim)
 
 
 def pga_metric(dim: int) -> Metric:
-    """
-    Get cached PGA metric for d-dimensional Euclidean space.
-
-    Creates a PGA (projective geometric algebra) context with:
-    - Metric tensor: diag(0, 1, 1, ..., 1) in (d+1) dimensions
-    - Signature: DEGENERATE
-    - Structure: PROJECTIVE
-
-    The first basis vector e_0 is the degenerate (null) direction representing
-    the ideal point at infinity.
-
-    Note: Consider using the unified :func:`metric` function instead:
-    ``metric(dim, "euclidean", "projective")``
-
-    Args:
-        dim: The Euclidean dimension (resulting space is dim+1)
-
-    Returns:
-        Cached Metric instance
-
-    Examples:
-        >>> m = pga_metric(3)  # 3D PGA
-        >>> m.dim
-        4
-        >>> m.euclidean_dim
-        3
-        >>> m.signature_tuple
-        (0, 1, 1, 1)
-    """
-    if dim not in _PGA_METRIC_CACHE:
-        total_dim = dim + 1
-        g = eye(total_dim)
-        g[0, 0] = 0.0
-        _PGA_METRIC_CACHE[dim] = Metric(
-            data=g,
-            signature=GASignature.DEGENERATE,
-            structure=GAStructure.PROJECTIVE,
-        )
-    return _PGA_METRIC_CACHE[dim]
+    """Projective GA of Euclidean ℝ^dim, the same as metric(space=dim, projective=1)."""
+    return metric(space=dim, projective=1)
 
 
 def lorentzian_metric(dim: int) -> Metric:
-    """
-    Get cached Lorentzian (spacetime) metric.
-
-    Creates an STA (spacetime algebra) context with:
-    - Metric tensor: diag(1, -1, -1, ..., -1)
-    - Signature: LORENTZIAN
-    - Structure: FLAT
-
-    The first basis vector is timelike (+1), the rest are spacelike (-1).
-
-    Args:
-        dim: Total spacetime dimension (typically 4 for Minkowski space)
-
-    Returns:
-        Cached Metric instance
-
-    Examples:
-        >>> m = lorentzian_metric(4)  # Minkowski spacetime
-        >>> m.signature_tuple
-        (1, -1, -1, -1)
-    """
-    if dim not in _LORENTZIAN_METRIC_CACHE:
-        g = -eye(dim)
-        g[0, 0] = 1.0
-        _LORENTZIAN_METRIC_CACHE[dim] = Metric(
-            data=g,
-            signature=GASignature.LORENTZIAN,
-            structure=GAStructure.FLAT,
-        )
-    return _LORENTZIAN_METRIC_CACHE[dim]
-
-
-# =============================================================================
-# Convenience Namespace (for compatibility with old euclidean.flat style)
-# =============================================================================
-
-
-class _MetricNamespace:
-    """
-    Namespace for metric singletons with clean API.
-
-    Provides: euclidean.flat(dim), degenerate.projective(dim), etc.
-    """
-
-    def __init__(self, sig: GASignature, struct: GAStructure):
-        self._signature = sig
-        self._structure = struct
-
-    def __call__(self, dim: int) -> Metric:
-        """Create metric for the given dimension."""
-        if self._signature == GASignature.EUCLIDEAN:
-            if self._structure == GAStructure.FLAT:
-                return euclidean_metric(dim)
-            elif self._structure == GAStructure.CONFORMAL:
-                return _cga_metric(dim)
-        elif self._signature == GASignature.DEGENERATE:
-            if self._structure == GAStructure.PROJECTIVE:
-                return pga_metric(dim)
-        elif self._signature == GASignature.LORENTZIAN:
-            if self._structure == GAStructure.FLAT:
-                return lorentzian_metric(dim)
-
-        # Fallback for unsupported combinations
-        raise ValueError(f"Unsupported metric combination: {self._signature.name}.{self._structure.name}")
-
-    def __repr__(self) -> str:
-        return f"{self._signature.name.lower()}.{self._structure.name.lower()}"
-
-
-class _SignatureNamespace:
-    """Namespace for signature-based metric access."""
-
-    def __init__(self, sig: GASignature):
-        self._signature = sig
-
-    @property
-    def flat(self) -> _MetricNamespace:
-        return _MetricNamespace(self._signature, GAStructure.FLAT)
-
-    @property
-    def projective(self) -> _MetricNamespace:
-        return _MetricNamespace(self._signature, GAStructure.PROJECTIVE)
-
-    @property
-    def conformal(self) -> _MetricNamespace:
-        return _MetricNamespace(self._signature, GAStructure.CONFORMAL)
-
-    @property
-    def round(self) -> _MetricNamespace:
-        return _MetricNamespace(self._signature, GAStructure.ROUND)
-
-
-# Singleton namespaces for clean API
-euclidean_ns = _SignatureNamespace(GASignature.EUCLIDEAN)
-lorentzian_ns = _SignatureNamespace(GASignature.LORENTZIAN)
-degenerate_ns = _SignatureNamespace(GASignature.DEGENERATE)
-
-# Aliases for direct PGA/STA access
-PGA = degenerate_ns.projective
-STA = lorentzian_ns.flat
-
-
-def _cga_metric(euclidean_dim: int) -> Metric:
-    """
-    Create CGA metric (placeholder - full implementation later).
-
-    CGA for d-dimensional Euclidean space uses (d+2) dimensions with
-    a specific metric structure involving null vectors.
-    """
-    dim = euclidean_dim + 2
-    # Standard CGA metric: diag(1, 1, ..., 1, 1, -1)
-    # or using null basis: different structure
-    g = eye(dim)
-    g[-1, -1] = -1.0
-    return Metric(
-        data=g,
-        signature=GASignature.EUCLIDEAN,  # CGA has mixed but overall Euclidean character
-        structure=GAStructure.CONFORMAL,
-    )
+    """Spacetime of total dimension dim in (+, -, -, -), the same as metric(time=1, space=dim - 1)."""
+    return metric(time=1, space=dim - 1)

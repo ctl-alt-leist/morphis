@@ -15,7 +15,7 @@ src/morphis/
 │   ├── vector.py               # Vector class (k-vectors)
 │   ├── multivector.py          # MultiVector class
 │   ├── frame.py                # Frame class
-│   ├── metric.py               # Metric, GASignature, GAStructure
+│   ├── metric.py               # Metric, Block, Dot, metric()
 │   ├── protocols.py            # Type protocols
 │   └── tests/
 │
@@ -99,7 +99,7 @@ src/morphis/
 | `vector.py` | `Vector` class, basis constructors |
 | `multivector.py` | `MultiVector` class |
 | `frame.py` | `Frame` class |
-| `metric.py` | `Metric`, `GASignature`, `GAStructure`, factory functions |
+| `metric.py` | `Metric`, `Block`, `Dot`, `metric()` and factory shorthands |
 | `protocols.py` | `Graded`, `Spanning`, `Transformable` protocols |
 
 ### `operations/`

@@ -26,7 +26,7 @@ class TestMetric:
         assert g[2, 2] == 1
         assert g[3, 3] == 1
         assert g[0, 1] == 0
-        assert g.signature_tuple == (0, 1, 1, 1)
+        assert g.signature == (3, 0, 1)
 
     def test_pga_metric_dimension(self):
         for d in [2, 3, 4, 5]:
@@ -36,7 +36,7 @@ class TestMetric:
     def test_euclidean_metric(self):
         g = euclidean_metric(3)
         assert_array_equal(g.data, eye(3))
-        assert g.signature_tuple == (1, 1, 1)
+        assert g.signature == (3, 0, 0)
 
     def test_metric_indexing(self):
         g = pga_metric(3)

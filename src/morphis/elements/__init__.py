@@ -13,16 +13,11 @@ from morphis.elements.field import Field
 from morphis.elements.frame import Frame
 from morphis.elements.lot_indexed import LotIndexed as LotIndexed
 from morphis.elements.metric import (
-    PGA as PGA,
-    STA as STA,
-    GASignature as GASignature,
-    GAStructure as GAStructure,
+    Block as Block,
+    Dot as Dot,
     Metric as Metric,
-    degenerate_ns as degenerate_ns,
     euclidean_metric as euclidean_metric,
-    euclidean_ns as euclidean_ns,
     lorentzian_metric as lorentzian_metric,
-    lorentzian_ns as lorentzian_ns,
     metric as metric,
     pga_metric as pga_metric,
 )

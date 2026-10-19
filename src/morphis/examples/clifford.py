@@ -26,7 +26,7 @@ def demo_geometric_basics() -> None:
     """Demonstrate the fundamental property: uv = u.v + u^v."""
     section("1. GEOMETRIC PRODUCT BASICS")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Geometric product decomposes into dot + wedge")
     u = Vector([1.0, 0.0, 0.0], grade=1, metric=g)  # e1
@@ -80,7 +80,7 @@ def demo_vector_contraction() -> None:
     """Demonstrate v^2 = |v|^2 for vectors."""
     section("2. VECTOR CONTRACTION (v^2 = |v|^2)")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Unit vector squares to 1")
     e1 = basis_vector(1, g)
@@ -105,7 +105,7 @@ def demo_anticommutativity() -> None:
     """Demonstrate orthogonal vectors anticommute."""
     section("3. ANTICOMMUTATIVITY (orthogonal vectors)")
 
-    g = metric(3)
+    g = metric(space=3)
 
     e1 = basis_vector(1, g)
     e2 = basis_vector(2, g)
@@ -137,7 +137,7 @@ def demo_reversion() -> None:
     """Demonstrate the reverse operation."""
     section("4. REVERSION")
 
-    g = metric(3)
+    g = metric(space=3)
 
     print("Reverse sign pattern: (-1)^{k(k-1)/2}")
     print("  Grade 0 (scalar):   +1")
@@ -186,7 +186,7 @@ def demo_inverse() -> None:
     """Demonstrate blade inverses."""
     section("5. INVERSE")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Vector inverse: v^{-1} = v / |v|^2")
     v = Vector([3.0, 4.0, 0.0], grade=1, metric=g)  # |v|^2 = 25
@@ -229,7 +229,7 @@ def demo_commutators() -> None:
     """Demonstrate commutator and anticommutator products."""
     section("6. COMMUTATOR AND ANTICOMMUTATOR")
 
-    g = metric(3)
+    g = metric(space=3)
 
     e1 = basis_vector(1, g)
     e2 = basis_vector(2, g)
@@ -258,7 +258,7 @@ def demo_grade_structure() -> None:
     """Demonstrate grade structure of geometric products."""
     section("7. GRADE STRUCTURE")
 
-    g = metric(3)
+    g = metric(space=3)
 
     print("Grade selection rule for blade product:")
     print("  grades(u_j * v_k) = |j-k|, |j-k|+2, ..., j+k")
@@ -295,7 +295,7 @@ def demo_geometric_interpretation() -> None:
     """Show geometric meaning of the geometric product."""
     section("8. GEOMETRIC INTERPRETATION")
 
-    g = metric(2)
+    g = metric(space=2)
 
     print("The geometric product encodes both magnitude and orientation:")
     print("  u * v = |u||v| (cos(theta) + I sin(theta))")

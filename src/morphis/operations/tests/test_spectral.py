@@ -7,7 +7,7 @@ from numpy import array
 from numpy.testing import assert_allclose
 
 from morphis.elements import Vector, basis_vectors, euclidean_metric
-from morphis.elements.metric import GASignature, GAStructure, Metric
+from morphis.elements.metric import metric
 from morphis.operations import norm, wedge
 from morphis.operations.spectral import (
     bivector_eigendecomposition,
@@ -233,13 +233,7 @@ class TestDifferentMetrics:
 
     def test_lorentzian_bivector(self):
         """Lorentzian metric handles timelike/spacelike planes."""
-        # Create Lorentzian metric (-,+,+)
-        metric_data = array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
-        g = Metric(
-            data=metric_data,
-            signature=GASignature.LORENTZIAN,
-            structure=GAStructure.FLAT,
-        )
+        g = metric(time=1, space=2, convention="mostly plus")
 
         e0, e1, e2 = basis_vectors(g)
 

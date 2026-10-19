@@ -18,7 +18,7 @@ from numpy import abs as np_abs, argsort, zeros
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
-from morphis.elements.metric import Metric, euclidean_metric
+from morphis.elements.metric import Dot, Metric, euclidean_metric
 from morphis.elements.vector import Vector
 
 
@@ -34,10 +34,10 @@ def validate_projection_axes(axes: tuple[int, ...]) -> tuple[int, int, int]:
     Range checking needs a metric and happens in `projection_slots`.
     """
     axes = tuple(axes)
-    if len(axes) != 3 or not all(isinstance(axis, Integral) for axis in axes):
-        raise ValueError(f"Projection requires exactly 3 integer geometric indices, got {axes!r}")
+    if len(axes) != 3 or not all(isinstance(axis, (Integral, Dot)) for axis in axes):
+        raise ValueError(f"Projection requires exactly 3 geometric indices, got {axes!r}")
 
-    axes = tuple(int(axis) for axis in axes)
+    axes = tuple(axis if isinstance(axis, Dot) else int(axis) for axis in axes)
 
     return axes
 

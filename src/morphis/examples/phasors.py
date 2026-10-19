@@ -33,7 +33,7 @@ def demo_complex_creation() -> None:
     """Demonstrate creating complex-valued blades."""
     section("1. COMPLEX BLADE CREATION")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Direct complex array")
     v = Vector([1 + 0j, 2 + 1j, 0 - 1j], grade=1, metric=g)
@@ -73,7 +73,7 @@ def demo_conjugation() -> None:
     """Demonstrate complex conjugation."""
     section("2. CONJUGATION")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Conjugate function and method")
     v = Vector([1 + 2j, 3 - 4j, 5j], grade=1, metric=g)
@@ -111,7 +111,7 @@ def demo_norms() -> None:
     """Demonstrate the difference between bilinear and Hermitian norms."""
     section("3. BILINEAR vs HERMITIAN NORMS")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Real blade: both forms agree")
     v_real = Vector([3.0, 4.0, 0.0], grade=1, metric=g)
@@ -164,7 +164,7 @@ def demo_operations() -> None:
     """Demonstrate GA operations work naturally with complex blades."""
     section("4. OPERATIONS ON COMPLEX BLADES")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Wedge product of phasors")
     phase1 = pi / 4
@@ -202,7 +202,7 @@ def demo_em_phasors() -> None:
     """Demonstrate phasor representation for electromagnetic fields."""
     section("5. ELECTROMAGNETIC PHASORS")
 
-    g = metric(3)
+    g = metric(space=3)
 
     print("In AC electromagnetics, fields are phasors:")
     print("  E(r, t) = Re[E_tilde(r) * exp(-i*omega*t)]")

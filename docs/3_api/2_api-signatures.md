@@ -90,49 +90,62 @@ class CompositeElement(Element):
 
 ### `morphis.elements.metric`
 
-*Geometric Algebra - Metric and Context*
+*Geometric Algebra - Metric and Space*
 
 ```python
-class GASignature(Enum):
-    """Metric signature: the pattern of eigenvalues."""
+class Dot(BaseModel):
+    """The partner label ṁ of mode m in a space with complex dimensions."""
 
+    def __init__(self, mode: 'int', /)
+        """Create a new model by parsing and validating input data from keyword arguments."""
 ```
 
 
 ```python
-class GAStructure(Enum):
-    """Geometric structure: the interpretation of GA elements."""
+class Block(tuple):
+    """A run of directions of one kind, in storage order."""
 
+    @property
+    def dim(self): ...
 ```
 
 
 ```python
 class Metric(BaseModel):
-    """Complete geometric context: metric tensor + signature + structure."""
+    """Complete geometric context: the metric tensor and the block layout."""
 
     @property
     def dim(self): ...
 
     @property
-    def euclidean_dim(self): ...
+    def n_time(self): ...
 
     @property
-    def signature_tuple(self): ...
+    def n_space(self): ...
 
     @property
-    def base_index(self): ...
+    def n_projective(self): ...
 
     @property
-    def max_index(self): ...
+    def n_modes(self): ...
 
-    def to_internal(self, index: 'int') -> 'int'
-        """Convert a user-facing geometric index to the internal 0-based slot."""
+    @property
+    def is_projective(self): ...
 
-    def to_user(self, internal: 'int') -> 'int'
-        """Convert an internal 0-based slot to the user-facing geometric index."""
+    @property
+    def signature(self): ...
 
-    def to_internal_multi(self, indices: 'Tuple[int, ...]') -> 'list[int]'
-        """Convert a tuple of user-facing geometric indices to internal slots."""
+    @property
+    def convention(self): ...
+
+    def to_internal(self, index: 'Label') -> 'int'
+        """Convert a geometric index (a direction's label) to its storage slot."""
+
+    def to_user(self, internal: 'int') -> 'Label'
+        """Convert a storage slot to the label of its direction."""
+
+    def to_internal_multi(self, indices: 'tuple[Label, ...]') -> 'list[int]'
+        """Convert a tuple of geometric indices to storage slots."""
 
     def is_compatible(self, other: 'Metric') -> 'bool'
         """Check if two metrics are compatible for operations."""
@@ -144,17 +157,17 @@ class Metric(BaseModel):
 **Functions:**
 
 ```python
-def metric(dim: 'int', signature: 'str' = 'euclidean', structure: 'str' = 'flat') -> 'Metric'
-    """Create a metric with specified signature and structure."""
+def metric(*, time: 'int' = 0, space: 'int' = 0, projective: 'int' = 0, modes: 'int' = 0, convention: 'Convention' = 'mostly minus') -> 'Metric'
+    """Declare a flat space by its blocks."""
 
 def euclidean_metric(dim: 'int') -> 'Metric'
-    """Get cached Euclidean metric for d-dimensional space."""
+    """Euclidean ℝ^dim, the same as metric(space=dim)."""
 
 def pga_metric(dim: 'int') -> 'Metric'
-    """Get cached PGA metric for d-dimensional Euclidean space."""
+    """Projective GA of Euclidean ℝ^dim, the same as metric(space=dim, projective=1)."""
 
 def lorentzian_metric(dim: 'int') -> 'Metric'
-    """Get cached Lorentzian (spacetime) metric."""
+    """Spacetime of total dimension dim in (+, -, -, -), the same as metric(time=1, space=dim - 1)."""
 ```
 
 

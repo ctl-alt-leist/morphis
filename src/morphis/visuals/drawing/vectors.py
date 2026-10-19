@@ -980,11 +980,8 @@ def draw_blade(
             v = v[:3] if len(v) >= 3 else array([*v, *[0.0] * (3 - len(v))])
             # Default label from dominant axes
             if name is None:
-                axis_u = b.metric.to_user(int(argmax(np_abs(u))))
-                axis_v = b.metric.to_user(int(argmax(np_abs(v))))
-                if axis_u > axis_v:
-                    axis_u, axis_v = axis_v, axis_u
-                name = f"e{axis_u}{axis_v}"
+                slot_u, slot_v = sorted((int(argmax(np_abs(u))), int(argmax(np_abs(v)))))
+                name = f"e{b.metric.to_user(slot_u)}{b.metric.to_user(slot_v)}"
             normal = cross(u, v)
             if norm(normal) > 1e-10:
                 normal = normal / norm(normal)

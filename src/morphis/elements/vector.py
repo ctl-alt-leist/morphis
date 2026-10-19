@@ -20,7 +20,7 @@ from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
 from morphis.elements.base import IndexableMixin
-from morphis.elements.metric import Metric
+from morphis.elements.metric import Dot, Metric
 from morphis.elements.tensor import Tensor
 
 
@@ -37,12 +37,12 @@ def _geo_to_internal(index, metric):
     """
     Translate one geometric index element from physics convention to storage.
 
-    Integer indices are mapped through the metric's index convention. Slices
+    Integer and Dot labels are mapped through the metric's index convention. Slices
     and other advanced index objects are not supported on geometric axes --
     reach for the raw .data array for those.
     """
-    if isinstance(index, (int, integer)):
-        return metric.to_internal(int(index))
+    if isinstance(index, (int, integer, Dot)):
+        return metric.to_internal(index)
 
     raise TypeError(
         f"geometric indexing supports integer component indices only, got {type(index).__name__}; "
@@ -142,11 +142,8 @@ class OnAccessor:
 
         new_data = self._vector.data[full_index]
 
-        # Compute new grade: each integer index reduces grade by 1
-        new_grade = n_geo
-        for idx in index:
-            if isinstance(idx, int):
-                new_grade -= 1
+        # Every geometric index is a component label, and each removes one grade
+        new_grade = n_geo - len(index)
 
         return Vector(new_data, grade=new_grade, metric=self._vector.metric)
 
@@ -318,7 +315,7 @@ class Vector(IndexableMixin, Tensor):
             b.on[1, 2]     # e_12 component of a bivector
 
         Indices are user-facing geometric indices, translated to storage
-        slots by the metric (see Metric.base_index). Indexing through .on only
+        slots by the metric (see Metric.labels). Indexing through .on only
         affects geometric dimensions; lot dimensions are preserved with
         implicit slice(None).
         """
@@ -1043,7 +1040,7 @@ def basis_vectors(metric: Metric) -> tuple[Vector, ...]:
         e1, e2, e3 = basis_vectors(euclidean_metric(3))
         e12 = e1 ^ e2  # Wedge product creates bivector
     """
-    return tuple(basis_vector(n, metric) for n in range(metric.base_index, metric.max_index + 1))
+    return tuple(basis_vector(n, metric) for n in metric.labels)
 
 
 def basis_element(indices: tuple[int, ...], metric: Metric) -> Vector:
@@ -1113,7 +1110,7 @@ def geometric_basis(metric: Metric) -> dict[int, tuple[Vector, ...]]:
     result[0] = (Vector(ones(()), grade=0, metric=metric),)
 
     # Geometric indices in the metric's convention (physics indices)
-    geo_indices = range(metric.base_index, metric.max_index + 1)
+    geo_indices = metric.labels
 
     # Grades 1 through dim
     for grade in range(1, dim + 1):
@@ -1143,4 +1140,4 @@ def pseudoscalar(metric: Metric) -> Vector:
     Example:
         I = pseudoscalar(euclidean_metric(3))  # e1 ^ e2 ^ e3
     """
-    return basis_element(tuple(range(metric.base_index, metric.max_index + 1)), metric)
+    return basis_element(metric.labels, metric)
