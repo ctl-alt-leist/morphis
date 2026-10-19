@@ -150,10 +150,10 @@ class TestCurvature:
         # k_11 = -r_1, the inward radius of the first circle; k_12 = 0
         torus = clifford_torus()
         sigma = torus.grid(7)
-        kab = torus.second_fundamental_form(sigma).data
+        k_ab = torus.second_fundamental_form(sigma).data
         r1 = torus(sigma).data * array([1, 1, 0, 0])
-        assert allclose(kab[..., 0, 0, :], -r1, atol=1e-8)
-        assert allclose(kab[..., 0, 1, :], 0, atol=1e-8)
+        assert allclose(k_ab[..., 0, 0, :], -r1, atol=1e-8)
+        assert allclose(k_ab[..., 0, 1, :], 0, atol=1e-8)
 
     def test_clifford_torus_is_flat(self):
         torus = clifford_torus((0.6, 0.8))
