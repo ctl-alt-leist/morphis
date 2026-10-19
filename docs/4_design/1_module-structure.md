@@ -52,6 +52,12 @@ src/morphis/
 │   ├── rotations.py            # rotor construction
 │   └── tests/
 │
+├── manifold/                    # Parametrized submanifolds
+│   ├── __init__.py
+│   ├── domain.py               # Interval, Circle, ComplexRegion, Domain
+│   ├── patch.py                # Patch
+│   └── tests/
+│
 ├── topology/                    # Combinatorial structure
 │   ├── __init__.py
 │   ├── cell_complex.py         # CellComplex
@@ -145,6 +151,14 @@ src/morphis/
 | `rotations.py` | `rotor()`, `rotation_about_point()` |
 | `actions.py` | `rotate()`, `translate()`, `transform()` |
 | `projective.py` | `point()`, `direction()`, `weight()`, `bulk()`, `euclidean()`, `is_point()`, `is_direction()`, `line()`, `plane()`, `translator()`, `screw()`, distance and incidence functions |
+
+### `manifold/`
+**Purpose**: Submanifolds of flat spaces of any dimension and signature
+
+| File | Contents |
+|------|----------|
+| `domain.py` | `Interval`, `Circle`, `ComplexRegion`, `Domain`: products with `*`, complex regions as `I + 1j * J`, `grid()`, `cells()` |
+| `patch.py` | `Patch`: `tangent_frame()`, `tangent_blade()`, `induced_metric()`, `volume_element()`, `tangent_part()`, `normal_part()`, `normal_frame()`, `normal_blade()`, `second_fundamental_form()`, `mean_curvature()`, `riemann_curvature()`, `ricci_curvature()`, `scalar_curvature()`, `gaussian_curvature()`, `causal_character()` |
 
 ### `topology/`
 **Purpose**: Combinatorial structure of sampled manifolds, independent of geometry

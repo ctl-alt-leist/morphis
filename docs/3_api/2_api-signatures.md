@@ -1109,6 +1109,163 @@ def screw(B: 'Vector', angle: 'float | NDArray', translation: 'Vector', center: 
 
 ---
 
+## Manifolds
+
+Parametrized submanifolds of flat spaces and their geometry.
+
+### `morphis.manifold.domain`
+
+*Manifolds - Domains*
+
+```python
+class Interval(BaseModel):
+    """A real coordinate ranging from start to stop."""
+
+    @property
+    def length(self): ...
+
+    @property
+    def span(self): ...
+
+    def __init__(self, start: 'float', stop: 'float', periodic: 'bool' = False)
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def samples(self, n: 'int') -> 'NDArray'
+        """n evenly spaced values, the endpoint left out when periodic."""
+```
+
+
+```python
+class Circle(Interval):
+    """A periodic coordinate on [0, length), 2π by default."""
+
+    @property
+    def length(self): ...
+
+    @property
+    def span(self): ...
+
+    def __init__(self, length: 'float' = 6.283185307179586)
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def samples(self, n: 'int') -> 'NDArray'
+        """n evenly spaced values, the endpoint left out when periodic."""
+```
+
+
+```python
+class ComplexRegion(BaseModel):
+    """A complex coordinate w = σ + i σ' with σ in real and σ' in imag."""
+
+    @property
+    def span(self): ...
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+```python
+class Domain(BaseModel):
+    """A product of real intervals and complex regions."""
+
+    @property
+    def span(self): ...
+
+    @property
+    def intervals(self): ...
+
+    @property
+    def periodic(self): ...
+
+    @property
+    def is_complex(self): ...
+
+    def arguments(self, sigma: 'NDArray') -> 'list[NDArray]'
+        """Split real coordinates into the arguments of a map, one per factor."""
+
+    def grid(self, shape: 'int | tuple[int, ...]') -> 'NDArray'
+        """A coordinate grid of shape (*shape, span)."""
+
+    def cells(self, shape: 'int | tuple[int, ...]') -> 'CellComplex'
+        """The cell complex of grid(shape), periodic coordinates closed into circles."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+### `morphis.manifold.patch`
+
+*Manifolds - Patches*
+
+```python
+class Patch:
+    """A parametrized submanifold X: U → V."""
+
+    @property
+    def span(self): ...
+
+    @property
+    def dim(self): ...
+
+    def __init__(self, map: 'Callable', domain: 'Domain | Factor', metric: 'Metric', step: 'float' = 0.001)
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def grid(self, shape: 'int | tuple[int, ...]') -> 'NDArray'
+        """A coordinate grid of shape (*shape, span) over the domain."""
+
+    def cells(self, shape: 'int | tuple[int, ...]') -> 'CellComplex'
+        """The cell complex of grid(shape)."""
+
+    def tangent_frame(self, sigma) -> 'Frame'
+        """The coordinate frame ∂_a X, span k, lot of σ."""
+
+    def tangent_blade(self, sigma) -> 'Vector'
+        """The tangent k-blade t = ∂_1 X ∧ ... ∧ ∂_k X, built densely with d^k components per point."""
+
+    def induced_metric(self, sigma) -> 'NDArray'
+        """h_ab = ∂_a X · ∂_b X, shape (*lot, k, k)."""
+
+    def volume_element(self, sigma) -> 'NDArray'
+        """√|det h|, the volume of the coordinate cell per unit coordinate volume."""
+
+    def tangent_part(self, v: 'Vector', sigma) -> 'Vector'
+        """The tangent projection P(v) = h^{ab} (v · ∂_b X) ∂_a X."""
+
+    def normal_part(self, v: 'Vector', sigma) -> 'Vector'
+        """The normal projection P⊥(v) = v - P(v)."""
+
+    def normal_frame(self, sigma) -> 'Frame'
+        """A frame of the normal space, orthonormal in the ambient metric."""
+
+    def normal_blade(self, sigma) -> 'Vector'
+        """The normal (d - k)-blade, built densely."""
+
+    def second_fundamental_form(self, sigma) -> 'Vector'
+        """k_ab = P⊥(∂_a ∂_b X), the normal part of the second derivatives."""
+
+    def mean_curvature(self, sigma) -> 'Vector'
+        """The mean curvature vector k = (1/k) h^{ab} k_ab."""
+
+    def riemann_curvature(self, sigma) -> 'NDArray'
+        """R_abcd = k_ac · k_bd - k_ad · k_bc by the Gauss equation, shape (*lot, k, k, k, k)."""
+
+    def ricci_curvature(self, sigma) -> 'NDArray'
+        """R_bd = h^{ac} R_abcd, shape (*lot, k, k)."""
+
+    def scalar_curvature(self, sigma) -> 'NDArray'
+        """R = h^{bd} R_bd."""
+
+    def gaussian_curvature(self, sigma) -> 'NDArray'
+        """K = R_1212 / det h, for a surface."""
+
+    def causal_character(self, sigma, tol: 'float' = 1e-09) -> 'NDArray'
+        """"spacelike", "timelike", or "null" at each point, from the inertia of h."""
+```
+
+---
+
 ## Topology
 
 Combinatorial structure of sampled manifolds.

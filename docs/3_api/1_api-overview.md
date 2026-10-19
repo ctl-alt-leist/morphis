@@ -441,6 +441,31 @@ v = Vector.from_amplitudes([0.6, 0.8j], g)
 v.amplitudes                              # [0.6, 0.8j]: v^m + i v^ṁ, no factor
 ```
 
+### Manifolds
+
+A patch is a map from a coordinate domain into a flat space of any dimension
+and signature; every quantity is a function of the coordinates σ, and a grid
+of σ is the lot:
+
+```python
+from numpy import cos, exp, sin
+from morphis.elements import metric
+from morphis.manifold import Circle, Interval, Patch
+
+torus = Patch(lambda θ, φ: [cos(θ), sin(θ), cos(φ), sin(φ)], Circle() * Circle(), metric(space=4))
+σ = torus.grid((64, 64))                  # shape (64, 64, 2)
+torus(σ)                                  # points, a Vector with lot (64, 64)
+torus.tangent_frame(σ)                    # ∂_a X, a Frame of span 2
+torus.induced_metric(σ)                   # h_ab, shape (64, 64, 2, 2)
+torus.second_fundamental_form(σ)          # k_ab, a Vector with lot (64, 64, 2, 2)
+torus.gaussian_curvature(σ)               # 0: the Clifford torus is flat
+torus.cells((64, 64))                     # its CellComplex, periodic in both
+
+# A map into a space with modes may return amplitudes; a complex coordinate is holomorphic
+curve = Patch(lambda w: [w, (1 - w**5) ** (1 / 5)], Interval(0.1, 0.6) + 1j * Interval(-0.2, 0.2), metric(modes=2))
+curve.mean_curvature(curve.grid(16))      # 0: complex curves are minimal
+```
+
 ### Frame Operations
 
 ```python

@@ -171,15 +171,21 @@ complex.
 
 ## Manifolds
 
-`Domain` describes the coordinate region: `Interval`, `Circle`, their products,
-and complex regions such as `Interval(0, π/2) + 1j * Interval(-1, 1)`. A complex
-coordinate $w = σ^1 + i \, σ^2$ is native, so a holomorphic patch is written in
-$w$ and its real coordinates are derived.
+`Domain`, in `morphis.manifold`, is the coordinate region: a product of
+`Interval`s, `Circle`s, and complex regions, written with `*`, and a complex
+region is written with the imaginary unit, `Interval(0, π/2) + 1j *
+Interval(-1, 1)`. A complex coordinate $w = σ^1 + i \, σ^2$ is native: the map
+receives $w$ itself, and its two real coordinates are derived.
 
-`Patch(map, domain)` is a parametrization $\mathbf{X}: U \to V$. Derivatives
-come from the map when it supplies them and from fourth-order central
-differences otherwise, respecting periodic coordinates. On a holomorphic patch,
-$\partial_2 \mathbf{X} = J(\partial_1 \mathbf{X})$ holds by construction.
+`Patch(map, domain, metric)` is a parametrization $\mathbf{X}: U \to V$. The map
+takes one argument per factor and returns the point as a `Vector`, as its real
+components, or, in a space with modes, as its complex amplitudes, so a
+holomorphic map is written in ordinary complex arithmetic. Derivatives are
+fourth-order central differences of the map, evaluated at $σ \pm h$ and $σ \pm
+2h$ rather than at grid neighbors, so periodic coordinates need no care. A map
+of a complex coordinate is holomorphic in it, and the derivative along
+$\mathrm{Im} \, w$ is computed as $i$ times the derivative along $\mathrm{Re}
+\, w$, so $\partial_2 \mathbf{X} = J(\partial_1 \mathbf{X})$ holds exactly.
 
 | Mathematics | Code |
 |-------------|------|
@@ -188,20 +194,32 @@ $\partial_2 \mathbf{X} = J(\partial_1 \mathbf{X})$ holds by construction.
 | $\mathbf{t}$ | `X.tangent_blade(σ)` |
 | $h_{ab}$ | `X.induced_metric(σ)` |
 | $\sqrt{\lvert \det h \rvert}$ | `X.volume_element(σ)` |
-| $P$ | `X.tangent_projector(σ)` |
+| $P(\mathbf{v})$, $P_\perp(\mathbf{v})$ | `X.tangent_part(v, σ)`, `X.normal_part(v, σ)` |
 | normal space | `X.normal_frame(σ)`, `X.normal_blade(σ)` |
-| $\mathbf{k}_{ab}$ | `X.second_fundamental_form(σ)` |
-| $\mathbf{k}$ | `X.mean_curvature(σ)` |
-| $K$ | `X.gaussian_curvature(σ)` |
+| $\mathbf{k}_{ab} = P_\perp(\partial_a \partial_b \mathbf{X})$ | `X.second_fundamental_form(σ)` |
+| $\mathbf{k} = \frac{1}{k} h^{ab} \, \mathbf{k}_{ab}$ | `X.mean_curvature(σ)` |
+| $R_{abcd} = \mathbf{k}_{ac} \cdot \mathbf{k}_{bd} - \mathbf{k}_{ad} \cdot \mathbf{k}_{bc}$ | `X.riemann_curvature(σ)` |
+| $R_{bd} = h^{ac} R_{abcd}$, $R = h^{bd} R_{bd}$ | `X.ricci_curvature(σ)`, `X.scalar_curvature(σ)` |
+| $K = R_{1212} / \det h$ | `X.gaussian_curvature(σ)` |
 | causal character | `X.causal_character(σ)` |
 
-The intrinsic dimension is `span`, as for `Frame`; `dim` is always the ambient
-dimension. Causal character is read from the inertia of $h_{ab}$ (its counts of
-positive, negative, and zero eigenvalues), which is correct in either sign
-convention.
+The Riemann tensor comes from the Gauss equation, so intrinsic curvature is
+read from the extrinsic geometry in any codimension and any intrinsic
+dimension; a Ricci-flat test on a Calabi–Yau patch is `ricci_curvature`. The
+projections are functions of a vector rather than an operator, because the
+projector differs at every point. The normal frame is orthonormal in the
+ambient metric, each normal squaring to $\pm 1$, and is fixed only up to a
+rotation of the normal space at each point.
 
-`X.grid(shape)` returns a coordinate grid over the domain, and `X.mesh(shape)`
-returns the sampled positions with their `CellComplex`.
+The intrinsic dimension is `span`, as for `Frame`; `dim` is always the ambient
+dimension. Causal character is read from the inertia of $h_{ab}$: null where
+$h$ is degenerate, timelike where it has a direction of the time sign, and
+spacelike otherwise. The time sign comes from the metric's convention, so the
+answer is the same in both.
+
+`X.grid(shape)` returns a coordinate grid over the domain, periodic
+coordinates leaving out their endpoint, and `X.cells(shape)` returns the
+matching `CellComplex`.
 
 `Atlas` is a set of patches with the complex that glues them, so a many-sheeted
 or closed manifold is one object.
@@ -277,7 +295,7 @@ complete figure is also an example script.
 | Clifford torus | $h_{ab} = δ_{ab}$, $K = 0$, $\mathbf{k}_{11} = -\mathbf{r}_1$ |
 | sphere of radius $ρ$ | $K = 1 / ρ^2$ |
 | de Sitter in $\mathbb{R}^{1,2}$ | timelike everywhere, in both conventions |
-| Fermat curve, $n = 5$ | $\cos θ_K = 1$, $\mathbf{k} = 0$, welded mesh $χ = -15$ with 5 boundary circles |
+| Fermat curve, $n = 5$ | $\cos θ_K = 1$, $\mathbf{k} = 0$, $K < 0$, welded mesh $χ = -15$ with 5 boundary circles |
 | Fermat projection at $α = π/4$ | exactly 15 pinch points, at the derived locations |
 | perspective | agrees with the PGA meet in $d = 4, 5$ |
 | stereographic Clifford torus | a torus of revolution |

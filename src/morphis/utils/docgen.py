@@ -359,6 +359,13 @@ MODULE_GROUPS = {
             "morphis.transforms.projective",
         ],
     },
+    "Manifolds": {
+        "description": "Parametrized submanifolds of flat spaces and their geometry.",
+        "modules": [
+            "morphis.manifold.domain",
+            "morphis.manifold.patch",
+        ],
+    },
     "Topology": {
         "description": "Combinatorial structure of sampled manifolds.",
         "modules": [

@@ -181,6 +181,14 @@ class Frame(GradedElement):
 | `actions.py` | `rotate()`, `translate()`, `transform()` |
 | `projective.py` | PGA utilities: `point()`, `direction()`, `line()`, etc. |
 
+### `manifold/`
+**Purpose**: Submanifolds of flat spaces of any dimension and signature
+
+| File | Contents |
+|------|----------|
+| `domain.py` | `Interval`, `Circle`, `ComplexRegion`, `Domain` |
+| `patch.py` | `Patch` and its submanifold quantities |
+
 ### `topology/`
 **Purpose**: Combinatorial structure of sampled manifolds, independent of geometry
 
