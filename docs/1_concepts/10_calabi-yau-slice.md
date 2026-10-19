@@ -28,7 +28,7 @@ Multiplication by $i$ is the complex structure $J$, the quarter turn $J \mathbf{
 from morphis.elements import Dot, Vector, basis_vector, metric
 
 SPACE = metric(modes=2)                       # ℝ⁴ with labels 1, 1̇, 2, 2̇
-E_1, F_1, E_2, F_2 = (basis_vector(label, SPACE) for label in (1, Dot(1), 2, Dot(2)))
+E1, F1, E2, F2 = (basis_vector(label, SPACE) for label in (1, Dot(1), 2, Dot(2)))
 
 v = Vector.from_amplitudes([1.0, 1j], SPACE)  # the point (1, i) of ℂ²
 v.amplitudes                                  # [1, 1j]
@@ -173,7 +173,7 @@ from numpy import cos, sin
 from morphis.visuals.projective import Projection
 
 α = pi / 4
-Π = Projection.orthographic([E_1, E_2, cos(α) * F_1 + sin(α) * F_2])
+Π = Projection.orthographic([E1, E2, cos(α) * F1 + sin(α) * F2])
 
 drawn = Π(mesh.vertices)                      # shape (n_vertices, 3)
 Π.pushforward(patch(σ), patch.tangent_frame(σ))   # dΠ on each tangent plane, shape (33, 17, 2, 3)

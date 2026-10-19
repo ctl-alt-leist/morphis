@@ -115,11 +115,11 @@ class TestEquality:
     def test_tensor_decides(self):
         # Same layout, different tensor: R^{2,2} is not R^{1,3}
         blocks = (("time", 1), ("space", 3))
-        g_13 = Metric(data=diag([1.0, -1.0, -1.0, -1.0]), blocks=blocks)
-        g_22 = Metric(data=diag([1.0, 1.0, -1.0, -1.0]), blocks=blocks)
-        assert g_13 == metric(time=1, space=3)
-        assert g_13 != g_22
-        assert hash(g_13) == hash(metric(time=1, space=3))
+        g13 = Metric(data=diag([1.0, -1.0, -1.0, -1.0]), blocks=blocks)
+        g22 = Metric(data=diag([1.0, 1.0, -1.0, -1.0]), blocks=blocks)
+        assert g13 == metric(time=1, space=3)
+        assert g13 != g22
+        assert hash(g13) == hash(metric(time=1, space=3))
 
     def test_layout_decides(self):
         # Same tensor, different layout: R^4 is not C^2

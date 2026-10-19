@@ -370,16 +370,16 @@ class Patch:
     def mean_curvature(self, sigma) -> Vector:
         """The mean curvature vector k = (1/k) h^{ab} k_ab."""
         h_inverse = inv(self.induced_metric(sigma))
-        k_ab = self.second_fundamental_form(sigma).data
+        kab = self.second_fundamental_form(sigma).data
 
-        result = Vector(einsum("...ab, ...abm -> ...m", h_inverse, k_ab) / self.span, grade=1, metric=self.metric)
+        result = Vector(einsum("...ab, ...abm -> ...m", h_inverse, kab) / self.span, grade=1, metric=self.metric)
 
         return result
 
     def riemann_curvature(self, sigma) -> NDArray:
         """R_abcd = k_ac · k_bd - k_ad · k_bc by the Gauss equation, shape (*lot, k, k, k, k)."""
-        k_ab = self.second_fundamental_form(sigma).data
-        products = einsum("...acm, mn, ...bdn -> ...abcd", k_ab, self.metric.data, k_ab)
+        kab = self.second_fundamental_form(sigma).data
+        products = einsum("...acm, mn, ...bdn -> ...abcd", kab, self.metric.data, kab)
 
         return products - products.swapaxes(-1, -2)
 

@@ -74,9 +74,9 @@ PALETTE = ("blue", "red", "green", "ochre", "violet")
 STAGES = ("patch", "phases", "atlas", "pinch")
 
 SPACE = metric(modes=2)
-E_1, F_1, E_2, F_2 = (basis_vector(label, SPACE) for label in (1, Dot(1), 2, Dot(2)))
+E1, F1, E2, F2 = (basis_vector(label, SPACE) for label in (1, Dot(1), 2, Dot(2)))
 
-PROJECTION = Projection.orthographic([E_1, E_2, cos(ANGLE) * F_1 + sin(ANGLE) * F_2])
+PROJECTION = Projection.orthographic([E1, E2, cos(ANGLE) * F1 + sin(ANGLE) * F2])
 
 
 def sheet(k1: int, k2: int) -> Patch:
