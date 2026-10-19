@@ -29,9 +29,7 @@ g = \mathbb{I}_d = \text{diag}(1, 1, \ldots, 1)
 
 ### Block Layout
 
-A space is declared by its blocks. Storage order is (time, space, projective),
-or (projective, space) for a purely spatial space with one projective
-direction, and labels follow position with $x$ always 1:
+A space is declared by its blocks. Storage order is (time, space, projective), or (projective, space) for a purely spatial space with one projective direction, and labels follow position with $x$ always 1:
 
 | Declaration | Diagonal | Labels |
 |-------------|----------|--------|

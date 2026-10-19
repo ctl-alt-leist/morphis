@@ -1,8 +1,6 @@
 # Manifolds: Mathematical Properties
 
-Worked submanifolds whose geometry is known in closed form, checked from the
-patch alone. Derivatives are fourth-order differences, so agreement is to
-about $10^{-9}$.
+Worked submanifolds whose geometry is known in closed form, checked from the patch alone. Derivatives are fourth-order differences, so agreement is to about $10^{-9}$.
 
 ## Domains
 
@@ -21,8 +19,7 @@ K &= 0
 \end{aligned}
 ```
 
-where $\mathbf{r}_1$ is the radius vector of the first circle. In $\mathbb{C}^2$,
-as $(e^{iθ}, e^{iφ}) / \sqrt{2}$, every tangent plane is Lagrangian: $θ_K = π / 2$.
+where $\mathbf{r}_1$ is the radius vector of the first circle. In $\mathbb{C}^2$, as $(e^{iθ}, e^{iφ}) / \sqrt{2}$, every tangent plane is Lagrangian: $θ_K = π / 2$.
 
 ## Sphere
 
@@ -57,9 +54,7 @@ The Fermat curve $w^5 + z^5 = 1$ in $\mathbb{C}^2$, parametrized by $w$:
 
 ## Atlases
 
-The Fermat curve $z_1^n + z_2^n = 1$ is covered by $n^2$ patches,
-$z_1 = e^{2πi k_1 / n} \cosh(w)^{2/n}$ and $z_2 = e^{2πi k_2 / n} (-i \sinh w)^{2/n}$.
-Welded, they give genus $g = (n - 1)(n - 2) / 2$ with the $n$ points at infinity cut off:
+The Fermat curve $z_1^n + z_2^n = 1$ is covered by $n^2$ patches, $z_1 = e^{2πi k_1 / n} \cosh(w)^{2/n}$ and $z_2 = e^{2πi k_2 / n} (-i \sinh w)^{2/n}$. Welded, they give genus $g = (n - 1)(n - 2) / 2$ with the $n$ points at infinity cut off:
 
 - $χ = 2 - 2 g - n$ with $n$ boundary circles, for $n = 2, 3, 5$
 - every welded vertex satisfies the curve equation

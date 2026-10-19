@@ -15,8 +15,7 @@ This symmetric bilinear form encodes all geometric information about how vectors
 - **Minkowski**: signature $(+,-,-,-)$ or $(-,+,+,+)$
 - **Degenerate (PGA)**: some diagonal entries are zero
 
-A space is declared by its blocks, which fix the storage order and the label of
-every direction (see the index convention in `docs/4_design/`):
+A space is declared by its blocks, which fix the storage order and the label of every direction (see the index convention in `docs/4_design/`):
 
 ```python
 from morphis.elements import metric
@@ -34,8 +33,7 @@ g.data         # the metric matrix
 k.labels       # (1, Dot(1), 2, Dot(2))
 ```
 
-`euclidean_metric(d)`, `pga_metric(d)`, and `lorentzian_metric(d)` are
-shorthands for the first three.
+`euclidean_metric(d)`, `pga_metric(d)`, and `lorentzian_metric(d)` are shorthands for the first three.
 
 ## Extended Inner Products
 

@@ -309,8 +309,7 @@ y = L.apply(v)  # explicit method
 L_composed = L1 * L2  # L1(L2(x))
 ```
 
-A grade-1 to grade-1 operator with no lot of its own acts pointwise, so it
-applies to a Vector of any lot.
+A grade-1 to grade-1 operator with no lot of its own acts pointwise, so it applies to a Vector of any lot.
 
 ### Inversion
 
@@ -443,9 +442,7 @@ v.amplitudes                              # [0.6, 0.8j]: v^m + i v^ṁ, no facto
 
 ### Manifolds
 
-A patch is a map from a coordinate domain into a flat space of any dimension
-and signature; every quantity is a function of the coordinates σ, and a grid
-of σ is the lot:
+A patch is a map from a coordinate domain into a flat space of any dimension and signature; every quantity is a function of the coordinates σ, and a grid of σ is the lot:
 
 ```python
 from numpy import cos, exp, sin
@@ -480,8 +477,7 @@ mesh = atlas.mesh((33, 17))               # welded: mesh.cells.euler_characteris
 sketch.surface(Π(mesh.vertices), mesh.cells.cells, colors=..., dots=...)
 ```
 
-`Projection.stereographic(pole)` sends the sphere of the pole's radius to the
-hyperplane through its center, and `@` composes maps.
+`Projection.stereographic(pole)` sends the sphere of the pole's radius to the hyperplane through its center, and `@` composes maps.
 
 ### Frame Operations
 
