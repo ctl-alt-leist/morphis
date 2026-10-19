@@ -332,6 +332,7 @@ class Sketch:
     def save(self, path: str | Path, dpi: int = 200, bounds: tuple[NDArray, NDArray] | None = None) -> Path:
         """Render and write the sketch; the format follows the extension (png, svg, pdf)."""
         target = Path(path).expanduser()
+        target.parent.mkdir(parents=True, exist_ok=True)
         with rc_context(font_settings(self.theme.font)):
             figure = self.render(dpi=dpi, bounds=bounds)
             figure.savefig(target, dpi=dpi, facecolor=self.theme.paper)
