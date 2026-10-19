@@ -344,3 +344,35 @@ class TestFonts:
 
         assert settings["font.family"] == FALLBACK_FONT
         assert settings["mathtext.it"] == f"{FALLBACK_FONT}:style=italic"
+
+
+# =============================================================================
+# Surfaces
+# =============================================================================
+
+
+class TestSurface:
+    def test_records_cells_in_drawing_order(self):
+        sketch = Sketch()
+        points = array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]])
+        sketch.surface(points, [[0, 1, 2, 3]])
+        mark = sketch.marks[0]
+        # binary corner order (00, 10, 01, 11) becomes the polygon (00, 10, 11, 01)
+        assert mark.kind == "surface"
+        assert mark.style["cells"].tolist() == [[0, 1, 3, 2]]
+
+    def test_renders_with_per_cell_colors_and_dots(self, tmp_path):
+        from numpy import cos, sin
+
+        from morphis.elements import metric
+        from morphis.manifold import Circle, Patch
+
+        torus = Patch(
+            lambda θ, φ: [(2 + cos(φ)) * cos(θ), (2 + cos(φ)) * sin(θ), sin(φ)], Circle() * Circle(), metric(space=3)
+        )
+        mesh = torus.mesh((12, 8))
+        sketch = Sketch(seed=1)
+        colors = ["blue" if n % 2 else "red" for n in range(len(mesh.cells.cells))]
+        sketch.surface(mesh.vertices.data, mesh.cells.cells, colors=colors, dots=mesh.vertices.data[:3])
+        path = sketch.save(tmp_path / "nested" / "torus.png", dpi=40)
+        assert path.exists()

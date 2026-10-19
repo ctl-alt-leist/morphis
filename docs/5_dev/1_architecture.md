@@ -188,6 +188,8 @@ class Frame(GradedElement):
 |------|----------|
 | `domain.py` | `Interval`, `Circle`, `ComplexRegion`, `Domain` |
 | `patch.py` | `Patch` and its submanifold quantities |
+| `mesh.py` | `Mesh`: sampled vertices with their cell complex |
+| `atlas.py` | `Atlas`: patches welded into one manifold |
 
 ### `topology/`
 **Purpose**: Combinatorial structure of sampled manifolds, independent of geometry

@@ -1218,6 +1218,9 @@ class Patch:
     def cells(self, shape: 'int | tuple[int, ...]') -> 'CellComplex'
         """The cell complex of grid(shape)."""
 
+    def mesh(self, shape: 'int | tuple[int, ...]') -> 'Mesh'
+        """The points of grid(shape) with their cell complex."""
+
     def tangent_frame(self, sigma) -> 'Frame'
         """The coordinate frame ∂_a X, span k, lot of σ."""
 
@@ -1262,6 +1265,53 @@ class Patch:
 
     def causal_character(self, sigma, tol: 'float' = 1e-09) -> 'NDArray'
         """"spacelike", "timelike", or "null" at each point, from the inertia of h."""
+```
+
+
+### `morphis.manifold.mesh`
+
+*Manifolds - Meshes*
+
+```python
+class Mesh(BaseModel):
+    """Vertices and the cells they bound."""
+
+    @property
+    def metric(self): ...
+
+    @property
+    def n_vertices(self): ...
+
+    def welded(self, tolerance: 'float' = 1e-09) -> 'Mesh'
+        """Glue vertices that coincide, as where patches of an atlas meet."""
+
+    def piece(self, k: 'int') -> 'NDArray'
+        """Indices of the top cells that came from piece k."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+### `morphis.manifold.atlas`
+
+*Manifolds - Atlases*
+
+```python
+class Atlas:
+    """Patches of one manifold."""
+
+    @property
+    def metric(self): ...
+
+    @property
+    def span(self): ...
+
+    def __init__(self, patches: 'Sequence[Patch]')
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def mesh(self, shape: 'int | tuple[int, ...]', tolerance: 'float' = 1e-09) -> 'Mesh'
+        """Sample every patch on a grid of the given shape and weld the samples."""
 ```
 
 ---
@@ -1642,6 +1692,31 @@ def get_projection_axes(blade: vector.Vector, config: projection.ProjectionConfi
 ```
 
 
+### `morphis.visuals.projective`
+
+*Projective Maps to the Picture*
+
+```python
+class Projection:
+    """A projective map from a space of any dimension to an m-dimensional picture."""
+
+    @property
+    def target_dim(self): ...
+
+    @property
+    def target(self): ...
+
+    def __init__(self, matrix: 'NDArray', source: 'Metric')
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def pushforward(self, points: 'Vector | NDArray', vectors: 'Frame | Vector | NDArray') -> 'NDArray'
+        """The differential of the map at points, applied to tangent vectors."""
+
+    def pinching(self, points: 'Vector | NDArray', frame: 'Frame') -> 'NDArray'
+        """How nearly the map collapses a tangent space: s_min / s_max of dΠ on the frame."""
+```
+
+
 ### `morphis.visuals.drawing.vectors`
 
 *Vector Drawing Functions*
@@ -1811,6 +1886,9 @@ class Sketch:
 
     def point(self, p: 'Point', radius: 'float' = 3.2, color: 'str | RGB | None' = None) -> 'NDArray'
         """Draw a solid dot; returns its drawing coordinates."""
+
+    def surface(self, points: 'Vector | NDArray', cells: 'NDArray', colors: 'str | RGB | list | None' = None, edges: 'str | None' = 'hair', edge_level: 'float' = 0.75, light: 'tuple[float, float, float]' = (-0.45, 0.6, 0.65), dots: 'Vector | NDArray | None' = None, dot_radius: 'float' = 3.0, dot_color: 'str | RGB | None' = 'ink') -> 'None'
+        """Draw a shaded surface, its cells painted far to near so nearer cells hide farther ones."""
 
     def label(self, text: 'str', at: 'Point', offset: 'tuple[float, float]' = (6.0, 4.0), size: 'float' = 13.0, color: 'str | RGB | None' = None) -> 'None'
         """Place text beside a drawing-space point, offset in points."""

@@ -54,3 +54,19 @@ The Fermat curve $w^5 + z^5 = 1$ in $\mathbb{C}^2$, parametrized by $w$:
 - $\partial_2 \mathbf{X} = J(\partial_1 \mathbf{X})$, so $θ_K = 0$
 - $\mathbf{k} = 0$: complex curves are minimal
 - $K < 0$
+
+## Atlases
+
+The Fermat curve $z_1^n + z_2^n = 1$ is covered by $n^2$ patches,
+$z_1 = e^{2πi k_1 / n} \cosh(w)^{2/n}$ and $z_2 = e^{2πi k_2 / n} (-i \sinh w)^{2/n}$.
+Welded, they give genus $g = (n - 1)(n - 2) / 2$ with the $n$ points at infinity cut off:
+
+- $χ = 2 - 2 g - n$ with $n$ boundary circles, for $n = 2, 3, 5$
+- every welded vertex satisfies the curve equation
+
+## Projections
+
+- an orthographic picture coordinate is $\mathbf{e}_c \cdot \mathbf{x}$
+- stereographic projection fixes the equator, sends the antipode of the pole to the origin, and takes the Clifford torus to a torus of revolution
+- composition with `@` agrees with applying the maps in sequence
+- the pushforward agrees with a central difference, and `pinching` is 1 on a faithfully drawn plane and 0 on one containing the hidden direction

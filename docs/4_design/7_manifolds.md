@@ -218,11 +218,16 @@ spacelike otherwise. The time sign comes from the metric's convention, so the
 answer is the same in both.
 
 `X.grid(shape)` returns a coordinate grid over the domain, periodic
-coordinates leaving out their endpoint, and `X.cells(shape)` returns the
-matching `CellComplex`.
+coordinates leaving out their endpoint, `X.cells(shape)` returns the matching
+`CellComplex`, and `X.mesh(shape)` returns both together.
 
-`Atlas` is a set of patches with the complex that glues them, so a many-sheeted
-or closed manifold is one object.
+`Atlas(patches)` is a set of patches of one manifold. `atlas.mesh(shape)`
+samples every patch, takes their disjoint union, and welds samples that
+coincide, so a many-sheeted or closed manifold becomes one complex whose
+Euler characteristic and boundary are those of the manifold. Each cell keeps
+the patch it came from, so the welded surface can still be colored patch by
+patch. The 25 patches of the Fermat quintic curve weld to $χ = -15$ with 5
+boundary circles.
 
 `LevelSet(f)` is a manifold given as $f^p(\mathbf{x}) = 0$. Its normal frame
 comes from the gradients $\nabla f^p = \mathbf{e}^m \, \partial_m f^p$, and a
@@ -237,9 +242,12 @@ the final frame to the initial one.
 
 ## Mesh
 
-`Surface` becomes `Mesh`: vertices as a grade-1 `Vector` of any dimension and
-metric, cells from a `CellComplex`. The file loaders remain as constructors. A
-mesh is what passes from geometry to drawing; it carries no derivatives.
+`Mesh`, in `morphis.manifold`, holds vertices as a grade-1 `Vector` of any
+dimension and metric, cells from a `CellComplex`, and the piece each cell came
+from. A mesh is what passes from geometry to drawing; it carries no
+derivatives. `Mesh.union` and `mesh.welded()` are the two halves of an atlas.
+The 3D `Surface` element, with its file loaders, is still separate; folding it
+into `Mesh` comes with moving the PyVista `Scene` onto projections.
 
 ## Projection
 
@@ -247,28 +255,31 @@ A projective map from $\mathbb{RP}^d$ to $\mathbb{RP}^3$ is a $4 \times (d + 1)$
 matrix whose kernel is the center of projection, a $(d - 4)$-flat. This is the
 closed form of $(\mathbf{c} \wedge \mathbf{p}) \vee \mathbf{s}$. Orthographic
 projection has an ideal center, and a linear map has a constant weight row.
-`Projection` holds the matrix and replaces both `ProjectionConfig` and the ink
-module's `Depiction`:
+`Projection`, in `morphis.visuals.projective`, holds the matrix, and maps to a
+picture of any dimension $m$, so maps chain. It is to replace both
+`ProjectionConfig` and the ink module's `Depiction`. Built so far:
 
-- `Projection.orthographic(screen)` from a 3-blade or an orthonormal `Frame`.
-- `Projection.perspective(center, screen)` from flats.
-- `Projection.stereographic(radius, pole)`: perspective from a point of the
-  sphere onto the hyperplane through its center perpendicular to the pole.
-- `Projection.linear(images)`: the deliberately unfaithful depiction, each
-  direction sent to a chosen drawing vector.
+- `Projection.orthographic(screen)` from an orthonormal `Frame` or vectors.
+- `Projection.stereographic(pole)`: perspective from the pole of the sphere of
+  its radius onto the hyperplane through the center perpendicular to it.
+- `Projection.linear(metric, images)`: the deliberately unfaithful depiction,
+  each direction sent to a chosen drawing vector.
 - Composition with `@`, so a stereographic map from $S^{d-1}$ followed by an
   orthographic one reaches 3D from any $d$.
-
-Operations:
-
 - `Π(v)` maps vectors of any lot, dividing by the weight once, at the end.
-- `Π.turned(R)` turns the screen by a rotor, equivalent to turning the object
-  by $\tilde{R}$.
-- `Π.hidden(v)` returns the coordinates the picture discards.
-- `Π.blade(b)` maps a blade by the outermorphism.
-- `Π.pinch_points(X, σ)` finds where the differential of the map drops rank on
-  the tangent frame; for an orthographic map this is
-  $\bar{P}_{\mathbf{s}}(\mathbf{t}) = 0$.
+- `Π.pushforward(x, frame)` is the differential $dΠ$ on tangent vectors, and
+  `Π.pinching(x, frame)` is $s_{\min} / s_{\max}$ of it, zero at a pinch
+  point, where the drawn surface folds to a cusp.
+
+Still to come: `Projection.perspective(center, screen)` from flats,
+`Π.turned(R)`, `Π.hidden(v)`, `Π.blade(b)`, and a numerical pinch-point
+search.
+
+The ink `Sketch` draws a mesh in drawing coordinates with `surface`: cells
+painted far to near with two-sided Lambert shading, one color or one per cell,
+cell edges as the coordinate grid, and dots that take part in the same depth
+order. Painting by depth cannot resolve two sheets that cross in the picture;
+the crossing shows as a sawtooth at the cell scale.
 
 Both renderers, the PyVista `Scene` and the ink `Sketch`, take meshes and curves
 in drawing coordinates with an optional lot-shaped `Vector` for color.
@@ -304,13 +315,21 @@ complete figure is also an example script.
 
 ## Phases
 
+The order is set by the path to Calabi–Yau figures.
+
 1. The space: block declaration, explicit signature and convention, labels,
-   modes, equality by tensor.
+   modes, equality by tensor. Done.
 2. Complex structure: amplitudes, structure bivector, blade classification,
-   Kähler angle.
-3. `CellComplex`.
-4. `Domain`, `Patch`, and the submanifold quantities.
-5. `Projection` and `Mesh`; renderers consume both.
-6. Examples: Clifford torus, Fermat curve, qubit phase orbit, de Sitter.
-7. `Atlas`, `LevelSet`, transport, and the first bundle figures.
-8. Concepts documentation in `docs/1_concepts/`.
+   Kähler angle. Done.
+3. `CellComplex`. Done.
+4. `Domain`, `Patch`, and the submanifold quantities. Done.
+5. The Calabi–Yau slice: `Mesh`, `Atlas`, the core of `Projection`, the ink
+   `surface`, and the staged `calabi_yau` example. Done.
+6. Projection completed: perspective, `turned`, `hidden`, pinch search; the
+   `Depiction` and `ProjectionConfig` replaced and the X.VI scripts updated;
+   `Surface` folded into `Mesh` for the PyVista `Scene`.
+7. Toward the threefold: projective coordinates and affine charts of ℂℙⁿ,
+   higher-dimensional slices drawn by their 2-skeletons or by moving
+   hyperplanes, and the Ricci curvature of the induced metric.
+8. `LevelSet`, transport, and the first bundle figures.
+9. Concepts documentation in `docs/1_concepts/`.

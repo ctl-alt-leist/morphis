@@ -364,6 +364,8 @@ MODULE_GROUPS = {
         "modules": [
             "morphis.manifold.domain",
             "morphis.manifold.patch",
+            "morphis.manifold.mesh",
+            "morphis.manifold.atlas",
         ],
     },
     "Topology": {
@@ -380,6 +382,7 @@ MODULE_GROUPS = {
             "morphis.visuals.canvas",
             "morphis.visuals.theme",
             "morphis.visuals.projection",
+            "morphis.visuals.projective",
             "morphis.visuals.drawing.vectors",
             "morphis.visuals.contexts",
             "morphis.visuals.operations",

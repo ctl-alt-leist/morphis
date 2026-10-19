@@ -28,7 +28,7 @@ grid at σ ± h and σ ± 2h, so periodic coordinates need no special care.
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from numpy import (
     abs as np_abs,
@@ -51,6 +51,10 @@ from morphis.elements.metric import Metric
 from morphis.elements.vector import Vector
 from morphis.manifold.domain import ComplexRegion, Domain, Factor
 from morphis.topology import CellComplex
+
+
+if TYPE_CHECKING:
+    from morphis.manifold.mesh import Mesh
 
 
 # Fourth-order central-difference stencils: offsets in units of h, and weights
@@ -133,6 +137,12 @@ class Patch:
     def cells(self, shape: int | tuple[int, ...]) -> CellComplex:
         """The cell complex of grid(shape)."""
         return self.domain.cells(shape)
+
+    def mesh(self, shape: int | tuple[int, ...]) -> Mesh:
+        """The points of grid(shape) with their cell complex."""
+        from morphis.manifold.mesh import Mesh
+
+        return Mesh.from_samples(self(self.grid(shape)), self.cells(shape))
 
     def __call__(self, sigma: NDArray) -> Vector:
         """The points X(σ), a grade-1 Vector whose lot is σ's."""

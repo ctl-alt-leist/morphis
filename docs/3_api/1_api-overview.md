@@ -466,6 +466,23 @@ curve = Patch(lambda w: [w, (1 - w**5) ** (1 / 5)], Interval(0.1, 0.6) + 1j * In
 curve.mean_curvature(curve.grid(16))      # 0: complex curves are minimal
 ```
 
+Many patches of one manifold weld into one mesh, and a projection draws it:
+
+```python
+from morphis.manifold import Atlas
+from morphis.visuals.projective import Projection
+
+atlas = Atlas(patches)                    # e.g. the 25 sheets of z_1^5 + z_2^5 = 1
+mesh = atlas.mesh((33, 17))               # welded: mesh.cells.euler_characteristic() == -15
+Π = Projection.orthographic([e1, e2, cos(α) * f1 + sin(α) * f2])
+Π(mesh.vertices)                          # drawing coordinates, shape (n, 3)
+Π.pinching(x, frame)                      # 0 where the drawn surface pinches
+sketch.surface(Π(mesh.vertices), mesh.cells.cells, colors=..., dots=...)
+```
+
+`Projection.stereographic(pole)` sends the sphere of the pole's radius to the
+hyperplane through its center, and `@` composes maps.
+
 ### Frame Operations
 
 ```python

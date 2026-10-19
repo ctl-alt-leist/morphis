@@ -56,6 +56,8 @@ src/morphis/
 │   ├── __init__.py
 │   ├── domain.py               # Interval, Circle, ComplexRegion, Domain
 │   ├── patch.py                # Patch
+│   ├── mesh.py                 # Mesh
+│   ├── atlas.py                # Atlas
 │   └── tests/
 │
 ├── topology/                    # Combinatorial structure
@@ -78,6 +80,7 @@ src/morphis/
 │   ├── contexts.py             # PGA-specific rendering
 │   ├── operations.py           # Operation visualization
 │   ├── projection.py           # nD -> 3D projection via Metric index translation
+│   ├── projective.py           # Projection: projective maps to the picture
 │   ├── model.py                # VisualModel for 3D meshes
 │   ├── text.py                 # Text annotations
 │   ├── backends/               # Rendering backend abstraction
@@ -158,7 +161,9 @@ src/morphis/
 | File | Contents |
 |------|----------|
 | `domain.py` | `Interval`, `Circle`, `ComplexRegion`, `Domain`: products with `*`, complex regions as `I + 1j * J`, `grid()`, `cells()` |
-| `patch.py` | `Patch`: `tangent_frame()`, `tangent_blade()`, `induced_metric()`, `volume_element()`, `tangent_part()`, `normal_part()`, `normal_frame()`, `normal_blade()`, `second_fundamental_form()`, `mean_curvature()`, `riemann_curvature()`, `ricci_curvature()`, `scalar_curvature()`, `gaussian_curvature()`, `causal_character()` |
+| `patch.py` | `Patch`: `tangent_frame()`, `tangent_blade()`, `induced_metric()`, `volume_element()`, `tangent_part()`, `normal_part()`, `normal_frame()`, `normal_blade()`, `second_fundamental_form()`, `mean_curvature()`, `riemann_curvature()`, `ricci_curvature()`, `scalar_curvature()`, `gaussian_curvature()`, `causal_character()`, `mesh()` |
+| `mesh.py` | `Mesh`: `from_samples()`, `union()`, `welded()`, `piece()` |
+| `atlas.py` | `Atlas`: `mesh()` samples and welds every patch |
 
 ### `topology/`
 **Purpose**: Combinatorial structure of sampled manifolds, independent of geometry
