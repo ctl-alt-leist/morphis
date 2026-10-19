@@ -842,6 +842,36 @@ def apply_outermorphism(A: "'Operator'", M: "'MultiVector'") -> "'MultiVector'"
 ```
 
 
+### `morphis.operations.complex_structure`
+
+*Geometric Algebra - Complex Structure*
+
+**Functions:**
+
+```python
+def structure_bivector(metric: 'Metric') -> 'Vector'
+    """The structure bivector J = e_m ∧ e_ṁ of a space with modes."""
+
+def contraction_map(B: 'Vector') -> 'Operator'
+    """The vector map v ↦ v ⌋ B induced by a bivector."""
+
+def complex_structure(metric: 'Metric') -> 'Operator'
+    """The complex structure J(v) = v ⌋ J as an Operator."""
+
+def kahler_angle(b: 'Vector | Frame', J: 'Vector | None' = None) -> 'NDArray'
+    """The Kähler angle θ of a plane, cos θ = b · J for a unit 2-blade b."""
+
+def is_complex(b: 'Vector', J: 'Vector | None' = None, tol: 'float' = 1e-09) -> 'NDArray'
+    """True where the blade spans a complex subspace, J b = b."""
+
+def is_isotropic(b: 'Vector', J: 'Vector | None' = None, tol: 'float' = 1e-09) -> 'NDArray'
+    """True where the symplectic form vanishes on the blade's subspace, J ⌋ b = 0."""
+
+def is_lagrangian(b: 'Vector', J: 'Vector | None' = None, tol: 'float' = 1e-09) -> 'NDArray'
+    """True where the blade is isotropic of the maximal grade n."""
+```
+
+
 ### `morphis.operations.matrix_rep`
 
 *Geometric Algebra - Matrix Representations*
@@ -1075,6 +1105,51 @@ def translator(v: 'Vector') -> 'MultiVector'
 
 def screw(B: 'Vector', angle: 'float | NDArray', translation: 'Vector', center: 'Vector | None' = None) -> 'MultiVector'
     """Create a motor for screw motion (rotation + translation along axis)."""
+```
+
+---
+
+## Topology
+
+Combinatorial structure of sampled manifolds.
+
+### `morphis.topology.cell_complex`
+
+*Topology - Cell Complexes*
+
+```python
+class CellComplex(BaseModel):
+    """A complex of r-cells over numbered vertices."""
+
+    def faces(self) -> 'CellComplex'
+        """The complex of (r - 1)-cells, each appearing once."""
+
+    def skeleton(self, r: 'int') -> 'CellComplex'
+        """The complex of r-cells, for 0 ≤ r ≤ dim."""
+
+    def vertices(self) -> 'NDArray'
+        """Indices of the vertices that some cell uses, sorted."""
+
+    def boundary(self) -> 'CellComplex'
+        """The (r - 1)-cells that bound exactly one top cell."""
+
+    def euler_characteristic(self) -> 'int'
+        """χ = Σ_r (-1)^r (number of r-cells), counting the vertices cells use."""
+
+    def components(self) -> 'int'
+        """Number of connected components, joining vertices that share a cell."""
+
+    def quotient(self, identifications: 'NDArray | list[tuple[int, int]]') -> 'CellComplex'
+        """Glue vertices together."""
+
+    def quotient_coincident(self, positions, tolerance: 'float' = 1e-09) -> 'CellComplex'
+        """Glue vertices whose positions coincide within a tolerance."""
+
+    def triangles(self) -> 'NDArray'
+        """Triangles covering the 2-cells, for renderers that draw only triangles."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
 ```
 
 ---

@@ -338,6 +338,7 @@ MODULE_GROUPS = {
             "morphis.operations.subspaces",
             "morphis.operations.spectral",
             "morphis.operations.outermorphism",
+            "morphis.operations.complex_structure",
             "morphis.operations.matrix_rep",
         ],
     },
@@ -356,6 +357,12 @@ MODULE_GROUPS = {
             "morphis.transforms.rotations",
             "morphis.transforms.actions",
             "morphis.transforms.projective",
+        ],
+    },
+    "Topology": {
+        "description": "Combinatorial structure of sampled manifolds.",
+        "modules": [
+            "morphis.topology.cell_complex",
         ],
     },
     "Visualization": {

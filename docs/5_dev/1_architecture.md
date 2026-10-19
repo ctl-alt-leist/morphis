@@ -157,6 +157,7 @@ class Frame(GradedElement):
 | `exponential.py` | `exp_vector()`, `log_versor()`, `slerp()` |
 | `factorization.py` | `factor()`, `spanning_vectors()` |
 | `outermorphism.py` | `apply_exterior_power()`, `apply_outermorphism()` |
+| `complex_structure.py` | `structure_bivector()`, `complex_structure()`, `contraction_map()`, `kahler_angle()`, `is_complex()`, `is_isotropic()`, `is_lagrangian()` |
 | `subspaces.py` | `join()`, `meet()` |
 | `spectral.py` | `bivector_eigendecomposition()` |
 | `matrix_rep.py` | `vector_to_array()`, `left_matrix()`, etc. |
@@ -179,6 +180,13 @@ class Frame(GradedElement):
 | `rotations.py` | `rotor()` construction |
 | `actions.py` | `rotate()`, `translate()`, `transform()` |
 | `projective.py` | PGA utilities: `point()`, `direction()`, `line()`, etc. |
+
+### `topology/`
+**Purpose**: Combinatorial structure of sampled manifolds, independent of geometry
+
+| File | Contents |
+|------|----------|
+| `cell_complex.py` | `CellComplex` |
 
 ## Design Decisions
 

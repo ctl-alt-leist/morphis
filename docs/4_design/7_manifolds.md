@@ -154,7 +154,11 @@ over the lot.
 
 ## Topology
 
-`CellComplex` holds $r$-cells as integer arrays.
+`CellComplex`, in `morphis.topology`, holds its top $r$-cells as integer arrays:
+a cube cell lists its $2^r$ corners in binary order, a simplex its $r + 1$.
+Lower cells are derived, and two cells with the same distinct vertices are the
+same cell, so a quotient that pinches a grid row to a point still leaves a valid
+complex.
 
 - `grid(shape, periodic)` builds the complex of a coordinate grid, any axis
   closed into a circle. Quadrilateral cells are kept; triangulation happens only
@@ -162,7 +166,8 @@ over the lot.
 - `quotient(identifications)` glues cells, and `quotient_coincident(positions,
   tolerance)` finds the identifications geometrically, which is how many patches
   become one surface.
-- `boundary()`, `skeleton(r)`, `euler_characteristic()`.
+- `boundary()`, `skeleton(r)`, `euler_characteristic()`, `components()`.
+- `triangles()` for renderers that draw only triangles.
 
 ## Manifolds
 

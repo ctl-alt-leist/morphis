@@ -29,6 +29,7 @@ src/morphis/
 │   ├── exponential.py          # exp_vector, log_versor, slerp
 │   ├── factorization.py        # factor, spanning_vectors
 │   ├── outermorphism.py        # outermorphism application
+│   ├── complex_structure.py    # structure bivector, Kähler angle, blade classes
 │   ├── subspaces.py            # join, meet
 │   ├── spectral.py             # eigendecomposition
 │   ├── matrix_rep.py           # matrix representations
@@ -49,6 +50,11 @@ src/morphis/
 │   ├── actions.py              # rotate, translate, transform
 │   ├── projective.py           # PGA utilities
 │   ├── rotations.py            # rotor construction
+│   └── tests/
+│
+├── topology/                    # Combinatorial structure
+│   ├── __init__.py
+│   ├── cell_complex.py         # CellComplex
 │   └── tests/
 │
 ├── utils/                       # Utilities
@@ -115,6 +121,7 @@ src/morphis/
 | `exponential.py` | `exp_vector()`, `log_versor()`, `slerp()` |
 | `factorization.py` | `factor()`, `spanning_vectors()` |
 | `outermorphism.py` | `apply_exterior_power()`, `apply_outermorphism()` |
+| `complex_structure.py` | `structure_bivector()`, `complex_structure()`, `contraction_map()`, `kahler_angle()`, `is_complex()`, `is_isotropic()`, `is_lagrangian()` |
 | `subspaces.py` | `join()`, `meet()` |
 | `spectral.py` | `bivector_to_skew_matrix()`, `bivector_eigendecomposition()`, `principal_vectors()` |
 | `matrix_rep.py` | `vector_to_array()`, `vector_to_vector()`, `multivector_to_array()`, `array_to_multivector()`, `left_matrix()`, `right_matrix()`, `operator_to_matrix()` |
@@ -138,6 +145,13 @@ src/morphis/
 | `rotations.py` | `rotor()`, `rotation_about_point()` |
 | `actions.py` | `rotate()`, `translate()`, `transform()` |
 | `projective.py` | `point()`, `direction()`, `weight()`, `bulk()`, `euclidean()`, `is_point()`, `is_direction()`, `line()`, `plane()`, `translator()`, `screw()`, distance and incidence functions |
+
+### `topology/`
+**Purpose**: Combinatorial structure of sampled manifolds, independent of geometry
+
+| File | Contents |
+|------|----------|
+| `cell_complex.py` | `CellComplex`: `grid()`, `faces()`, `skeleton()`, `boundary()`, `euler_characteristic()`, `components()`, `quotient()`, `quotient_coincident()`, `triangles()` |
 
 ---
 
