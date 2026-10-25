@@ -28,13 +28,14 @@ Run:
 
 import sys
 
-from numpy import abs as np_abs, cos, exp, linspace, newaxis, pi, sin, stack
+from numpy import abs as np_abs, cos, exp, linspace, pi, sin, stack
 from numpy.typing import NDArray
 
 from morphis.elements import Dot, metric
 from morphis.manifold import Circle, Patch
 from morphis.operations import kahler_angle
 from morphis.visuals.ink import Camera, Sketch
+from morphis.visuals.projective import Stereographic
 
 
 # Populations fixed by the polar angle χ on the Bloch sphere; π/2 is the Clifford torus
@@ -59,20 +60,21 @@ INK_RANGE = (0.95, 0.22)
 SPACE = metric(modes=2)
 
 
-def state(θ, φ):
+def state(phase_1, phase_2):
     """Mode amplitudes of the state with phases θ and φ at fixed populations."""
-    return [cos(POLAR_ANGLE / 2) * exp(1j * θ), sin(POLAR_ANGLE / 2) * exp(1j * φ)]
+    return [cos(POLAR_ANGLE / 2) * exp(1j * phase_1), sin(POLAR_ANGLE / 2) * exp(1j * phase_2)]
 
 
 TORUS = Patch(state, Circle() * Circle(), SPACE)
 
 
+# From the pole e_2̇ of S³ onto the hyperplane of the directions 1, 1̇, 2
+STEREOGRAPHIC = Stereographic(axes=(1, Dot(1), 2), pole=Dot(2)).resolve(SPACE)
+
+
 def stereographic(points: NDArray) -> NDArray:
     """Project unit vectors of ℝ⁴ from the pole e_2̇ onto the hyperplane through the origin perpendicular to it."""
-    pole = SPACE.to_internal(Dot(2))
-    rest = [SPACE.to_internal(label) for label in (1, Dot(1), 2)]
-
-    return points[..., rest] / (1.0 - points[..., pole])[..., newaxis]
+    return STEREOGRAPHIC(points)
 
 
 # =============================================================================
@@ -134,8 +136,8 @@ def create_sketch(theme: str = "ink") -> Sketch:
         strokes(sketch, stereographic(TORUS(sigma).data), depths, "hair", 20)
 
     # A global phase orbit e^{iα} ψ: both phases advance together
-    θ0, φ0 = ORBIT_START
-    orbit = stereographic(TORUS(stack([θ0 + loop, φ0 + loop], axis=-1)).data)
+    start_1, start_2 = ORBIT_START
+    orbit = stereographic(TORUS(stack([start_1 + loop, start_2 + loop], axis=-1)).data)
     strokes(sketch, orbit, depths, "bold", 60, levels=(1.0, 0.5))
     sketch.point(orbit[0], radius=3.6)
     sketch.label(r"$\mathbf{ψ}$", orbit[0], offset=(10, 10), size=15)

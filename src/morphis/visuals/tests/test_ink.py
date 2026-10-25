@@ -371,7 +371,7 @@ class TestSurface:
         from morphis.manifold import Circle, Patch
 
         torus = Patch(
-            lambda theta, phi: [(2 + cos(phi)) * cos(theta), (2 + cos(phi)) * sin(theta), sin(phi)],
+            lambda u, v: [(2 + cos(v)) * cos(u), (2 + cos(v)) * sin(u), sin(v)],
             Circle() * Circle(),
             metric(space=3),
         )

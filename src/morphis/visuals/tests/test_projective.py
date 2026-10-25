@@ -70,7 +70,7 @@ class TestStereographic:
     def test_conformal_on_circles(self):
         # the Clifford torus goes to a torus of revolution: every θ circle has one radius per φ
         g = metric(space=4)
-        torus = Patch(lambda theta, phi: [cos(theta), sin(theta), cos(phi), sin(phi)], Circle() * Circle(), g)
+        torus = Patch(lambda u, v: [cos(u), sin(u), cos(v), sin(v)], Circle() * Circle(), g)
         projection = Projection.stereographic(sqrt(2) * basis_vector(4, g))
         drawn = projection(torus(torus.grid((16, 8))))
         radii = sqrt(drawn[..., 0] ** 2 + drawn[..., 1] ** 2)
@@ -104,7 +104,7 @@ class TestPushforward:
 
     def test_frame_shape(self):
         g = metric(space=4)
-        torus = Patch(lambda theta, phi: [cos(theta), sin(theta), cos(phi), sin(phi)], Circle() * Circle(), g)
+        torus = Patch(lambda u, v: [cos(u), sin(u), cos(v), sin(v)], Circle() * Circle(), g)
         sigma = torus.grid((6, 5))
         projection = Projection.linear(g, {1: (1, 0, 0), 2: (0, 1, 0), 3: (0, 0, 1)})
         assert projection.pushforward(torus(sigma), torus.tangent_frame(sigma)).shape == (6, 5, 2, 3)
