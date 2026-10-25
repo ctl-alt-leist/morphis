@@ -93,6 +93,55 @@ R[2]  # -sin(pi/4) * b
 v_rotated = R * e1 * ~R  # e1 becomes e2
 ```
 
+## Non-Simple Bivectors
+
+From four dimensions on, a bivector need not be a blade. The sum of two rotations in orthogonal planes,
+
+```math
+b = θ_1 \, \mathbf{e}_{12} + θ_2 \, \mathbf{e}_{34}
+```
+
+squares to $b^2 = -θ_1^2 - θ_2^2 + 2 θ_1 θ_2 \, \mathbf{e}_{1234}$, which is not a scalar, so the closed form above does not apply. In four and five dimensions every bivector splits as $b = b_1 + b_2$ into simple bivectors in orthogonal planes, which commute, with $b_k^2 = λ_k$ scalars. Two invariants of $b$ fix the $λ_k$:
+
+```math
+\begin{aligned}
+\langle b^2 \rangle_0 &= λ_1 + λ_2 \\ \\
+w = \tfrac{1}{2} \, b \wedge b &= b_1 b_2 \\ \\
+w^2 &= λ_1 λ_2
+\end{aligned}
+```
+
+so the $λ_k$ are the roots of $λ^2 - \langle b^2 \rangle_0 \, λ + w^2 = 0$, and each part is $b_k = (λ_k b - b w) / (λ_k - λ_l)$. Because the parts commute, $e^b = e^{b_1} e^{b_2}$. Writing $c_k = \cos\sqrt{-λ_k}$ and $s_k = \sin\sqrt{-λ_k} / \sqrt{-λ_k}$, which are entire functions of $λ_k$ (cosh and sinh for $λ_k > 0$, and 1 at $λ_k = 0$), the product expressed through $b$ and $w$ alone is:
+
+```math
+e^b = c_1 c_2 + s_1 s_2 \, w + \tfrac{1}{2} (c_2 s_1 + c_1 s_2) \, b + \tfrac{1}{2} D \left( \langle b^2 \rangle_0 \, b - 2 \, b w \right)
+```
+
+with the divided difference $D = (c_2 s_1 - c_1 s_2) / (λ_1 - λ_2)$. The split itself is never formed. One formula covers two rotations, a rotation with a boost in spacetime, and a screw in PGA, where one $λ_k$ is zero and its factor is $1 + b_k$. A simple bivector has $w = 0$ and reduces to $\cos + b \sin$. This is the invariant decomposition of Roelfs and De Keninck.
+
+When the roots coincide, as for the isoclinic rotation $b = θ (\mathbf{e}_{12} + \mathbf{e}_{34})$ that turns every vector by the same angle, any split serves and $\langle b^2 \rangle_0 \, b - 2 \, b w$ vanishes, so $D$ is taken at its finite limit. There the exponential is:
+
+```math
+e^{θ (\mathbf{e}_{12} + \mathbf{e}_{34})} = \cos^2 θ + \sin θ \cos θ \, (\mathbf{e}_{12} + \mathbf{e}_{34}) + \sin^2 θ \, \mathbf{e}_{1234}
+```
+
+A rotor of a non-simple bivector therefore has a grade-4 part, and the sandwich $R v \tilde{R}$ applies it as before:
+
+```python
+from numpy import pi, sqrt
+from morphis.elements import basis_vectors, euclidean_metric
+from morphis.transforms import rotor
+
+g = euclidean_metric(4)
+e1, e2, e3, e4 = basis_vectors(g)
+
+b = ((e1 ^ e4) + (e2 ^ e3)) / sqrt(2)   # isoclinic: equal turns in e_14 and e_23
+R = rotor(b, pi / 3)                   # exp(-b π/6), grades {0, 2, 4}
+turned = R * e1 * ~R                   # e1 turned by π/(3√2) in the e_14 plane
+```
+
+`exp_vector` sends every bivector to `exp_bivector`, which applies this formula in four and five dimensions and the simple form elsewhere. Six or more dimensions allow three or more invariant planes; there a non-simple bivector raises `NotImplementedError`. `log_versor` inverts simple rotors only.
+
 ## The Logarithm
 
 The **logarithm** extracts the generator from a versor. For rotor $R = a + b$ where $a$ is the scalar part and $b$ is the bivector part:

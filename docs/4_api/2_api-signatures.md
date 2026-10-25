@@ -735,6 +735,9 @@ def hermitian_form(v: 'Vector') -> 'NDArray'
 def exp_vector(B: 'Vector') -> 'MultiVector'
     """Compute the exponential of a vector: exp(B)"""
 
+def exp_bivector(B: 'Vector') -> 'MultiVector'
+    """Exponential of a bivector that need not be simple: exp(B)."""
+
 def log_versor(M: 'MultiVector') -> 'Vector'
     """Extract the bivector generator from a rotor/versor: log(M)"""
 
@@ -1373,7 +1376,7 @@ Visualization and rendering tools.
 class SceneData:
     """Serializable scene state for save/load."""
 
-    def __init__(self, theme_name: 'str', size: 'tuple[int, int]', projection: 'tuple[int, ...]', show_basis: 'bool', elements: 'list[dict]') -> None
+    def __init__(self, theme_name: 'str', size: 'tuple[int, int]', projection: 'View | Projection', show_basis: 'bool', elements: 'list[dict]') -> None
         """Initialize self.  See help(type(self)) for accurate signature."""
 ```
 
@@ -1438,7 +1441,7 @@ class Scene:
     @property
     def basis_labels(self): ...
 
-    def __init__(self, projection: 'tuple[int, ...] | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (1280, 800), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True, auto_camera: 'bool' = True, window: 'bool' = True)
+    def __init__(self, projection: 'View | Projection | None' = None, theme: 'str | Theme' = 'obsidian', size: 'tuple[int, int]' = (1280, 800), frame_rate: 'int' = 30, backend: 'str' = 'pyvista', show_basis: 'bool' = True, auto_camera: 'bool' = True, window: 'bool' = True)
         """Initialize self.  See help(type(self)) for accurate signature."""
 
     def add(self, element: 'Element', color: 'Color | None' = None, opacity: 'float' = 1.0, **kwargs) -> 'str'
@@ -1447,8 +1450,8 @@ class Scene:
     def remove(self, element_id: 'str') -> 'None'
         """Remove an element from the scene."""
 
-    def set_projection(self, axes: 'tuple[int, ...]') -> 'None'
-        """Set projection axes for nD -> 3D."""
+    def set_projection(self, projection: 'View | Projection') -> 'None'
+        """Draw elements of dimension above 3 through a new view, or a given projection."""
 
     def camera(self, position: 'tuple[float, float, float] | None' = None, focal_point: 'tuple[float, float, float] | None' = None, up: 'tuple[float, float, float] | None' = None) -> 'None'
         """Set camera position and orientation. Disables auto_camera."""
@@ -1509,7 +1512,7 @@ class Recording:
         """Append one RGB (or RGBA) image of shape (height, width, 3 or 4)."""
 
     def close(self) -> 'None'
-        """Finalize the file."""
+        """Finalize the file; a GIF is encoded here, from every frame at once."""
 ```
 
 
@@ -1706,6 +1709,9 @@ class Projection:
     @property
     def target(self): ...
 
+    @property
+    def is_affine(self): ...
+
     def __init__(self, matrix: 'NDArray', source: 'Metric')
         """Initialize self.  See help(type(self)) for accurate signature."""
 
@@ -1714,6 +1720,64 @@ class Projection:
 
     def pinching(self, points: 'Vector | NDArray', frame: 'Frame') -> 'NDArray'
         """How nearly the map collapses a tangent space: s_min / s_max of dΠ on the frame."""
+
+    def blade(self, b: 'Vector', at: 'Vector | NDArray | None' = None) -> 'NDArray'
+        """A k-vector attached at a point, carried into the picture by ∧ᵏ dΠ."""
+```
+
+
+```python
+class View(BaseModel):
+    """How a renderer draws a space of any dimension in three dimensions."""
+
+    def resolve(self, metric: 'Metric') -> 'Projection'
+        """The projection of this view from the given space to 3D."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+```python
+class Orthographic(View):
+    """Parallel projection onto the axes, dropping every other direction."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def resolve(self, metric: 'Metric') -> 'Projection'
+        """The projection of this view from the given space to 3D."""
+```
+
+
+```python
+class Perspective(View):
+    """Central projection with the eye along the dropped directions."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def resolve(self, metric: 'Metric') -> 'Projection'
+        """The projection of this view from the given space to 3D."""
+```
+
+
+```python
+class Stereographic(View):
+    """Stereographic projection from a pole of the sphere, then onto the axes."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def resolve(self, metric: 'Metric') -> 'Projection'
+        """The projection of this view from the given space to 3D."""
+```
+
+**Functions:**
+
+```python
+def resolve(view: 'View | Projection', metric: 'Metric') -> 'Projection'
+    """The projection to 3D that a view, or a given projection, draws the space with."""
 ```
 
 
@@ -1744,8 +1808,8 @@ def create_trivector_mesh(origin: 'ndarray', u: 'ndarray', v: 'ndarray', w: 'nda
 def create_quadvector_mesh(origin: 'ndarray', u: 'ndarray', v: 'ndarray', w: 'ndarray', x: 'ndarray', projection_axes: 'tuple[int, int, int]' = (0, 1, 2), shaft_radius: 'float' = 0.006, face_opacity: 'float' = 0.12) -> 'tuple[PolyData, PolyData, PolyData]'
     """Create meshes for a quadvector (4-blade) as a tesseract projection."""
 
-def create_frame_mesh(origin: 'ndarray', vectors: 'ndarray', shaft_radius: 'float' = 0.008, projection_axes: 'tuple[int, int, int] | None' = None, filled: 'bool' = False) -> 'tuple[PolyData | None, PolyData | None, PolyData]'
-    """Create meshes for a frame (k arrows from origin)."""
+def create_frame_mesh(corners: 'ndarray', shaft_radius: 'float' = 0.008, filled: 'bool' = False) -> 'tuple[PolyData | None, PolyData | None, PolyData]'
+    """Create meshes for a frame of k vectors from the drawn corners of the cell they span."""
 
 def create_blade_mesh(grade: 'int', origin: 'ndarray', vectors: 'ndarray', shaft_radius: 'float' = 0.008, edge_radius: 'float' = 0.006, projection_axes: 'tuple[int, int, int] | None' = None) -> 'tuple[PolyData | None, PolyData | None, PolyData]'
     """Create meshes for a blade of any grade."""
@@ -1860,11 +1924,14 @@ class Mark:
 class Sketch:
     """A pen-and-ink conceptual figure."""
 
-    def __init__(self, camera: 'Camera | None' = None, theme: 'str | InkTheme' = 'ink', depiction: 'Depiction | None' = None, size: 'tuple[float, float]' = (8.0, 6.0), seed: 'int' = 0)
+    def __init__(self, camera: 'Camera | None' = None, theme: 'str | InkTheme' = 'ink', projection: 'View | Projection | None' = None, size: 'tuple[float, float]' = (8.0, 6.0), seed: 'int' = 0)
         """Initialize self.  See help(type(self)) for accurate signature."""
 
     def drawn(self, point: 'Point') -> 'NDArray'
-        """Drawing coordinates of a true-space Vector or a drawing-space triple."""
+        """Drawing coordinates of a true-space point (a Vector of any lot) or a drawing-space triple."""
+
+    def carried(self, displacement: 'Point') -> 'NDArray'
+        """Drawing displacement of a true-space Vector, or a drawing-space triple as given."""
 
     def space(self, space: 'OrganicSpace', weight: 'str' = 'bold', stipple: 'float' = 1.0, light: 'float' = 210.0) -> 'None'
         """Draw an enclosing organic space: a pen silhouette with rim stipple."""
@@ -1881,8 +1948,8 @@ class Sketch:
     def circle(self, center: 'Point', u: 'Point', v: 'Point', radius: 'float' = 1.0, arc: 'tuple[float, float]' = (0.0, 6.283185307179586), arrow: 'bool' = False, weight: 'str' = 'fine', level: 'float' = 0.6) -> 'None'
         """Draw a circle (or arc) of the given radius in the plane of unit directions u and v."""
 
-    def curve(self, points: 'list[Point] | NDArray', dashed: 'bool' = False, arrow: 'bool' = False, weight: 'str' = 'fine', level: 'float' = 0.6) -> 'None'
-        """Draw a polyline through drawing-space points (true-space Vectors are depicted)."""
+    def curve(self, points: 'Vector | list[Point] | NDArray', dashed: 'bool' = False, arrow: 'bool' = False, weight: 'str' = 'fine', level: 'float' = 0.6) -> 'None'
+        """Draw a polyline through points: a true-space Vector with a lot, a list of points, or drawing triples."""
 
     def point(self, p: 'Point', radius: 'float' = 3.2, color: 'str | RGB | None' = None) -> 'NDArray'
         """Draw a solid dot; returns its drawing coordinates."""
@@ -1916,19 +1983,6 @@ class Sketch:
 ```python
 def animate(build: 'Callable[[float], Sketch]', times: 'Sequence[float]', path: 'str | Path', frame_rate: 'float' = 30, dpi: 'int' = 150) -> 'Path'
     """Render an ink animation to a video or GIF."""
-```
-
-
-### `morphis.visuals.ink.depiction`
-
-*Depiction*
-
-```python
-class Depiction:
-    """Linear map from a true space to the 3D drawing space."""
-
-    def __init__(self, metric: 'Metric', images: 'dict[int, tuple[float, float, float]] | None' = None)
-        """Initialize self.  See help(type(self)) for accurate signature."""
 ```
 
 

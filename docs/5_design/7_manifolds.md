@@ -136,16 +136,18 @@ The intrinsic dimension is `span`, as for `Frame`; `dim` is always the ambient d
 
 ## Projection
 
-A projective map from $\mathbb{RP}^d$ to $\mathbb{RP}^3$ is a $4 \times (d + 1)$ matrix whose kernel is the center of projection, a $(d - 4)$-flat. This is the closed form of $(\mathbf{c} \wedge \mathbf{p}) \vee \mathbf{s}$. Orthographic projection has an ideal center, and a linear map has a constant weight row. `Projection`, in `morphis.visuals.projective`, holds the matrix, and maps to a picture of any dimension $m$, so maps chain. It is to replace both `ProjectionConfig` and the ink module's `Depiction`. Built so far:
+A projective map from $\mathbb{RP}^d$ to $\mathbb{RP}^3$ is a $4 \times (d + 1)$ matrix whose kernel is the center of projection, a $(d - 4)$-flat. This is the closed form of $(\mathbf{c} \wedge \mathbf{p}) \vee \mathbf{s}$. Orthographic projection has an ideal center, and a linear map has a constant weight row. `Projection`, in `morphis.visuals.projective`, holds the matrix, and maps to a picture of any dimension $m$, so maps chain. It replaces the ink module's former `Depiction`, and both renderers draw through it. Built so far:
 
 - `Projection.orthographic(screen)` from an orthonormal `Frame` or vectors.
 - `Projection.stereographic(pole)`: perspective from the pole of the sphere of its radius onto the hyperplane through the center perpendicular to it.
 - `Projection.linear(metric, images)`: the deliberately unfaithful depiction, each direction sent to a chosen drawing vector.
 - Composition with `@`, so a stereographic map from $S^{d-1}$ followed by an orthographic one reaches 3D from any $d$.
-- `Π(v)` maps vectors of any lot, dividing by the weight once, at the end.
-- `Π.pushforward(x, frame)` is the differential $dΠ$ on tangent vectors, and `Π.pinching(x, frame)` is $s_{\min} / s_{\max}$ of it, zero at a pinch point, where the drawn surface folds to a cusp.
+- `projection(points)` maps points of any lot, dividing by the weight once, at the end.
+- `projection.pushforward(x, frame)` is the differential $dΠ$ on tangent vectors, and `projection.pinching(x, frame)` is $s_{\min} / s_{\max}$ of it, zero at a pinch point, where the drawn surface folds to a cusp.
+- `projection.blade(b, at)` carries a k-vector at a point by the outermorphism $∧^k dΠ$.
+- The views `Orthographic`, `Perspective`, and `Stereographic` name a projection to 3D by its kind and the labels of the three directions drawn, and resolve against each element's metric (see the [visuals architecture](4_visuals_architecture.md)).
 
-Still to come: `Projection.perspective(center, screen)` from flats, `Π.turned(R)`, `Π.hidden(v)`, `Π.blade(b)`, and a numerical pinch-point search.
+Still to come: `Projection.perspective(center, screen)` from general flats, `projection.turned(R)`, `projection.hidden(v)`, and a numerical pinch-point search.
 
 The ink `Sketch` draws a mesh in drawing coordinates with `surface`: cells painted far to near with two-sided Lambert shading, one color or one per cell, cell edges as the coordinate grid, and dots that take part in the same depth order. Painting by depth cannot resolve two sheets that cross in the picture; the crossing shows as a sawtooth at the cell scale.
 
@@ -183,7 +185,7 @@ The order is set by the path to Calabi–Yau figures.
 3. `CellComplex`. Done.
 4. `Domain`, `Patch`, and the submanifold quantities. Done.
 5. The Calabi–Yau slice: `Mesh`, `Atlas`, the core of `Projection`, the ink `surface`, and the staged `calabi_yau` example. Done.
-6. Projection completed: perspective, `turned`, `hidden`, pinch search; the `Depiction` and `ProjectionConfig` replaced and the X.VI scripts updated; `Surface` folded into `Mesh` for the PyVista `Scene`.
+6. Projection completed: views for the Scene and the Sketch, perspective along dropped directions, `blade`, and the `Depiction` replaced, done; still to come are perspective from general flats, `turned`, `hidden`, pinch search, `ProjectionConfig` replaced on the Canvas path, the X.VI scripts updated, and `Surface` folded into `Mesh` for the PyVista `Scene`.
 7. Toward the threefold: projective coordinates and affine charts of ℂℙⁿ, higher-dimensional slices drawn by their 2-skeletons or by moving hyperplanes, and the Ricci curvature of the induced metric.
 8. `LevelSet`, transport, and the first bundle figures.
 9. Concepts documentation in `docs/1_concepts/`.

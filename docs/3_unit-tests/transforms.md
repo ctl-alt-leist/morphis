@@ -48,6 +48,20 @@ R^{-1} = \tilde{R} = \cos(\theta/2) + \sin(\theta/2) B
 R(0) = 1
 ```
 
+### Non-Simple Bivectors
+
+In four and five dimensions $B$ need not be simple, and `exp_bivector` evaluates $e^B$ in closed form through $\langle B^2 \rangle_0$ and $W = \tfrac{1}{2} B \wedge B$. Each case is checked against the defining series $\sum_n B^n / n!$ in the geometric product:
+
+- a random bivector of $\mathbb{R}^4$ and of $\mathbb{R}^5$
+- the isoclinic $θ (\mathbf{e}_{12} + \mathbf{e}_{34})$, where also $\langle e^B \rangle_0 = \cos^2 θ$ and $\langle e^B \rangle_4 = \sin^2 θ \, \mathbf{e}_{1234}$
+- nearly isoclinic bivectors, whose roots differ by $10^{-5}$ to $10^{-12}$
+- a bivector of size $10^{-5}$, to $10^{-15}$
+- random bivectors of spacetime in both conventions
+- a PGA screw $0.8 \, \mathbf{e}_{12} + 0.5 \, \mathbf{e}_{03} + 0.3 \, \mathbf{e}_{01}$
+- a lot of shape $(3, 2)$
+
+A simple bivector gives $\cos + B \sin$ with no grade-4 part, also in six dimensions, where a non-simple bivector raises `NotImplementedError`. For $B = 0.9 \, \mathbf{u}_1 \wedge \mathbf{u}_2 - 0.4 \, \mathbf{u}_3 \wedge \mathbf{u}_4$ in a random orthonormal frame, `rotor(B, 1)` turns vectors as the product of the two plane rotors, and $R \tilde{R} = 1$.
+
 ## Sandwich Product
 
 Rotors act via:

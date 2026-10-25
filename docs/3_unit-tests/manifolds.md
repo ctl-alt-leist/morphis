@@ -65,3 +65,8 @@ The Fermat curve $z_1^n + z_2^n = 1$ is covered by $n^2$ patches, $z_1 = e^{2πi
 - stereographic projection fixes the equator, sends the antipode of the pole to the origin, and takes the Clifford torus to a torus of revolution
 - composition with `@` agrees with applying the maps in sequence
 - the pushforward agrees with a central difference, and `pinching` is 1 on a faithfully drawn plane and 0 on one containing the hidden direction
+- `blade` under an orthographic view is the sub-array of components at the axes, and under perspective it is the wedge of the pushforwards
+- every view draws a space of dimension 3 or less in its own coordinates; axes are three distinct labels, routed through the metric
+- perspective from $\mathbb{R}^4$ draws $D \, \mathbf{x}_{123} / (D - x_4)$, from $\mathbb{R}^5$ divides by $1 - (x_2 + x_4) / D$ for axes $(1, 3, 5)$, and keeps collinear points collinear
+- the stereographic view agrees with `Projection.stereographic`, reorders and drops directions by label, and refuses a pole among its axes
+- in the Scene, a frame's corners are the images of the true corners (not sums of the images of its vectors), an arrow's tip is the image of its tip, and a tesseract's cell has 24 faces
