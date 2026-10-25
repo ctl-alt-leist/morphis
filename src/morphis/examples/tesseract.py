@@ -4,21 +4,23 @@ Tesseract
 The unit tesseract of ℝ⁴, centered on the origin, turning in an isoclinic
 double rotation: the bivector
 
-    B = (e_14 + e_23) / √2
+    B = e_14 + e_23
 
 is not simple. It is the sum of two rotations in the orthogonal planes e_14 and
-e_23 at the same rate, so every vector turns by the same angle, and its rotor
+e_23 at the same rate, so every vector turns by the same angle θ, and its rotor
 
-    R(t) = exp(-B t / 2)
+    R(θ) = exp(-B θ / 2)
 
-has a grade-4 part. exp_vector evaluates it in closed form through the
+has a grade-4 part. After θ = 2π both planes have made a full turn, and the
+rotor is 1 again. exp_vector evaluates it in closed form through the
 invariants of B. The tesseract's corner and its four edge vectors are turned by
 the sandwich R x R̃ each frame; the Scene draws what it is handed.
 
 The Scene draws the tesseract first orthographically onto e_1, e_2, e_3, where
 the cell is a cube whose far and near halves overlap, and then in perspective
 with the eye on the e_4 axis, where the far cell is drawn inside the near one
-and the turn carries cells through each other. Under perspective each corner
+and the turn carries cells through each other. The perspective turn picks up
+where the orthographic quarter turn left off. Under perspective each corner
 is mapped by the projective map itself, so the drawn cells stay exact.
 
 Run: uv run python -m morphis.examples.tesseract
@@ -28,7 +30,7 @@ Record: uv run python -m morphis.examples.tesseract figures/tesseract/tesseract.
 import sys
 from contextlib import nullcontext
 
-from numpy import pi, sqrt
+from numpy import pi
 
 from morphis.elements import Frame, basis_vectors, euclidean_metric
 from morphis.transforms import rotor
@@ -53,7 +55,7 @@ def create_scene(output: str | None = None) -> Scene:
     """
     g = euclidean_metric(4)
     e1, e2, e3, e4 = basis_vectors(g)
-    B = ((e1 ^ e4) + (e2 ^ e3)) / sqrt(2)
+    B = (e1 ^ e4) + (e2 ^ e3)
 
     # The cell spanned by the four edge vectors from one corner, centered on the origin
     edges = Frame(e1, e2, e3, e4)
@@ -80,11 +82,12 @@ def create_scene(output: str | None = None) -> Scene:
             scene.capture(t)
             t += dt
 
-        # A quarter turn drawn orthographically, then the full turn in perspective
-        for view, total in ((Orthographic(axes=(1, 2, 3)), pi / 2), (Perspective(distance=EYE_DISTANCE), 2 * pi)):
+        # A quarter turn drawn orthographically, then a full turn more in perspective
+        phases = ((Orthographic(axes=(1, 2, 3)), 0.0, pi / 2), (Perspective(distance=EYE_DISTANCE), pi / 2, 2 * pi))
+        for view, start, total in phases:
             scene.set_projection(view)
             for n in range(n_turn + 1):
-                turn(total * ease_in_out_cubic(n / n_turn))
+                turn(start + total * ease_in_out_cubic(n / n_turn))
                 scene.capture(t)
                 t += dt
 
