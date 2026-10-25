@@ -1,6 +1,6 @@
 # Qutrit Orbit
 
-The [conjugate-planes](2_conjugate-planes.md) qubit lives in $\mathbb{R}^4$, small enough that its two conjugate planes can be laid out side by side. A qutrit has three modes, so its state space is $\mathbb{C}^3 = \mathbb{R}^6$, and this example draws no planes at all. It draws the state's evolution through its phase space: the populations are conserved, the unobservable global phase is removed, and what is left is a 2-torus of relative phases, over which the state winds along a line that never closes. The torus sits on a 3-sphere, and a stereographic projection draws it in three dimensions as a torus of revolution. The code is the `qutrit_orbit` example:
+The [conjugate-planes](2_conjugate-planes.md) qubit lives in $\mathbb{R}^4$, small enough that its two conjugate planes can be laid out side by side. A qutrit has three modes, so its state space is $\mathbb{C}^3 = \mathbb{R}^6$, and this example draws no planes at all. It draws the state's evolution $\mathbf{ψ}(t) = e^{-iHt} \mathbf{ψ}(0)$ through its phase space, the same kind of evolution as the qubit's, with three modes instead of two: the populations are conserved, the unobservable global phase is removed, and what is left is a 2-torus of relative phases, over which the state winds along a line that never closes. The torus sits on a 3-sphere, and a stereographic projection draws it in three dimensions as a torus of revolution. The code is the `qutrit_orbit` example:
 
 ```
 uv run python -m morphis.examples.qutrit_orbit
@@ -125,17 +125,14 @@ PROJECTION = Projection.stereographic(RADIUS * basis_vector(4, EXCITED.target)) 
 
 The only things the figure gives up are the ones the physics gives up: the global phase, removed before drawing, and the constant ground amplitude. Distances on the torus are distorted by the conformal factor of the stereographic map, larger near the pole, and angles between curves are kept.
 
-The ink `Sketch` draws the torus as faint hairline coordinate circles, 24 in one direction and 12 in the other, and the orbit as a fine stroke. Ink curves have no hidden-line removal, so depth is shown by graphite level instead: each curve is inked in short pieces, each darker the nearer it is to the camera, over the range of depths of the whole drawn torus. The orbit's graphite levels run from 0.45 to 1.0 and the torus's from 0.12 to 0.45, so the orbit is never lighter than the torus at any depth.
+The ink `Sketch` draws the torus as a translucent `shell`, in pen and stipple and with no grid. Its contour, the curve where the surface turns from facing the eye to facing away, is found on the mesh of the patch from normals interpolated between vertices, and inked with a pen wobble, lighter the farther it is. Its body is stippled, densest where the surface turns edge-on to the eye and heavier on the side away from the light, with lighter dots on the far sheets. The cusped curve around the hole is part of the true contour of a torus of revolution seen from above its equator; an opaque drawing would hide part of it.
+
+Ink curves have no hidden-line removal, and on a translucent torus none is wanted: the orbit is drawn in full, and depth is shown by graphite level. Each stretch of the orbit is inked darker the nearer it is to the camera, over the range of depths of the drawn torus, so the stretches running behind the tube read as seen through it.
 
 ```python
-def strokes(sketch: Sketch, path: NDArray, depths, weight: str, pieces: int, levels) -> None:
-    _, depth = sketch.camera.project(path)
-    near, far = depths
-    bounds = linspace(0, len(path) - 1, pieces + 1).astype(int)
-    for start, stop in zip(bounds[:-1], bounds[1:], strict=True):
-        nearness = (far - depth[start : stop + 1].mean()) / (far - near)
-        level = levels[1] + (levels[0] - levels[1]) * nearness
-        sketch.curve(path[start : stop + 1], weight=weight, level=float(level))
+mesh = TORUS.mesh(MESH_SHAPE)
+torus = PROJECTION(mesh.vertices)
+sketch.shell(torus, mesh.cells.cells)
 
 orbit = PROJECTION(TORUS(phases(linspace(0.0, t, count))))
 strokes(sketch, orbit, depths, "fine", max(1, count // 25), ORBIT_INK)
@@ -145,7 +142,7 @@ sketch.label(r"$\mathbf{ψ}$", orbit[-1], offset=(9, 7), size=15)
 
 The still shows the whole run, 60 time units, with the state at its end.
 
-![The torus of relative phases drawn as faint coordinate circles of a torus of revolution, wound by the dark orbit of the state, which nearly follows the curve that turns twice around the tube for each turn around the axis](../../figures/qutrit-orbit/qutrit-orbit.png)
+![The torus of relative phases drawn translucent in pen and stipple as a torus of revolution, wound by the dark orbit of the state, which nearly follows the curve that turns twice around the tube for each turn around the axis](../../figures/qutrit-orbit/qutrit-orbit.png)
 
 ## The Animation
 

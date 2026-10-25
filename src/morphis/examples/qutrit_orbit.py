@@ -28,7 +28,9 @@ and it precesses slowly around the torus.
 The figure drops the constant ground amplitude and draws the rest, a torus on
 the 3-sphere of radius ρ = √(a_2² + a_3²) in the directions 2, 2̇, 3, 3̇, by
 stereographic projection from the pole ρ e_3̇, where it becomes a torus of
-revolution. The animation draws the state and the orbit it has traced.
+revolution, drawn translucent in pen and stipple: its contour inked and its
+body stippled, with no grid, so the orbit shows through it, lighter where it
+runs behind. The animation draws the state and the orbit it has traced.
 
 Run:
     uv run python -m morphis.examples.qutrit_orbit [output.png] [ink|parchment|chalkboard]
@@ -37,7 +39,7 @@ Run:
 
 import sys
 
-from numpy import abs as np_abs, array, cos, diag, exp, linspace, pi, sin, sqrt, stack
+from numpy import abs as np_abs, array, cos, diag, exp, linspace, sin, sqrt
 from numpy.linalg import eigh
 from numpy.typing import NDArray
 
@@ -62,15 +64,13 @@ FRAME_RATE = 30
 # Resolution of animation frames; a GIF of stippled ink grows quickly with it
 ANIMATION_DPI = 100
 
-# Coordinate circles of the torus drawn in each direction, and the samples along each
-N_CIRCLES = (24, 12)
-N_SAMPLES = 181
+# Cells of the mesh the torus's contour and stipple are drawn from, around the axis and around the tube
+MESH_SHAPE = (96, 48)
 
 CAMERA = Camera(azimuth=-32.0, elevation=30.0, distance=14.0, fov=17.0)
 
-# Graphite levels for the nearest and farthest strokes of the torus and of the orbit
-TORUS_INK = (0.45, 0.12)
-ORBIT_INK = (1.0, 0.45)
+# Graphite levels for the nearest and farthest strokes of the orbit; the far side shows through the torus
+ORBIT_INK = (1.0, 0.3)
 
 SPACE = metric(modes=3)
 
@@ -146,13 +146,6 @@ def report() -> None:
 # =============================================================================
 
 
-def depth_range(sketch: Sketch) -> tuple[float, float]:
-    """Nearest and farthest camera depth over the whole drawn torus."""
-    _, depth = sketch.camera.project(PROJECTION(TORUS(TORUS.grid(64))).reshape(-1, 3))
-
-    return depth.min(), depth.max()
-
-
 def strokes(sketch: Sketch, path: NDArray, depths, weight: str, pieces: int, levels) -> None:
     """Ink a drawn curve in short pieces, each darker the nearer it is to the camera."""
     _, depth = sketch.camera.project(path)
@@ -166,17 +159,13 @@ def strokes(sketch: Sketch, path: NDArray, depths, weight: str, pieces: int, lev
 
 def create_sketch(theme: str = "ink", t: float = DURATION) -> Sketch:
     sketch = Sketch(camera=CAMERA, size=(8.0, 6.0), seed=5, theme=theme)
-    loop = linspace(0.0, 2 * pi, N_SAMPLES)
-    depths = depth_range(sketch)
 
-    # The torus of relative phases, as faint coordinate circles
-    for fixed in linspace(0.0, 2 * pi, N_CIRCLES[0], endpoint=False):
-        circle = stack([0 * loop + fixed, loop], axis=-1)
-        strokes(sketch, PROJECTION(TORUS(circle)), depths, "hair", 24, TORUS_INK)
-
-    for fixed in linspace(0.0, 2 * pi, N_CIRCLES[1], endpoint=False):
-        circle = stack([loop, 0 * loop + fixed], axis=-1)
-        strokes(sketch, PROJECTION(TORUS(circle)), depths, "hair", 24, TORUS_INK)
+    # The torus of relative phases, translucent: a pen contour and stipple, no grid
+    mesh = TORUS.mesh(MESH_SHAPE)
+    torus = PROJECTION(mesh.vertices)
+    sketch.shell(torus, mesh.cells.cells)
+    _, depth = sketch.camera.project(torus)
+    depths = (depth.min(), depth.max())
 
     # The orbit traced so far, and the state now
     count = max(2, int(ORBIT_SAMPLES * t / DURATION))
