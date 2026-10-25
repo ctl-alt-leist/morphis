@@ -78,8 +78,8 @@ def sheet(k1, k2):
     return Patch(X, Interval(-1.2, 1.2) + 1j * Interval(0, pi / 2), SPACE)
 
 patch = sheet(0, 0)
-σ = patch.grid((33, 17))                      # real coordinates (ξ, θ), shape (33, 17, 2)
-patch(σ)                                      # the points, a Vector with lot (33, 17)
+coordinates = patch.grid((33, 17))            # real coordinates (ξ, θ), shape (33, 17, 2)
+patch(coordinates)                            # the points, a Vector with lot (33, 17)
 ```
 
 Every geometric quantity is a method taking the same coordinates. Because the coordinate is complex, the derivative along $θ$ is computed as $i$ times the derivative along $ξ$, so the tangent frame is an exact $J$ pair:
@@ -87,9 +87,9 @@ Every geometric quantity is a method taking the same coordinates. Because the co
 ```python
 from morphis.operations import kahler_angle
 
-kahler_angle(patch.tangent_frame(σ))          # 0: complex lines
-patch.mean_curvature(σ)                       # 0: minimal
-patch.gaussian_curvature(σ)                   # negative everywhere
+kahler_angle(patch.tangent_frame(coordinates))  # 0: complex lines
+patch.mean_curvature(coordinates)               # 0: minimal
+patch.gaussian_curvature(coordinates)           # negative everywhere
 ```
 
 ## Stage 2: The Phases
@@ -166,18 +166,20 @@ How close the drawing comes to pinching is measured by the differential of the p
 
 ![The welded surface in gray, tinted red where the projection nearly collapses a tangent plane, with the 15 pinch points marked](../../figures/higher-dimensional/calabi-yau-pinch.png)
 
-**The code.** A `Projection` is a projective map on homogeneous coordinates. It is built from the screen directions and applied to vectors of any lot:
+**The code.** A `Projection` is a projective map on homogeneous coordinates, the same kind of map behind every view described in [Visualization Styles](1_visualization-styles.md). It is built from the screen directions and applied to vectors of any lot:
 
 ```python
 from numpy import cos, sin
 from morphis.visuals.projective import Projection
 
-α = pi / 4
-Π = Projection.orthographic([E1, E2, cos(α) * F1 + sin(α) * F2])
+angle = pi / 4
+projection = Projection.orthographic([E1, E2, cos(angle) * F1 + sin(angle) * F2])
 
-drawn = Π(mesh.vertices)                      # shape (n_vertices, 3)
-Π.pushforward(patch(σ), patch.tangent_frame(σ))   # dΠ on each tangent plane, shape (33, 17, 2, 3)
-Π.pinching(patch(σ), patch.tangent_frame(σ))      # s_min / s_max, 0 at a pinch point
+drawn = projection(mesh.vertices)             # shape (n_vertices, 3)
+
+points, frame = patch(coordinates), patch.tangent_frame(coordinates)
+projection.pushforward(points, frame)         # dΠ on each tangent plane, shape (33, 17, 2, 3)
+projection.pinching(points, frame)            # s_min / s_max, 0 at a pinch point
 ```
 
 The ink `Sketch` draws the mesh as a shaded surface, cells painted from far to near. The pinch points are passed as dots, so a dot on a sheet behind another sheet is hidden by it:
@@ -186,7 +188,7 @@ The ink `Sketch` draws the mesh as a shaded surface, cells painted from far to n
 from morphis.visuals.ink import Camera, Sketch
 
 sketch = Sketch(camera=Camera(azimuth=-35, elevation=25, distance=14, fov=15), size=(8, 8))
-sketch.surface(drawn, mesh.cells.cells, colors=colors, dots=Π(pinch_points))  # one color per cell; the 15 points as a Vector
+sketch.surface(drawn, mesh.cells.cells, colors=colors, dots=projection(pinch_points))  # one color per cell; the 15 points as a Vector
 sketch.save("figures/higher-dimensional/calabi-yau-pinch.png")
 ```
 
