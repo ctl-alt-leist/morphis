@@ -39,6 +39,7 @@ from numpy import (
     arange,
     arctan2,
     asarray,
+    ceil,
     clip as clamp,
     concatenate,
     cos,
@@ -46,11 +47,16 @@ from numpy import (
     cumsum,
     einsum,
     exp as exponential,
+    floor,
+    full,
+    inf,
     interp,
     linspace,
     meshgrid,
+    minimum,
     pi,
     repeat,
+    rint,
     sin,
     sqrt,
     stack,
@@ -60,6 +66,7 @@ from numpy import (
 from numpy.linalg import norm
 from numpy.random import default_rng
 from numpy.typing import NDArray
+from scipy.ndimage import maximum_filter
 
 from morphis.elements.vector import Vector
 from morphis.visuals.ink.camera import Camera
@@ -309,6 +316,14 @@ class Sketch:
         stipple: float = 1.0,
         light: tuple[float, float, float] = (-0.45, 0.6, 0.65),
         far_level: float = 0.4,
+        veil: float = 0.3,
+        curves: list[Vector | NDArray] | None = None,
+        curve_weight: str = "fine",
+        dots: Vector | NDArray | None = None,
+        dot_radius: float = 4.0,
+        labels: list[str | None] | None = None,
+        label_offset: tuple[float, float] = (9.0, 7.0),
+        label_size: float = 15.0,
     ) -> None:
         """
         Draw a translucent surface in pen and stipple: its contour inked, its body shaded by stipple.
@@ -316,9 +331,13 @@ class Sketch:
         The contour is where the surface turns from facing the eye to facing
         away, found between vertices from interpolated normals and inked with a
         pen wobble, lighter the farther it is. Stipple is densest where the
-        surface turns edge-on to the eye, heavier on the side away from the
-        light, and lighter on the far sheets, so what lies behind still shows.
-        No grid is drawn.
+        surface turns edge-on to the eye and heavier on the side away from the
+        light. No grid is drawn.
+
+        The shell is translucent, not transparent: anything a nearer sheet of
+        it covers, whether its own far contour and stipple or the curves and
+        dots given with it, is drawn at the strength veil. Covering is decided
+        against a depth buffer of the shell rasterized on the page.
 
         Args:
             points: Vertex positions, true-space Vectors (projected) or drawing triples, shape (n, 3)
@@ -326,12 +345,35 @@ class Sketch:
             weight: Stroke weight of the nearest contour
             stipple: Stipple density multiplier; 0 for the contour alone
             light: Light direction in the camera frame (right, up, toward the eye)
-            far_level: Graphite level of the farthest contour and of stipple on far sheets
+            far_level: Graphite level of the farthest marks in front of the shell
+            veil: Strength, from 0 to 1, of whatever a nearer sheet of the shell covers
+            curves: Polylines drawn with the shell and veiled where it covers them,
+                true-space Vectors (projected) or drawing points
+            curve_weight: Stroke weight of the curves
+            dots: Points drawn with the shell and veiled where it covers them
+            dot_radius: Radius of the dots in points
+            labels: Text beside each dot, veiled with it, or None for none
+            label_offset: Offset of the labels from their dots, in points
+            label_size: Font size of the labels
         """
         drawn = self.drawn(points) if isinstance(points, Vector) else asarray(points, dtype=float)
         cells = asarray(cells, dtype=int)
         triangles = concatenate([cells[:, [0, 1, 3]], cells[:, [0, 3, 2]]]) if cells.shape[1] == 4 else cells
-        style = {"triangles": triangles, "weight": weight, "stipple": stipple, "light": light, "far_level": far_level}
+        style = {
+            "triangles": triangles,
+            "weight": weight,
+            "stipple": stipple,
+            "light": light,
+            "far_level": far_level,
+            "veil": veil,
+            "curves": [self.drawn(curve).reshape(-1, 3) for curve in curves or []],
+            "curve_weight": curve_weight,
+            "dots": self.drawn(dots).reshape(-1, 3) if dots is not None else zeros((0, 3)),
+            "dot_radius": dot_radius,
+            "labels": labels or [],
+            "label_offset": label_offset,
+            "label_size": label_size,
+        }
         self.marks.append(Mark("shell", drawn.reshape(-1, 3), style))
 
     def surface(
@@ -525,10 +567,30 @@ class Sketch:
         points, triangles = mark.points, style["triangles"]
         _, depth = self.camera.project(points)
         near, far = depth.min(), depth.max()
+        buffer = _DepthBuffer(page, depth, triangles)
 
-        def level(at_depth: NDArray) -> NDArray:
+        # Graphite level: lighter with depth in front, and veiled where a nearer sheet covers
+        def level(at_page: NDArray, at_depth: NDArray) -> NDArray:
             nearness = clamp((far - at_depth) / max(far - near, 1e-12), 0.0, 1.0)
-            return style["far_level"] + (1.0 - style["far_level"]) * nearness
+            shade = style["far_level"] + (1.0 - style["far_level"]) * nearness
+            return where(buffer.covers(at_page, at_depth), style["veil"] * shade, shade)
+
+        def ink(at_page: NDArray, at_depth: NDArray, weight: str, wobble: float, z: float) -> None:
+            # The wobbled stroke is resampled evenly by arc length; depth follows it the same way
+            stroke = _wobble(at_page, wobble * units_per_point, rng, samples=4 * len(at_page))
+            arc = concatenate([[0.0], cumsum(norm(at_page[1:] - at_page[:-1], axis=-1))])
+            stroke_depth = interp(linspace(0.0, arc[-1], len(stroke)), arc, at_depth)
+            shade = level(stroke, stroke_depth)[:-1]
+            segments = stack([stroke[:-1], stroke[1:]], axis=1)
+            axes.add_collection(
+                LineCollection(
+                    segments,
+                    linewidths=WEIGHTS[weight] * (0.55 + 0.45 * shade),
+                    colors=[self.theme.gray(value) for value in shade],
+                    capstyle="round",
+                    zorder=z,
+                )
+            )
 
         # Facing: the normal against the direction toward the eye, per face and per vertex
         corners = points[triangles]
@@ -542,24 +604,12 @@ class Sketch:
         facing = einsum("na, na -> n", unit, toward)
         vertex_facing = einsum("na, na -> n", vertex_normals, self._toward_eye(points))
 
-        # Contour: where the vertex facing changes sign, inked lighter with depth
+        # Contour: where the vertex facing changes sign
         for contour in _contours(points, triangles, vertex_facing):
-            contour_page, contour_depth = self.camera.project(contour)
-            stroke = _wobble(contour_page, 0.6 * units_per_point, rng, samples=4 * len(contour_page))
-            shade = level(interp(linspace(0, 1, len(stroke)), linspace(0, 1, len(contour_depth)), contour_depth))
-            segments = stack([stroke[:-1], stroke[1:]], axis=1)
-            axes.add_collection(
-                LineCollection(
-                    segments,
-                    linewidths=WEIGHTS[style["weight"]] * (0.55 + 0.45 * shade[:-1]),
-                    colors=[self.theme.gray(value) for value in shade[:-1]],
-                    capstyle="round",
-                    zorder=zorder + 1e-5,
-                )
-            )
+            ink(*self.camera.project(contour), style["weight"], 0.6, zorder + 1e-5)
 
         if style["stipple"] > 0:
-            # Stipple: densest where the surface turns edge-on, heavier away from the light, lighter far away
+            # Stipple: densest where the surface turns edge-on, heavier away from the light
             light = einsum("ab, a -> b", self.camera.frame, asarray(style["light"], dtype=float))
             light = light / norm(light)
             front = unit * where(facing >= 0, 1.0, -1.0)[:, None]
@@ -567,7 +617,7 @@ class Sketch:
             rim = exponential(-((np_abs(facing) / 0.28) ** 0.9))
             density = style["stipple"] * (0.012 + 0.95 * rim * (0.3 + 0.7 * shadow))
 
-            page_corners = page[triangles]
+            page_corners, depth_corners = page[triangles], depth[triangles]
             first_side, second_side = page_corners[:, 1] - page_corners[:, 0], page_corners[:, 2] - page_corners[:, 0]
             spans = first_side[:, 0] * second_side[:, 1] - first_side[:, 1] * second_side[:, 0]
             spacing = 1.25 * units_per_point
@@ -576,17 +626,41 @@ class Sketch:
             first, second = rng.uniform(size=(2, len(owner)))
             is_folded = first + second > 1.0
             first, second = where(is_folded, 1.0 - first, first), where(is_folded, 1.0 - second, second)
-            base = page_corners[owner, 0]
-            dots = (
-                base
-                + first[:, None] * (page_corners[owner, 1] - base)
-                + second[:, None] * (page_corners[owner, 2] - base)
-            )
 
-            shade = level(depth[triangles].mean(axis=1)[owner])
+            def at(values: NDArray) -> NDArray:
+                base = values[owner, 0]
+                weights = (first, second) if values.ndim == 2 else (first[:, None], second[:, None])
+                return base + weights[0] * (values[owner, 1] - base) + weights[1] * (values[owner, 2] - base)
+
+            dots, dot_depth = at(page_corners), at(depth_corners)
+
+            # A covered dot is also less likely to be drawn, so the far sheets thin out behind the near ones
+            shade = level(dots, dot_depth)
+            is_kept = rng.uniform(size=len(owner)) < where(buffer.covers(dots, dot_depth), 0.5, 1.0)
             sizes = rng.uniform(0.08, 0.36, size=len(owner)) * (0.5 + 0.5 * shade)
-            colors = [self.theme.gray(value) for value in shade]
-            axes.scatter(*dots.T, s=sizes, c=colors, linewidths=0, zorder=zorder)
+            colors = [self.theme.gray(value) for value in shade[is_kept]]
+            axes.scatter(*dots[is_kept].T, s=sizes[is_kept], c=colors, linewidths=0, zorder=zorder)
+
+        # Curves and dots given with the shell, veiled where it covers them
+        for curve in style["curves"]:
+            ink(*self.camera.project(curve), style["curve_weight"], 0.0, zorder + 2e-5)
+
+        if len(style["dots"]):
+            dot_page, dot_depth = self.camera.project(style["dots"])
+            shade = level(dot_page, dot_depth)
+            axes.scatter(
+                *dot_page.T,
+                s=style["dot_radius"] ** 2 * 3.2,
+                c=[self.theme.gray(value) for value in shade],
+                linewidths=0,
+                zorder=zorder + 3e-5,
+            )
+            for text, position, value in zip(style["labels"], dot_page, shade, strict=False):
+                if text is not None:
+                    color = self.theme.gray(value)
+                    self._annotate(
+                        axes, text, position, style["label_offset"], style["label_size"], color, zorder + 4e-5
+                    )
 
     def _toward_eye(self, points: NDArray) -> NDArray:
         """Unit directions from points toward the eye; for an orthographic camera, the view direction."""
@@ -803,6 +877,55 @@ def _wobble(polyline: NDArray, amplitude: float, rng, samples: int | None = None
     displaced = resampled + (amplitude * noise * envelope)[:, None] * normal
 
     return displaced
+
+
+class _DepthBuffer:
+    """
+    The nearest depth of a triangle mesh at each pixel of a grid over its page extent.
+
+    A query point is covered when the mesh around its page position is nearer
+    than it by more than a small tolerance, so a point lying on the mesh is
+    not covered by the sheet it lies on, even where that sheet is steep.
+    """
+
+    def __init__(self, page: NDArray, depth: NDArray, triangles: NDArray, resolution: int = 480):
+        lower, upper = page.min(axis=0), page.max(axis=0)
+        self.lower = lower
+        self.scale = (resolution - 1) / float((upper - lower).max())
+        self.tolerance = 0.03 * float(depth.max() - depth.min())
+        width, height = (ceil((upper - lower) * self.scale) + 1).astype(int)
+        self.depth = full((height, width), inf)
+
+        pixels = (page - lower) * self.scale
+        for a, b, c in triangles:
+            self._raster(pixels[[a, b, c]], depth[[a, b, c]])
+
+        # Covered only where the whole neighborhood is nearer, so a steep edge does not cover its own sheet
+        self.depth = maximum_filter(self.depth, size=3)
+
+    def _raster(self, corners: NDArray, depths: NDArray) -> None:
+        low, high = floor(corners.min(axis=0)).astype(int), ceil(corners.max(axis=0)).astype(int)
+        xs, ys = meshgrid(arange(low[0], high[0] + 1), arange(low[1], high[1] + 1))
+        (x0, y0), (x1, y1), (x2, y2) = corners
+        area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)
+        if abs(area) > 1e-12:
+            weight_1 = ((xs - x0) * (y2 - y0) - (x2 - x0) * (ys - y0)) / area
+            weight_2 = ((x1 - x0) * (ys - y0) - (xs - x0) * (y1 - y0)) / area
+            weight_0 = 1.0 - weight_1 - weight_2
+            inside = (weight_0 >= -0.02) & (weight_1 >= -0.02) & (weight_2 >= -0.02)
+            values = weight_0 * depths[0] + weight_1 * depths[1] + weight_2 * depths[2]
+            region = self.depth[ys[inside], xs[inside]]
+            self.depth[ys[inside], xs[inside]] = minimum(region, values[inside])
+
+    def covers(self, page: NDArray, depth: NDArray) -> NDArray:
+        """Whether a nearer part of the mesh lies in front of each page point at its depth."""
+        pixels = rint((asarray(page) - self.lower) * self.scale).astype(int)
+        height, width = self.depth.shape
+        is_on = (pixels[:, 0] >= 0) & (pixels[:, 0] < width) & (pixels[:, 1] >= 0) & (pixels[:, 1] < height)
+        nearest = full(len(pixels), inf)
+        nearest[is_on] = self.depth[pixels[is_on, 1], pixels[is_on, 0]]
+
+        return nearest < asarray(depth) - self.tolerance
 
 
 def _contours(points: NDArray, triangles: NDArray, values: NDArray) -> list[NDArray]:

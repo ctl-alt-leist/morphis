@@ -7,7 +7,7 @@ window is opened; sketches render to an off-screen matplotlib Figure or file.
 """
 
 import pytest
-from numpy import allclose, array, ptp
+from numpy import allclose, array, concatenate, ptp
 from numpy.linalg import norm
 from numpy.testing import assert_allclose
 
@@ -425,3 +425,19 @@ class TestShell:
             if hasattr(collection, "get_segments")
         )
         assert any(collection.get_offsets().shape[0] > 100 for collection in axes.collections)
+
+    def test_veils_what_the_near_sheet_covers(self):
+        from morphis.visuals.ink.sketch import _DepthBuffer
+
+        mesh = self.sphere()
+        camera = Camera(azimuth=0.0, elevation=0.0, distance=10.0, fov=20.0)
+        cells = mesh.cells.cells
+        triangles = concatenate([cells[:, [0, 1, 3]], cells[:, [0, 3, 2]]])
+        page, depth = camera.project(mesh.vertices.data)
+        buffer = _DepthBuffer(page, depth, triangles)
+
+        # The points of the sphere nearest to and farthest from the eye, at the same page position
+        toward = camera.view_direction
+        marks_page, marks_depth = camera.project(array([toward, -toward]))
+
+        assert buffer.covers(marks_page, marks_depth).tolist() == [False, True]

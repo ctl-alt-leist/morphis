@@ -29,8 +29,9 @@ The figure drops the constant ground amplitude and draws the rest, a torus on
 the 3-sphere of radius ρ = √(a_2² + a_3²) in the directions 2, 2̇, 3, 3̇, by
 stereographic projection from the pole ρ e_3̇, where it becomes a torus of
 revolution, drawn translucent in pen and stipple: its contour inked and its
-body stippled, with no grid, so the orbit shows through it, lighter where it
-runs behind. The animation draws the state and the orbit it has traced.
+body stippled, with no grid. It is translucent rather than transparent: its
+own far side and the stretches of orbit behind the tube are veiled. The
+animation draws the state and the orbit it has traced.
 
 Run:
     uv run python -m morphis.examples.qutrit_orbit [output.png] [ink|parchment|chalkboard]
@@ -68,9 +69,6 @@ ANIMATION_DPI = 100
 MESH_SHAPE = (96, 48)
 
 CAMERA = Camera(azimuth=-32.0, elevation=30.0, distance=14.0, fov=17.0)
-
-# Graphite levels for the nearest and farthest strokes of the orbit; the far side shows through the torus
-ORBIT_INK = (1.0, 0.3)
 
 SPACE = metric(modes=3)
 
@@ -146,34 +144,16 @@ def report() -> None:
 # =============================================================================
 
 
-def strokes(sketch: Sketch, path: NDArray, depths, weight: str, pieces: int, levels) -> None:
-    """Ink a drawn curve in short pieces, each darker the nearer it is to the camera."""
-    _, depth = sketch.camera.project(path)
-    near, far = depths
-    bounds = linspace(0, len(path) - 1, pieces + 1).astype(int)
-    for start, stop in zip(bounds[:-1], bounds[1:], strict=True):
-        nearness = (far - depth[start : stop + 1].mean()) / (far - near)
-        level = levels[1] + (levels[0] - levels[1]) * nearness
-        sketch.curve(path[start : stop + 1], weight=weight, level=float(level))
-
-
 def create_sketch(theme: str = "ink", t: float = DURATION) -> Sketch:
     sketch = Sketch(camera=CAMERA, size=(8.0, 6.0), seed=5, theme=theme)
-
-    # The torus of relative phases, translucent: a pen contour and stipple, no grid
-    mesh = TORUS.mesh(MESH_SHAPE)
-    torus = PROJECTION(mesh.vertices)
-    sketch.shell(torus, mesh.cells.cells)
-    _, depth = sketch.camera.project(torus)
-    depths = (depth.min(), depth.max())
 
     # The orbit traced so far, and the state now
     count = max(2, int(ORBIT_SAMPLES * t / DURATION))
     orbit = PROJECTION(TORUS(phases(linspace(0.0, t, count))))
-    strokes(sketch, orbit, depths, "fine", max(1, count // 25), ORBIT_INK)
 
-    sketch.point(orbit[-1], radius=4.0)
-    sketch.label(r"$\mathbf{ψ}$", orbit[-1], offset=(9, 7), size=15)
+    # The torus of relative phases, translucent in pen and stipple; it veils the orbit where it runs behind
+    mesh = TORUS.mesh(MESH_SHAPE)
+    sketch.shell(PROJECTION(mesh.vertices), mesh.cells.cells, curves=[orbit], dots=orbit[-1:], labels=[r"$\mathbf{ψ}$"])
 
     return sketch
 

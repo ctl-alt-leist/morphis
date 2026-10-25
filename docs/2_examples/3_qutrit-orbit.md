@@ -125,19 +125,17 @@ PROJECTION = Projection.stereographic(RADIUS * basis_vector(4, EXCITED.target)) 
 
 The only things the figure gives up are the ones the physics gives up: the global phase, removed before drawing, and the constant ground amplitude. Distances on the torus are distorted by the conformal factor of the stereographic map, larger near the pole, and angles between curves are kept.
 
-The ink `Sketch` draws the torus as a translucent `shell`, in pen and stipple and with no grid. Its contour, the curve where the surface turns from facing the eye to facing away, is found on the mesh of the patch from normals interpolated between vertices, and inked with a pen wobble, lighter the farther it is. Its body is stippled, densest where the surface turns edge-on to the eye and heavier on the side away from the light, with lighter dots on the far sheets. The cusped curve around the hole is part of the true contour of a torus of revolution seen from above its equator; an opaque drawing would hide part of it.
+The ink `Sketch` draws the torus as a translucent `shell`, in pen and stipple and with no grid. Its contour, the curve where the surface turns from facing the eye to facing away, is found on the mesh of the patch from normals interpolated between vertices, and inked with a pen wobble, lighter the farther it is. Its body is stippled, densest where the surface turns edge-on to the eye and heavier on the side away from the light. The cusped curve around the hole is part of the true contour of a torus of revolution seen from above its equator.
 
-Ink curves have no hidden-line removal, and on a translucent torus none is wanted: the orbit is drawn in full, and depth is shown by graphite level. Each stretch of the orbit is inked darker the nearer it is to the camera, over the range of depths of the drawn torus, so the stretches running behind the tube read as seen through it.
+The shell is translucent, not transparent. It rasterizes a depth buffer of itself on the page, and whatever a nearer sheet covers is drawn at a fraction of its strength: its own far contour and far stipple, and the orbit and the state, which are given to the shell so that they take part. The stretches of orbit on the near face of the tube are inked dark, and the stretches behind it show faintly through, so the near lip of the hole reads in front of the far one.
 
 ```python
-mesh = TORUS.mesh(MESH_SHAPE)
-torus = PROJECTION(mesh.vertices)
-sketch.shell(torus, mesh.cells.cells)
-
 orbit = PROJECTION(TORUS(phases(linspace(0.0, t, count))))
-strokes(sketch, orbit, depths, "fine", max(1, count // 25), ORBIT_INK)
-sketch.point(orbit[-1], radius=4.0)
-sketch.label(r"$\mathbf{ψ}$", orbit[-1], offset=(9, 7), size=15)
+
+mesh = TORUS.mesh(MESH_SHAPE)
+sketch.shell(
+    PROJECTION(mesh.vertices), mesh.cells.cells, curves=[orbit], dots=orbit[-1:], labels=[r"$\mathbf{ψ}$"]
+)
 ```
 
 The still shows the whole run, 60 time units, with the state at its end.
@@ -146,7 +144,7 @@ The still shows the whole run, 60 time units, with the state at its end.
 
 ## The Animation
 
-The animation draws 300 frames over the 60 time units. Each frame builds the sketch at its time $t$ from the true geometry: the same torus, the orbit traced from 0 to $t$, and the state at $t$. The state runs along the near-$(1, 2)$ loop, and successive loops land beside one another as the precession carries them around the torus.
+The animation draws 300 frames over the 60 time units. Each frame builds the sketch at its time $t$ from the true geometry: the same torus, the orbit traced from 0 to $t$, and the state at $t$. The state runs along the near-$(1, 2)$ loop, fading as it passes behind the tube and darkening as it comes round, and successive loops land beside one another as the precession carries them around the torus.
 
 ```python
 times = linspace(0.0, DURATION, int(ANIMATION_SECONDS * FRAME_RATE) + 1)[1:]
