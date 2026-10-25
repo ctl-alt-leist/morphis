@@ -7,9 +7,9 @@ from math import pi
 from numpy import array, cos, linspace, sin, zeros
 from numpy.testing import assert_allclose
 
-from morphis.elements import Vector, basis_vectors, euclidean_metric
+from morphis.elements import Vector, basis_vectors, euclidean_metric, metric
 from morphis.operations import norm, wedge
-from morphis.operations.exponential import exp_vector, log_versor, slerp
+from morphis.operations.exponential import exp_bivector, exp_vector, log_versor, slerp
 
 
 # =============================================================================
@@ -305,3 +305,133 @@ class TestSlerp:
         # Check endpoints
         assert_allclose(result[0].data[0], R0[0].data, rtol=1e-10)
         assert_allclose(result[0].data[-1], R1[0].data, rtol=1e-10)
+
+
+# =============================================================================
+# Test exp_bivector
+# =============================================================================
+
+
+def bivector(g, seed, lot=(), scale=1.0):
+    """A random, generally non-simple bivector with the given lot."""
+    from numpy.random import default_rng
+
+    rng = default_rng(seed)
+    u, v, w, x = (Vector(rng.standard_normal(lot + (g.dim,)), grade=1, metric=g) for _ in range(4))
+    result = (u ^ v) + (w ^ x)
+
+    return Vector(scale * result.data, grade=2, metric=g, collection=lot)
+
+
+def series(B, terms=40):
+    """exp(B) from its defining series Σ Bⁿ / n!, in the geometric product."""
+    from morphis.elements import MultiVector
+    from morphis.operations import geometric
+
+    one = Vector(zeros(B.collection) + 1.0, grade=0, metric=B.metric, collection=B.collection)
+    term = MultiVector(data={0: one}, metric=B.metric, collection=B.collection)
+    total = term
+    for n in range(1, terms):
+        term = geometric(term, B) * (1.0 / n)
+        total = total + term
+
+    return total
+
+
+def assert_same_multivector(M, N, atol=1e-10):
+    for grade in sorted(set(M.data) | set(N.data)):
+        reference = M[grade] if grade in M.data else N[grade]
+        left = M[grade].data if grade in M.data else zeros(reference.data.shape)
+        right = N[grade].data if grade in N.data else zeros(reference.data.shape)
+        assert_allclose(left, right, atol=atol, err_msg=f"grade {grade}")
+
+
+class TestExpBivector:
+    """exp of bivectors that need not be simple, against the defining series."""
+
+    def test_euclidean_four(self):
+        B = bivector(euclidean_metric(4), seed=1)
+        assert_same_multivector(exp_bivector(B), series(B))
+
+    def test_isoclinic(self):
+        g = euclidean_metric(4)
+        e1, e2, e3, e4 = basis_vectors(g)
+        angle = 0.7
+        B = angle * ((e1 ^ e2) + (e3 ^ e4))
+        R = exp_bivector(B)
+
+        assert_same_multivector(R, series(B))
+        assert_allclose(R[0].data, cos(angle) ** 2)
+        assert_allclose(R[4].data, sin(angle) ** 2 * (e1 ^ e2 ^ e3 ^ e4).data, atol=1e-15)
+
+    def test_nearly_isoclinic(self):
+        g = euclidean_metric(4)
+        e1, e2, e3, e4 = basis_vectors(g)
+        for gap in (1e-5, 1e-8, 1e-12):
+            B = 0.9 * (e1 ^ e2) + (0.9 + gap) * (e3 ^ e4) + 0.2 * (e1 ^ e3) + 0.2 * (e2 ^ e4) * -1.0
+            assert_same_multivector(exp_bivector(B), series(B))
+
+    def test_small(self):
+        B = bivector(euclidean_metric(4), seed=2, scale=1e-5)
+        assert_same_multivector(exp_bivector(B), series(B), atol=1e-15)
+
+    def test_lorentzian(self):
+        for convention in ("mostly minus", "mostly plus"):
+            g = metric(time=1, space=3, convention=convention)
+            B = bivector(g, seed=3, scale=0.5)
+            assert_same_multivector(exp_bivector(B), series(B))
+
+    def test_pga_screw(self):
+        g = metric(space=3, projective=1)
+        e0, e1, e2, e3 = basis_vectors(g)
+        B = 0.8 * (e1 ^ e2) + 0.5 * (e0 ^ e3) + 0.3 * (e0 ^ e1)
+        assert_same_multivector(exp_bivector(B), series(B))
+
+    def test_five_dimensions(self):
+        B = bivector(euclidean_metric(5), seed=4, scale=0.6)
+        assert_same_multivector(exp_bivector(B), series(B))
+
+    def test_lot(self):
+        B = bivector(euclidean_metric(4), seed=5, lot=(3, 2), scale=0.8)
+        R = exp_bivector(B)
+        assert R[2].data.shape == (3, 2, 4, 4)
+        assert_same_multivector(R, series(B))
+
+    def test_simple_reduces_to_plane_rotation(self):
+        g = euclidean_metric(4)
+        e1, e2, _, _ = basis_vectors(g)
+        R = exp_bivector(1.1 * (e1 ^ e2))
+        assert_allclose(R[0].data, cos(1.1))
+        assert_allclose(R[4].data, 0, atol=1e-15)
+
+    def test_simple_in_six_dimensions(self):
+        g = euclidean_metric(6)
+        u, v = basis_vectors(g)[0], basis_vectors(g)[4]
+        R = exp_vector(0.4 * (u ^ v))
+        assert_allclose(R[0].data, cos(0.4))
+        assert_allclose(R[2].data, sin(0.4) * (u ^ v).data)
+
+    def test_non_simple_in_six_dimensions_raises(self):
+        import pytest
+
+        with pytest.raises(NotImplementedError):
+            exp_vector(bivector(euclidean_metric(6), seed=6))
+
+    def test_rotor_turns_each_invariant_plane(self):
+        from numpy.linalg import qr
+        from numpy.random import default_rng
+
+        from morphis.transforms import rotor
+
+        # B in its own orthogonal planes: angles 0.9 in u1 ∧ u2 and -0.4 in u3 ∧ u4
+        g = euclidean_metric(4)
+        frame, _ = qr(default_rng(8).standard_normal((4, 4)))
+        u1, u2, u3, u4 = (Vector(frame[:, n], grade=1, metric=g) for n in range(4))
+        B = 0.9 * (u1 ^ u2) - 0.4 * (u3 ^ u4)
+
+        R = rotor(B, 1.0)
+        S = rotor(0.9 * (u1 ^ u2), 1.0) * rotor(-0.4 * (u3 ^ u4), 1.0)
+        v = 0.3 * u1 - 1.2 * u2 + 0.5 * u3 + 2.0 * u4
+
+        assert_allclose((R * v * ~R)[1].data, (S * v * ~S)[1].data, atol=1e-12)
+        assert_allclose((R * ~R)[0].data, 1.0, atol=1e-12)

@@ -26,6 +26,7 @@ from morphis.operations.duality import (
 
 # Exponentials and logarithms
 from morphis.operations.exponential import (
+    exp_bivector as exp_bivector,
     exp_vector as exp_vector,
     log_versor as log_versor,
     slerp as slerp,

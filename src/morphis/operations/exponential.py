@@ -8,6 +8,12 @@ For a vector B where B² is scalar, the exponential has a closed form:
     exp(B) = cosh(√λ) + B * sinh(√λ)/√λ      if B² = λ > 0 (hyperbolic)
     exp(B) = 1 + B                            if B² = 0 (nilpotent)
 
+A bivector in four or five dimensions need not square to a scalar: it is the
+sum B = B₁ + B₂ of two commuting simple bivectors in orthogonal planes, and
+B² = λ₁ + λ₂ + 2 W with W = ½ B ∧ B = B₁ B₂. Its exponential is the product
+exp(B₁) exp(B₂), written through B and W alone (the invariant decomposition of
+Roelfs and De Keninck), so the split itself is never formed.
+
 The logarithm is the inverse operation, extracting the generator from a versor.
 """
 
@@ -15,12 +21,27 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numpy import arctan2, cos, cosh, newaxis, ones, sin, sinh, sqrt, where, zeros
+from numpy import (
+    abs as np_abs,
+    arctan2,
+    cos,
+    cosh,
+    iscomplexobj,
+    newaxis,
+    ones,
+    pi,
+    sin,
+    sinc,
+    sinh,
+    sqrt,
+    where,
+    zeros,
+)
 from numpy.typing import NDArray
 
 from morphis.config import TOLERANCE
 from morphis.operations.norms import norm
-from morphis.operations.products import geometric, grade_project
+from morphis.operations.products import geometric, grade_project, wedge
 
 
 if TYPE_CHECKING:
@@ -36,6 +57,11 @@ if TYPE_CHECKING:
 def exp_vector(B: Vector) -> MultiVector:
     """
     Compute the exponential of a vector: exp(B)
+
+    A bivector of a space of dimension 4 or 5 may be non-simple, the sum of
+    two rotations, a rotation and a boost, or a screw in PGA; its exponential
+    is exact in closed form for every metric (see exp_bivector). In six or
+    more dimensions a bivector must be simple.
 
     For a vector B where B² is scalar (always true for simple vectors), the
     exponential has a closed form based on the sign of B²:
@@ -68,6 +94,17 @@ def exp_vector(B: Vector) -> MultiVector:
         scalar_data = np_exp(B.data)
         scalar_vector = Vector(scalar_data, grade=0, metric=B.metric, collection=B.collection)
         return MultiVector(data={0: scalar_vector}, metric=B.metric, collection=B.collection)
+
+    if B.grade == 2:
+        return exp_bivector(B)
+
+    return _exp_scalar_square(B)
+
+
+def _exp_scalar_square(B: Vector) -> MultiVector:
+    """The closed form for a vector B whose square is a scalar λ: cos, cosh, or 1 + B by the sign of λ."""
+    from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
 
     # Compute B² and extract scalar part
     B_squared = geometric(B, B)
@@ -131,6 +168,134 @@ def exp_vector(B: Vector) -> MultiVector:
         metric=B.metric,
         collection=B.collection,
     )
+
+
+# =============================================================================
+# Bivector Exponential
+# =============================================================================
+
+
+def exp_bivector(B: Vector) -> MultiVector:
+    """
+    Exponential of a bivector that need not be simple: exp(B).
+
+    In four or five dimensions B = B₁ + B₂, with B₁ and B₂ simple, commuting,
+    and in orthogonal planes, so B_k² = λ_k are scalars and B₁ B₂ = B₁ ∧ B₂.
+    The two invariants of B determine the λ_k:
+
+        ⟨B²⟩₀ = λ₁ + λ₂,    W = ½ B ∧ B = B₁ B₂,    W² = λ₁ λ₂
+
+    so they are the roots of λ² - ⟨B²⟩₀ λ + W² = 0, and B_k = (λ_k B - B W) / (λ_k - λ_l).
+    With c_k = cos √-λ_k and s_k = sin √-λ_k / √-λ_k, entire functions of λ_k
+    that are cosh and sinh for λ_k > 0 and 1 at λ_k = 0, the product
+    exp(B₁) exp(B₂) is
+
+        c₁ c₂ + s₁ s₂ W + ½ (c₂ s₁ + c₁ s₂) B + ½ D (⟨B²⟩₀ B - 2 B W)
+
+    where D = (c₂ s₁ - c₁ s₂) / (λ₁ - λ₂) is a divided difference, finite as
+    the roots meet. One formula covers rotations, boosts, and null
+    translations together, and a simple bivector (W = 0) reduces to
+    cos + B sin. When the roots coincide, as for an isoclinic rotation, any
+    split serves and ⟨B²⟩₀ B - 2 B W vanishes, so D is taken at its limit.
+
+    Args:
+        B: Bivector of any lot; in six or more dimensions it must be simple
+
+    Outside four and five dimensions B ∧ B is zero (below four) or must be
+    (six and above), and the simple closed form cos + B sin applies.
+
+    Returns:
+        MultiVector with grades {0, 2, 4}, or {0, 2} for a simple bivector
+        outside four and five dimensions
+
+    Raises:
+        NotImplementedError: For a non-simple bivector in six or more dimensions,
+            which has three or more invariant planes
+    """
+    from morphis.elements.multivector import MultiVector
+    from morphis.elements.vector import Vector
+
+    if B.dim < 4:
+        return _exp_scalar_square(B)
+
+    W = 0.5 * wedge(B, B)
+
+    if B.dim >= 6:
+        scale = norm(B) ** 2 + 1.0
+        is_simple = (norm(W) <= 1e-9 * scale).all()
+        if not is_simple:
+            raise NotImplementedError(
+                f"exp of a non-simple bivector in {B.dim} dimensions needs three or more invariant planes"
+            )
+
+        return _exp_scalar_square(B)
+
+    metric, collection = B.metric, B.collection
+    square = grade_project(geometric(B, B), 0).data
+    product = grade_project(geometric(W, W), 0).data
+
+    # Roots of λ² - square λ + product, the larger one first so the smaller keeps its precision
+    half = 0.5 * square + 0j
+    root = sqrt(half**2 - product)
+    is_plus = np_abs(half + root) >= np_abs(half - root)
+    large = where(is_plus, half + root, half - root)
+    small = where(np_abs(large) > 0, product / where(np_abs(large) > 0, large, 1.0), 0.0)
+
+    c_large, s_large = _even_cos(large), _even_sinc(large)
+    c_small, s_small = _even_cos(small), _even_sinc(small)
+
+    gap = large - small
+    is_split = np_abs(gap) > 1e-6 * (1.0 + np_abs(half))
+    difference = (c_small * s_large - c_large * s_small) / where(is_split, gap, 1.0)
+    divided = where(is_split, difference, _divided_limit(half))
+
+    scalar = c_large * c_small
+    along_B = 0.5 * (c_small * s_large + c_large * s_small) + 0.5 * divided * square
+    along_BW = -divided
+    along_W = s_large * s_small
+
+    BW = grade_project(geometric(B, W), 2).data
+
+    def components(value: NDArray, grade: int) -> NDArray:
+        expanded = value
+        for _ in range(grade):
+            expanded = expanded[..., newaxis]
+
+        return expanded if iscomplexobj(B.data) else expanded.real
+
+    bivector = components(along_B, 2) * B.data + components(along_BW, 2) * BW
+    data = {
+        0: Vector(components(scalar, 0), grade=0, metric=metric, collection=collection),
+        2: Vector(bivector, grade=2, metric=metric, collection=collection),
+        4: Vector(components(along_W, 4) * W.data, grade=4, metric=metric, collection=collection),
+    }
+
+    return MultiVector(data=data, metric=metric, collection=collection)
+
+
+def _even_cos(square: NDArray) -> NDArray:
+    """cos √-λ as a function of λ: cosh √λ for λ > 0, 1 at 0."""
+    return cos(sqrt(-square + 0j))
+
+
+def _even_sinc(square: NDArray) -> NDArray:
+    """sin √-λ / √-λ as a function of λ: sinh √λ / √λ for λ > 0, 1 at 0."""
+    return sinc(sqrt(-square + 0j) / pi)
+
+
+def _divided_limit(mean: NDArray) -> NDArray:
+    """
+    The divided difference D at coincident roots λ₁ = λ₂ = μ: c s' - c' s at μ.
+
+    With c' = s / 2 and s' = (c - s) / (2 μ), and the series 1/6 + μ/60 + μ²/2520
+    + μ³/181440 for s' near μ = 0.
+    """
+    c, s = _even_cos(mean), _even_sinc(mean)
+    is_small = np_abs(mean) < 1e-3
+    safe = where(is_small, 1.0, mean)
+    derivative = where(is_small, 1 / 6 + mean / 60 + mean**2 / 2520 + mean**3 / 181440, (c - s) / (2 * safe))
+
+    return c * derivative - 0.5 * s * s
 
 
 # =============================================================================
