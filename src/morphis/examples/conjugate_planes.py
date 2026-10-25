@@ -54,6 +54,9 @@ ORBIT_TIMES = linspace(0.0, PERIOD, 721)
 DURATION = 10.0
 FRAME_RATE = 30
 
+# Resolution of animation frames; a GIF of stippled ink grows quickly with it
+ANIMATION_DPI = 100
+
 # Where the state arrow is based and how large it is drawn: room for its whole
 # orbit in the open space between the two planes
 STATE_ORIGIN = (0.35, 0.9, -0.35)
@@ -175,7 +178,7 @@ if __name__ == "__main__":
 
     if is_animation:
         times = linspace(0.0, PERIOD, int(DURATION * FRAME_RATE), endpoint=False)
-        path = animate(lambda t: create_sketch(theme, t), times, output, frame_rate=FRAME_RATE)
+        path = animate(lambda t: create_sketch(theme, t), times, output, frame_rate=FRAME_RATE, dpi=ANIMATION_DPI)
     else:
         path = create_sketch(theme).save(output)
 

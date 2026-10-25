@@ -267,9 +267,10 @@ class Projection:
 
 class View(BaseModel):
     """
-    How a renderer draws a space of any dimension in three: the kind of
-    projection, the three directions that become the picture's x, y, z, and the
-    projection's parameters.
+    How a renderer draws a space of any dimension in three dimensions.
+
+    A view holds the kind of projection, the three directions that become the
+    picture's x, y, z, and the projection's parameters.
 
     Spaces of dimension 3 or less are drawn in their own coordinates by every
     view. Above that, resolve() builds the map for the element's metric, and an
@@ -311,8 +312,9 @@ class View(BaseModel):
 
 class Orthographic(View):
     """
-    Parallel projection onto the axes: x, y, z are the components along them,
-    and every other direction is dropped.
+    Parallel projection onto the axes, dropping every other direction.
+
+    The picture's x, y, z are the components along the axes.
     """
 
     def _project(self, metric: Metric) -> Projection:
@@ -327,8 +329,7 @@ class Orthographic(View):
 
 class Perspective(View):
     """
-    Central projection with the eye at the given distance along the dropped
-    directions.
+    Central projection with the eye along the dropped directions.
 
     A point x is drawn at D x_axes / (D - Σ x_dropped), with D the distance:
     the weight row is 1 - Σ x_dropped / D, so the center of projection is the
@@ -356,9 +357,11 @@ class Perspective(View):
 
 class Stereographic(View):
     """
-    Stereographic projection of the sphere of the given radius from the pole
-    onto the hyperplane through the origin perpendicular to it, followed by
-    the orthographic projection onto the axes.
+    Stereographic projection from a pole of the sphere, then onto the axes.
+
+    The sphere of the given radius is projected from the pole onto the
+    hyperplane through the origin perpendicular to it, and that picture
+    orthographically onto the axes.
 
     A great circle through the pole is drawn as a straight line, and every
     other circle on the sphere as a circle.
