@@ -122,16 +122,15 @@ def _extract_spanning_vectors(b: Vector, tol: float) -> Vector:
             collection=(1,),
         )
 
-    # Detect degenerate metric (PGA case)
+    # Null directions (projective) cannot contract non-trivially; skip them
     g = b.metric
-    is_degenerate = np_abs(g.data[0, 0]) < tol
-    start_index = 1 if is_degenerate else 0
+    slots = [n for n in range(b.dim) if np_abs(g.data[n, n]) >= tol]
 
     # Find a basis vector that contracts non-trivially with the vector
     v_test = None
     contracted = None
 
-    for i in range(start_index, b.dim):
+    for i in slots:
         # Create basis vector e_i
         e_i_data = zeros(b.dim)
         e_i_data[i] = 1.0

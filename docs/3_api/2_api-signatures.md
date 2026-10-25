@@ -90,49 +90,62 @@ class CompositeElement(Element):
 
 ### `morphis.elements.metric`
 
-*Geometric Algebra - Metric and Context*
+*Geometric Algebra - Metric and Space*
 
 ```python
-class GASignature(Enum):
-    """Metric signature: the pattern of eigenvalues."""
+class Dot(BaseModel):
+    """The partner label ṁ of mode m in a space with complex dimensions."""
 
+    def __init__(self, mode: 'int', /)
+        """Create a new model by parsing and validating input data from keyword arguments."""
 ```
 
 
 ```python
-class GAStructure(Enum):
-    """Geometric structure: the interpretation of GA elements."""
+class Block(tuple):
+    """A run of directions of one kind, in storage order."""
 
+    @property
+    def dim(self): ...
 ```
 
 
 ```python
 class Metric(BaseModel):
-    """Complete geometric context: metric tensor + signature + structure."""
+    """Complete geometric context: the metric tensor and the block layout."""
 
     @property
     def dim(self): ...
 
     @property
-    def euclidean_dim(self): ...
+    def n_time(self): ...
 
     @property
-    def signature_tuple(self): ...
+    def n_space(self): ...
 
     @property
-    def base_index(self): ...
+    def n_projective(self): ...
 
     @property
-    def max_index(self): ...
+    def n_modes(self): ...
 
-    def to_internal(self, index: 'int') -> 'int'
-        """Convert a user-facing geometric index to the internal 0-based slot."""
+    @property
+    def is_projective(self): ...
 
-    def to_user(self, internal: 'int') -> 'int'
-        """Convert an internal 0-based slot to the user-facing geometric index."""
+    @property
+    def signature(self): ...
 
-    def to_internal_multi(self, indices: 'Tuple[int, ...]') -> 'list[int]'
-        """Convert a tuple of user-facing geometric indices to internal slots."""
+    @property
+    def convention(self): ...
+
+    def to_internal(self, index: 'Label') -> 'int'
+        """Convert a geometric index (a direction's label) to its storage slot."""
+
+    def to_user(self, internal: 'int') -> 'Label'
+        """Convert a storage slot to the label of its direction."""
+
+    def to_internal_multi(self, indices: 'tuple[Label, ...]') -> 'list[int]'
+        """Convert a tuple of geometric indices to storage slots."""
 
     def is_compatible(self, other: 'Metric') -> 'bool'
         """Check if two metrics are compatible for operations."""
@@ -144,17 +157,17 @@ class Metric(BaseModel):
 **Functions:**
 
 ```python
-def metric(dim: 'int', signature: 'str' = 'euclidean', structure: 'str' = 'flat') -> 'Metric'
-    """Create a metric with specified signature and structure."""
+def metric(*, time: 'int' = 0, space: 'int' = 0, projective: 'int' = 0, modes: 'int' = 0, convention: 'Convention' = 'mostly minus') -> 'Metric'
+    """Declare a flat space by its blocks."""
 
 def euclidean_metric(dim: 'int') -> 'Metric'
-    """Get cached Euclidean metric for d-dimensional space."""
+    """Euclidean ℝ^dim, the same as metric(space=dim)."""
 
 def pga_metric(dim: 'int') -> 'Metric'
-    """Get cached PGA metric for d-dimensional Euclidean space."""
+    """Projective GA of Euclidean ℝ^dim, the same as metric(space=dim, projective=1)."""
 
 def lorentzian_metric(dim: 'int') -> 'Metric'
-    """Get cached Lorentzian (spacetime) metric."""
+    """Spacetime of total dimension dim in (+, -, -, -), the same as metric(time=1, space=dim - 1)."""
 ```
 
 
@@ -247,6 +260,9 @@ class Vector(IndexableMixin, Tensor):
 
     @property
     def imag(self): ...
+
+    @property
+    def amplitudes(self): ...
 
     @property
     def collection(self): ...
@@ -826,6 +842,36 @@ def apply_outermorphism(A: "'Operator'", M: "'MultiVector'") -> "'MultiVector'"
 ```
 
 
+### `morphis.operations.complex_structure`
+
+*Geometric Algebra - Complex Structure*
+
+**Functions:**
+
+```python
+def structure_bivector(metric: 'Metric') -> 'Vector'
+    """The structure bivector J = e_m ∧ e_ṁ of a space with modes."""
+
+def contraction_map(B: 'Vector') -> 'Operator'
+    """The vector map v ↦ v ⌋ B induced by a bivector."""
+
+def complex_structure(metric: 'Metric') -> 'Operator'
+    """The complex structure J(v) = v ⌋ J as an Operator."""
+
+def kahler_angle(b: 'Vector | Frame', J: 'Vector | None' = None) -> 'NDArray'
+    """The Kähler angle θ of a plane, cos θ = b · J for a unit 2-blade b."""
+
+def is_complex(b: 'Vector', J: 'Vector | None' = None, tol: 'float' = 1e-09) -> 'NDArray'
+    """True where the blade spans a complex subspace, J b = b."""
+
+def is_isotropic(b: 'Vector', J: 'Vector | None' = None, tol: 'float' = 1e-09) -> 'NDArray'
+    """True where the symplectic form vanishes on the blade's subspace, J ⌋ b = 0."""
+
+def is_lagrangian(b: 'Vector', J: 'Vector | None' = None, tol: 'float' = 1e-09) -> 'NDArray'
+    """True where the blade is isotropic of the maximal grade n."""
+```
+
+
 ### `morphis.operations.matrix_rep`
 
 *Geometric Algebra - Matrix Representations*
@@ -1059,6 +1105,258 @@ def translator(v: 'Vector') -> 'MultiVector'
 
 def screw(B: 'Vector', angle: 'float | NDArray', translation: 'Vector', center: 'Vector | None' = None) -> 'MultiVector'
     """Create a motor for screw motion (rotation + translation along axis)."""
+```
+
+---
+
+## Manifolds
+
+Parametrized submanifolds of flat spaces and their geometry.
+
+### `morphis.manifold.domain`
+
+*Manifolds - Domains*
+
+```python
+class Interval(BaseModel):
+    """A real coordinate ranging from start to stop."""
+
+    @property
+    def length(self): ...
+
+    @property
+    def span(self): ...
+
+    def __init__(self, start: 'float', stop: 'float', periodic: 'bool' = False)
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def samples(self, n: 'int') -> 'NDArray'
+        """n evenly spaced values, the endpoint left out when periodic."""
+```
+
+
+```python
+class Circle(Interval):
+    """A periodic coordinate on [0, length), 2π by default."""
+
+    @property
+    def length(self): ...
+
+    @property
+    def span(self): ...
+
+    def __init__(self, length: 'float' = 6.283185307179586)
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def samples(self, n: 'int') -> 'NDArray'
+        """n evenly spaced values, the endpoint left out when periodic."""
+```
+
+
+```python
+class ComplexRegion(BaseModel):
+    """A complex coordinate w = σ + i σ' with σ in real and σ' in imag."""
+
+    @property
+    def span(self): ...
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+```python
+class Domain(BaseModel):
+    """A product of real intervals and complex regions."""
+
+    @property
+    def span(self): ...
+
+    @property
+    def intervals(self): ...
+
+    @property
+    def periodic(self): ...
+
+    @property
+    def is_complex(self): ...
+
+    def arguments(self, sigma: 'NDArray') -> 'list[NDArray]'
+        """Split real coordinates into the arguments of a map, one per factor."""
+
+    def grid(self, shape: 'int | tuple[int, ...]') -> 'NDArray'
+        """A coordinate grid of shape (*shape, span)."""
+
+    def cells(self, shape: 'int | tuple[int, ...]') -> 'CellComplex'
+        """The cell complex of grid(shape), periodic coordinates closed into circles."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+### `morphis.manifold.patch`
+
+*Manifolds - Patches*
+
+```python
+class Patch:
+    """A parametrized submanifold X: U → V."""
+
+    @property
+    def span(self): ...
+
+    @property
+    def dim(self): ...
+
+    def __init__(self, map: 'Callable', domain: 'Domain | Factor', metric: 'Metric', step: 'float' = 0.001)
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def grid(self, shape: 'int | tuple[int, ...]') -> 'NDArray'
+        """A coordinate grid of shape (*shape, span) over the domain."""
+
+    def cells(self, shape: 'int | tuple[int, ...]') -> 'CellComplex'
+        """The cell complex of grid(shape)."""
+
+    def mesh(self, shape: 'int | tuple[int, ...]') -> 'Mesh'
+        """The points of grid(shape) with their cell complex."""
+
+    def tangent_frame(self, sigma) -> 'Frame'
+        """The coordinate frame ∂_a X, span k, lot of σ."""
+
+    def tangent_blade(self, sigma) -> 'Vector'
+        """The tangent k-blade t = ∂_1 X ∧ ... ∧ ∂_k X, built densely with d^k components per point."""
+
+    def induced_metric(self, sigma) -> 'NDArray'
+        """h_ab = ∂_a X · ∂_b X, shape (*lot, k, k)."""
+
+    def volume_element(self, sigma) -> 'NDArray'
+        """√|det h|, the volume of the coordinate cell per unit coordinate volume."""
+
+    def tangent_part(self, v: 'Vector', sigma) -> 'Vector'
+        """The tangent projection P(v) = h^{ab} (v · ∂_b X) ∂_a X."""
+
+    def normal_part(self, v: 'Vector', sigma) -> 'Vector'
+        """The normal projection P⊥(v) = v - P(v)."""
+
+    def normal_frame(self, sigma) -> 'Frame'
+        """A frame of the normal space, orthonormal in the ambient metric."""
+
+    def normal_blade(self, sigma) -> 'Vector'
+        """The normal (d - k)-blade, built densely."""
+
+    def second_fundamental_form(self, sigma) -> 'Vector'
+        """k_ab = P⊥(∂_a ∂_b X), the normal part of the second derivatives."""
+
+    def mean_curvature(self, sigma) -> 'Vector'
+        """The mean curvature vector k = (1/k) h^{ab} k_ab."""
+
+    def riemann_curvature(self, sigma) -> 'NDArray'
+        """R_abcd = k_ac · k_bd - k_ad · k_bc by the Gauss equation, shape (*lot, k, k, k, k)."""
+
+    def ricci_curvature(self, sigma) -> 'NDArray'
+        """R_bd = h^{ac} R_abcd, shape (*lot, k, k)."""
+
+    def scalar_curvature(self, sigma) -> 'NDArray'
+        """R = h^{bd} R_bd."""
+
+    def gaussian_curvature(self, sigma) -> 'NDArray'
+        """K = R_1212 / det h, for a surface."""
+
+    def causal_character(self, sigma, tol: 'float' = 1e-09) -> 'NDArray'
+        """"spacelike", "timelike", or "null" at each point, from the inertia of h."""
+```
+
+
+### `morphis.manifold.mesh`
+
+*Manifolds - Meshes*
+
+```python
+class Mesh(BaseModel):
+    """Vertices and the cells they bound."""
+
+    @property
+    def metric(self): ...
+
+    @property
+    def n_vertices(self): ...
+
+    def welded(self, tolerance: 'float' = 1e-09) -> 'Mesh'
+        """Glue vertices that coincide, as where patches of an atlas meet."""
+
+    def piece(self, k: 'int') -> 'NDArray'
+        """Indices of the top cells that came from piece k."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+```
+
+
+### `morphis.manifold.atlas`
+
+*Manifolds - Atlases*
+
+```python
+class Atlas:
+    """Patches of one manifold."""
+
+    @property
+    def metric(self): ...
+
+    @property
+    def span(self): ...
+
+    def __init__(self, patches: 'Sequence[Patch]')
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def mesh(self, shape: 'int | tuple[int, ...]', tolerance: 'float' = 1e-09) -> 'Mesh'
+        """Sample every patch on a grid of the given shape and weld the samples."""
+```
+
+---
+
+## Topology
+
+Combinatorial structure of sampled manifolds.
+
+### `morphis.topology.cell_complex`
+
+*Topology - Cell Complexes*
+
+```python
+class CellComplex(BaseModel):
+    """A complex of r-cells over numbered vertices."""
+
+    def faces(self) -> 'CellComplex'
+        """The complex of (r - 1)-cells, each appearing once."""
+
+    def skeleton(self, r: 'int') -> 'CellComplex'
+        """The complex of r-cells, for 0 ≤ r ≤ dim."""
+
+    def vertices(self) -> 'NDArray'
+        """Indices of the vertices that some cell uses, sorted."""
+
+    def boundary(self) -> 'CellComplex'
+        """The (r - 1)-cells that bound exactly one top cell."""
+
+    def euler_characteristic(self) -> 'int'
+        """χ = Σ_r (-1)^r (number of r-cells), counting the vertices cells use."""
+
+    def components(self) -> 'int'
+        """Number of connected components, joining vertices that share a cell."""
+
+    def quotient(self, identifications: 'NDArray | list[tuple[int, int]]') -> 'CellComplex'
+        """Glue vertices together."""
+
+    def quotient_coincident(self, positions, tolerance: 'float' = 1e-09) -> 'CellComplex'
+        """Glue vertices whose positions coincide within a tolerance."""
+
+    def triangles(self) -> 'NDArray'
+        """Triangles covering the 2-cells, for renderers that draw only triangles."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
 ```
 
 ---
@@ -1394,6 +1692,31 @@ def get_projection_axes(blade: vector.Vector, config: projection.ProjectionConfi
 ```
 
 
+### `morphis.visuals.projective`
+
+*Projective Maps to the Picture*
+
+```python
+class Projection:
+    """A projective map from a space of any dimension to an m-dimensional picture."""
+
+    @property
+    def target_dim(self): ...
+
+    @property
+    def target(self): ...
+
+    def __init__(self, matrix: 'NDArray', source: 'Metric')
+        """Initialize self.  See help(type(self)) for accurate signature."""
+
+    def pushforward(self, points: 'Vector | NDArray', vectors: 'Frame | Vector | NDArray') -> 'NDArray'
+        """The differential of the map at points, applied to tangent vectors."""
+
+    def pinching(self, points: 'Vector | NDArray', frame: 'Frame') -> 'NDArray'
+        """How nearly the map collapses a tangent space: s_min / s_max of dΠ on the frame."""
+```
+
+
 ### `morphis.visuals.drawing.vectors`
 
 *Vector Drawing Functions*
@@ -1563,6 +1886,9 @@ class Sketch:
 
     def point(self, p: 'Point', radius: 'float' = 3.2, color: 'str | RGB | None' = None) -> 'NDArray'
         """Draw a solid dot; returns its drawing coordinates."""
+
+    def surface(self, points: 'Vector | NDArray', cells: 'NDArray', colors: 'str | RGB | list | None' = None, edges: 'str | None' = 'hair', edge_level: 'float' = 0.75, light: 'tuple[float, float, float]' = (-0.45, 0.6, 0.65), dots: 'Vector | NDArray | None' = None, dot_radius: 'float' = 3.0, dot_color: 'str | RGB | None' = 'ink') -> 'None'
+        """Draw a shaded surface, its cells painted far to near so nearer cells hide farther ones."""
 
     def label(self, text: 'str', at: 'Point', offset: 'tuple[float, float]' = (6.0, 4.0), size: 'float' = 13.0, color: 'str | RGB | None' = None) -> 'None'
         """Place text beside a drawing-space point, offset in points."""

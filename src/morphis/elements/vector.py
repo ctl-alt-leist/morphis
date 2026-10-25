@@ -15,12 +15,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Sequence
 
-from numpy import asarray, broadcast_shapes, integer, stack, zeros
+from numpy import asarray, broadcast_shapes, integer, iscomplexobj, stack, zeros
 from numpy.typing import NDArray
 from pydantic import ConfigDict, model_validator
 
 from morphis.elements.base import IndexableMixin
-from morphis.elements.metric import Metric
+from morphis.elements.metric import Dot, Metric
 from morphis.elements.tensor import Tensor
 
 
@@ -37,12 +37,12 @@ def _geo_to_internal(index, metric):
     """
     Translate one geometric index element from physics convention to storage.
 
-    Integer indices are mapped through the metric's index convention. Slices
+    Integer and Dot labels are mapped through the metric's index convention. Slices
     and other advanced index objects are not supported on geometric axes --
     reach for the raw .data array for those.
     """
-    if isinstance(index, (int, integer)):
-        return metric.to_internal(int(index))
+    if isinstance(index, (int, integer, Dot)):
+        return metric.to_internal(index)
 
     raise TypeError(
         f"geometric indexing supports integer component indices only, got {type(index).__name__}; "
@@ -142,11 +142,8 @@ class OnAccessor:
 
         new_data = self._vector.data[full_index]
 
-        # Compute new grade: each integer index reduces grade by 1
-        new_grade = n_geo
-        for idx in index:
-            if isinstance(idx, int):
-                new_grade -= 1
+        # Every geometric index is a component label, and each removes one grade
+        new_grade = n_geo - len(index)
 
         return Vector(new_data, grade=new_grade, metric=self._vector.metric)
 
@@ -318,7 +315,7 @@ class Vector(IndexableMixin, Tensor):
             b.on[1, 2]     # e_12 component of a bivector
 
         Indices are user-facing geometric indices, translated to storage
-        slots by the metric (see Metric.base_index). Indexing through .on only
+        slots by the metric (see Metric.labels). Indexing through .on only
         affects geometric dimensions; lot dimensions are preserved with
         implicit slice(None).
         """
@@ -367,6 +364,59 @@ class Vector(IndexableMixin, Tensor):
             grade=self.grade,
             metric=self.metric,
         )
+
+    @property
+    def amplitudes(self) -> NDArray:
+        """
+        The mode amplitudes v^m + i v^ṁ of a real vector in a space with modes.
+
+        This is the complex reading of complex dimensions, one amplitude per
+        mode, with no normalization factor. Under the ket convention, where
+        e_m = |e_m⟩ / √2, the ket amplitudes are these divided by √2.
+
+        Returns:
+            Complex array of shape (*lot, n_modes)
+
+        Raises:
+            ValueError: If the vector is not grade-1 or the metric has no modes
+            TypeError: If the coefficients are complex, since complex
+                coefficients and complex dimensions are distinct structures
+        """
+        metric = self.metric
+        if self.grade != 1 or metric.n_modes == 0:
+            raise ValueError("amplitudes are defined for grade-1 vectors of a space with modes")
+
+        if iscomplexobj(self.data):
+            raise TypeError("amplitudes read real components; this vector already has complex coefficients")
+
+        modes = range(1, metric.n_modes + 1)
+        representative = self.data[..., [metric.to_internal(m) for m in modes]]
+        partner = self.data[..., [metric.to_internal(Dot(m)) for m in modes]]
+
+        result = representative + 1j * partner
+
+        return result
+
+    @classmethod
+    def from_amplitudes(cls, amplitudes, metric: Metric) -> "Vector":
+        """
+        The real vector with mode amplitudes z^m = v^m + i v^ṁ.
+
+        Inverse of `amplitudes`. The last axis of the input runs over modes and
+        any leading axes become the lot.
+        """
+        amplitudes = asarray(amplitudes)
+        if metric.n_modes == 0 or amplitudes.shape[-1] != metric.n_modes:
+            raise ValueError(f"expected {metric.n_modes} amplitudes per vector for {metric!r}")
+
+        modes = range(1, metric.n_modes + 1)
+        data = zeros(amplitudes.shape[:-1] + (metric.dim,))
+        data[..., [metric.to_internal(m) for m in modes]] = amplitudes.real
+        data[..., [metric.to_internal(Dot(m)) for m in modes]] = amplitudes.imag
+
+        result = cls(data, grade=1, metric=metric)
+
+        return result
 
     # =========================================================================
     # Indexing (implements IndexableMixin interface)
@@ -1043,7 +1093,7 @@ def basis_vectors(metric: Metric) -> tuple[Vector, ...]:
         e1, e2, e3 = basis_vectors(euclidean_metric(3))
         e12 = e1 ^ e2  # Wedge product creates bivector
     """
-    return tuple(basis_vector(n, metric) for n in range(metric.base_index, metric.max_index + 1))
+    return tuple(basis_vector(n, metric) for n in metric.labels)
 
 
 def basis_element(indices: tuple[int, ...], metric: Metric) -> Vector:
@@ -1113,7 +1163,7 @@ def geometric_basis(metric: Metric) -> dict[int, tuple[Vector, ...]]:
     result[0] = (Vector(ones(()), grade=0, metric=metric),)
 
     # Geometric indices in the metric's convention (physics indices)
-    geo_indices = range(metric.base_index, metric.max_index + 1)
+    geo_indices = metric.labels
 
     # Grades 1 through dim
     for grade in range(1, dim + 1):
@@ -1143,4 +1193,4 @@ def pseudoscalar(metric: Metric) -> Vector:
     Example:
         I = pseudoscalar(euclidean_metric(3))  # e1 ^ e2 ^ e3
     """
-    return basis_element(tuple(range(metric.base_index, metric.max_index + 1)), metric)
+    return basis_element(metric.labels, metric)

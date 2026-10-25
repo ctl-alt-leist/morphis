@@ -14,7 +14,6 @@ from numpy import array, cross, zeros
 from numpy.linalg import norm as np_norm
 from numpy.typing import NDArray
 
-from morphis.elements.metric import GAStructure
 from morphis.elements.vector import Vector
 from morphis.transforms.projective import bulk, euclidean, is_point
 from morphis.visuals.canvas import Canvas
@@ -248,7 +247,7 @@ def render_pga_plane(
 
 def is_pga_context(vec: Vector) -> bool:
     """Check if blade has PGA context."""
-    return vec.metric.structure == GAStructure.PROJECTIVE
+    return vec.metric.is_projective
 
 
 def visualize_pga_blade(

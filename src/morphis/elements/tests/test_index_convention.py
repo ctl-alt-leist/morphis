@@ -1,22 +1,26 @@
 """
 Unit tests for the geometric index convention.
 
-The geometric index base is a property of the metric signature:
-- Euclidean is purely spatial and indexed from 1 (e_1 is x).
-- Lorentzian carries a distinguished time direction at index 0.
-- Degenerate (PGA) carries a distinguished ideal direction at index 0.
+A space is declared by its blocks, and the block layout labels every direction:
 
-In every signature the first spatial direction (x) is index 1. Storage is
-always 0-based internally; the convention is a translation applied on the
-geometric surface only (basis construction, .on component access). Lot
-(collection) axes are always standard 0-based Python indexing and are not
-affected.
+- Euclidean (space) is labeled 1..n.
+- PGA (projective, space) is labeled 0, 1..n with the ideal direction at 0.
+- Spacetime (time, space) is labeled 0, 1..n with time at 0.
+- Spacetime PGA (time, space, projective) is labeled 0, 1..n, n + 1.
+- Kähler (modes) is labeled 1, 1̇, 2, 2̇, ...
+
+In every layout the first spatial direction (x) is 1. Storage is always
+0-based internally; the convention is a translation applied on the geometric
+surface only (basis construction, .on component access). Lot (collection) axes
+are always standard 0-based Python indexing and are not affected.
 """
 
 import pytest
-from numpy import array
+from numpy import array, diag
 
 from morphis.elements import (
+    Dot,
+    Metric,
     Vector,
     basis_element,
     basis_vector,
@@ -24,32 +28,111 @@ from morphis.elements import (
     euclidean_metric,
     geometric_basis,
     lorentzian_metric,
+    metric,
     pga_metric,
     pseudoscalar,
 )
 
 
 # =============================================================================
-# Metric index converters
+# Block declaration
 # =============================================================================
 
 
-class TestBaseIndex:
-    def test_euclidean_indexed_from_one(self):
-        g = euclidean_metric(3)
-        assert g.base_index == 1
-        assert g.max_index == 3
+class TestLabels:
+    def test_euclidean(self):
+        assert metric(space=3).labels == (1, 2, 3)
 
-    def test_lorentzian_indexed_from_zero(self):
-        g = lorentzian_metric(4)
-        assert g.base_index == 0
-        assert g.max_index == 3
+    def test_pga_projective_first(self):
+        g = metric(space=3, projective=1)
+        assert g.labels == (0, 1, 2, 3)
+        assert g.kinds == ("projective", "space", "space", "space")
 
-    def test_pga_indexed_from_zero(self):
-        g = pga_metric(3)  # 4-dimensional degenerate space
+    def test_spacetime(self):
+        assert metric(time=1, space=3).labels == (0, 1, 2, 3)
+
+    def test_spacetime_pga_projective_last(self):
+        g = metric(time=1, space=3, projective=1)
+        assert g.labels == (0, 1, 2, 3, 4)
+        assert g.kinds == ("time", "space", "space", "space", "projective")
+
+    def test_several_projective_follow_space(self):
+        g = metric(space=2, projective=2)
+        assert g.labels == (1, 2, 3, 4)
+        assert g.kinds == ("space", "space", "projective", "projective")
+
+    def test_modes_adjacent(self):
+        g = metric(modes=2)
         assert g.dim == 4
-        assert g.base_index == 0
-        assert g.max_index == 3
+        assert g.labels == (1, Dot(1), 2, Dot(2))
+        assert str(Dot(1)) == "1\u0307"
+
+    def test_factories_agree(self):
+        assert euclidean_metric(3) == metric(space=3)
+        assert pga_metric(3) == metric(space=3, projective=1)
+        assert lorentzian_metric(4) == metric(time=1, space=3)
+
+    def test_cached(self):
+        assert metric(time=1, space=3) is metric(time=1, space=3)
+
+
+class TestSignature:
+    def test_mostly_minus_default(self):
+        g = metric(time=1, space=3)
+        assert list(g.data.diagonal()) == [1, -1, -1, -1]
+        assert g.signature == (1, 3, 0)
+        assert g.convention == "mostly minus"
+
+    def test_mostly_plus(self):
+        g = metric(time=1, space=3, convention="mostly plus")
+        assert list(g.data.diagonal()) == [-1, 1, 1, 1]
+        assert g.signature == (3, 1, 0)
+        assert g.convention == "mostly plus"
+
+    def test_projective_is_null(self):
+        assert metric(time=1, space=3, projective=1).signature == (1, 3, 1)
+
+    def test_euclidean_has_no_convention(self):
+        assert metric(space=3).convention is None
+
+    def test_unknown_convention_raises(self):
+        with pytest.raises(ValueError):
+            metric(time=1, space=3, convention="east coast")
+
+    def test_second_time_direction_deferred(self):
+        with pytest.raises(NotImplementedError):
+            metric(time=2, space=2)
+
+    def test_space_and_modes_exclusive(self):
+        with pytest.raises(ValueError):
+            metric(space=1, modes=1)
+
+
+class TestEquality:
+    def test_conventions_differ(self):
+        assert metric(time=1, space=3) != metric(time=1, space=3, convention="mostly plus")
+
+    def test_tensor_decides(self):
+        # Same layout, different tensor: R^{2,2} is not R^{1,3}
+        blocks = (("time", 1), ("space", 3))
+        g_13 = Metric(data=diag([1.0, -1.0, -1.0, -1.0]), blocks=blocks)
+        g_22 = Metric(data=diag([1.0, 1.0, -1.0, -1.0]), blocks=blocks)
+        assert g_13 == metric(time=1, space=3)
+        assert g_13 != g_22
+        assert hash(g_13) == hash(metric(time=1, space=3))
+
+    def test_layout_decides(self):
+        # Same tensor, different layout: R^4 is not C^2
+        assert metric(space=4) != metric(modes=2)
+
+    def test_blocks_must_match_tensor(self):
+        with pytest.raises(ValueError):
+            Metric(data=diag([1.0, 1.0]), blocks=(("space", 3),))
+
+
+# =============================================================================
+# Metric index converters
+# =============================================================================
 
 
 class TestToInternal:
@@ -65,6 +148,10 @@ class TestToInternal:
         g = pga_metric(3)
         assert [g.to_internal(n) for n in (0, 1, 2, 3)] == [0, 1, 2, 3]
 
+    def test_modes_mapping(self):
+        g = metric(modes=2)
+        assert [g.to_internal(n) for n in (1, Dot(1), 2, Dot(2))] == [0, 1, 2, 3]
+
     def test_euclidean_index_zero_forbidden(self):
         g = euclidean_metric(3)
         with pytest.raises(IndexError):
@@ -75,6 +162,8 @@ class TestToInternal:
             euclidean_metric(3).to_internal(4)
         with pytest.raises(IndexError):
             lorentzian_metric(4).to_internal(4)
+        with pytest.raises(IndexError):
+            metric(modes=2).to_internal(3)
 
     def test_multi(self):
         g = euclidean_metric(3)
@@ -82,9 +171,16 @@ class TestToInternal:
 
 
 class TestToUserRoundTrip:
-    def test_round_trip_all_signatures(self):
-        for g in (euclidean_metric(3), lorentzian_metric(4), pga_metric(3)):
-            for n in range(g.base_index, g.max_index + 1):
+    def test_round_trip_all_layouts(self):
+        layouts = (
+            metric(space=3),
+            metric(space=3, projective=1),
+            metric(time=1, space=3),
+            metric(time=1, space=3, projective=1),
+            metric(modes=2),
+        )
+        for g in layouts:
+            for n in g.labels:
                 assert g.to_user(g.to_internal(n)) == n
 
     def test_to_user_out_of_range(self):
@@ -94,7 +190,7 @@ class TestToUserRoundTrip:
 
 
 class TestXIsAlwaysIndexOne:
-    """The first spatial direction is index 1 regardless of signature."""
+    """The first spatial direction is index 1 in every layout."""
 
     def test_x_maps_to_first_stored_component_euclidean(self):
         g = euclidean_metric(3)
@@ -104,14 +200,19 @@ class TestXIsAlwaysIndexOne:
         # index 0 is time (stored slot 0); x is index 1 (stored slot 1)
         g = lorentzian_metric(4)
         assert g.to_internal(1) == 1
-        assert g.signature_tuple[g.to_internal(0)] == 1  # time is +1
-        assert g.signature_tuple[g.to_internal(1)] == -1  # x is spacelike
+        assert g[g.to_internal(0), g.to_internal(0)] == 1  # time is +1
+        assert g[g.to_internal(1), g.to_internal(1)] == -1  # x is spacelike
 
     def test_x_maps_past_ideal_direction_pga(self):
         # index 0 is the ideal/null direction; x is index 1
         g = pga_metric(3)
         assert g.to_internal(1) == 1
-        assert g.signature_tuple[g.to_internal(0)] == 0  # ideal direction is null
+        assert g[g.to_internal(0), g.to_internal(0)] == 0  # ideal direction is null
+
+    def test_x_is_first_slot_in_spacetime_pga(self):
+        g = metric(time=1, space=3, projective=1)
+        assert g.to_internal(1) == 1
+        assert g[g.to_internal(4), g.to_internal(4)] == 0  # trailing projective is null
 
 
 # =============================================================================
@@ -143,6 +244,12 @@ class TestBasisConstruction:
         assert list(e0.data) == [1.0, 0.0, 0.0, 0.0]
         e1 = basis_vector(1, g)  # x
         assert list(e1.data) == [0.0, 1.0, 0.0, 0.0]
+
+    def test_modes_partner(self):
+        g = metric(modes=2)
+        e1_dot = basis_vector(Dot(1), g)
+        assert list(e1_dot.data) == [0.0, 1.0, 0.0, 0.0]
+        assert pseudoscalar(g).on[1, Dot(1), 2, Dot(2)] == pytest.approx(1.0)
 
     def test_pga_ideal_at_zero(self):
         g = pga_metric(3)

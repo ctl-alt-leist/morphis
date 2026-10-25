@@ -49,7 +49,7 @@ def demo_vector_creation() -> None:
     """Demonstrate creating scalars, vectors, and bivectors."""
     section("1. BASIC BLADE CREATION")
 
-    g = metric(3)
+    g = metric(space=3)
     print(f"Euclidean metric (3D): signature={g.signature}")
 
     subsection("Scalar (Grade 0)")
@@ -92,7 +92,7 @@ def demo_vector_arithmetic() -> None:
     """Demonstrate addition and subtraction of blades."""
     section("2. BLADE ARITHMETIC (SAME GRADE)")
 
-    g = metric(3)
+    g = metric(space=3)
 
     u = Vector([1.0, 0.0, 0.0], grade=1, metric=g)
     v = Vector([0.0, 1.0, 0.0], grade=1, metric=g)
@@ -121,7 +121,7 @@ def demo_single_vs_single() -> None:
     """Demonstrate operations between two single blades."""
     section("3. SINGLE BLADE vs SINGLE BLADE")
 
-    g = metric(3)
+    g = metric(space=3)
 
     u = Vector([1.0, 0.0, 0.0], grade=1, metric=g)
     v = Vector([0.0, 1.0, 0.0], grade=1, metric=g)
@@ -167,7 +167,7 @@ def demo_single_vs_array() -> None:
     """Demonstrate broadcasting: single blade against an array of blades."""
     section("4. SINGLE BLADE vs ARRAY OF BLADES")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Create single vector and array of vectors")
     single = Vector([1.0, 0.0, 0.0], grade=1, metric=g)
@@ -208,7 +208,7 @@ def demo_array_vs_array() -> None:
     """Demonstrate element-wise operations on aligned arrays."""
     section("5. ARRAY OF BLADES vs ARRAY OF BLADES")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Two arrays of vectors (same shape)")
     u_data = [
@@ -250,7 +250,7 @@ def demo_array_operations() -> None:
     """Demonstrate operations that work across array elements."""
     section("6. OPERATIONS ON ARRAYS OF BLADES")
 
-    g = metric(3)
+    g = metric(space=3)
 
     subsection("Unit vectors from array")
     v_data = [
@@ -287,7 +287,7 @@ def demo_complements() -> None:
     """Demonstrate complement and Hodge dual operations."""
     section("7. COMPLEMENTS AND DUALITY")
 
-    g = metric(3)
+    g = metric(space=3)
 
     u = Vector([1.0, 0.0, 0.0], grade=1, metric=g)
     v = Vector([0.0, 1.0, 0.0], grade=1, metric=g)
@@ -317,7 +317,7 @@ def demo_meet() -> None:
     """Demonstrate the meet (intersection) of subspaces."""
     section("8. MEET (INTERSECTION)")
 
-    g = metric(3)
+    g = metric(space=3)
 
     u = Vector([1.0, 0.0, 0.0], grade=1, metric=g)
     v = Vector([0.0, 1.0, 0.0], grade=1, metric=g)
@@ -349,7 +349,7 @@ def demo_projective() -> None:
     section("9. PROJECTIVE GEOMETRIC ALGEBRA (PGA)")
 
     # Can use "pga" as alias for "projective" structure
-    g = metric(3, "euclidean", "pga")
+    g = metric(space=3, projective=1)
     print(f"PGA metric (3D): signature={g.signature}")
     print("  diag(0, 1, 1, 1) - degenerate in e0")
 

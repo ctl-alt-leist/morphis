@@ -1,106 +1,82 @@
 # Geometric Index Convention
 
-This document describes how geometric components are addressed in morphis, and
-why the metric is the single authority for the convention.
+This document describes how geometric components are addressed in morphis, and why the metric is the single authority for the convention.
 
 ## Motivation
 
-The point of morphis is to let you write geometric algebra the way you write it
-on paper. On paper, a purely geometric vector has components `v_1 = x`, `v_2 = y`,
-`v_3 = z` — indexed from 1. A spacetime vector has a time component at index 0:
-`v_0 = t`, `v_1 = x`. The index base is not a global preference; it is a property
-of the space you are working in.
+The point of morphis is to let you write geometric algebra the way you write it on paper. On paper, a purely geometric vector has components `v_1 = x`, `v_2 = y`, `v_3 = z`, indexed from 1. A spacetime vector has a time component at index 0: `v_0 = t`, `v_1 = x`. A Kähler space pairs each direction with its partner, `v_1, v_1̇, v_2, v_2̇`. The labels are not a global preference; they are a property of the space you are working in.
 
-## The Convention
+## Spaces Are Declared by Blocks
 
-Storage is always 0-based internally (a NumPy array). The user-facing geometric
-index is translated to and from the internal slot by the metric, and the base
-index is derived from the signature:
+A space is declared by its blocks, and the block layout fixes both the storage order and the label of every direction:
 
-| Signature | Base index | Index 0 | First spatial |
-|-----------|------------|---------|---------------|
-| Euclidean | 1 | forbidden (raises) | `e_1 = x` |
-| Lorentzian | 0 | time | `e_1 = x` |
-| Degenerate (PGA) | 0 | ideal/null direction | `e_1 = x` |
+```python
+metric(space=3)                          # Euclidean ℝ³
+metric(space=3, projective=1)            # PGA
+metric(time=1, space=3)                  # spacetime
+metric(time=1, space=3, projective=1)    # spacetime PGA
+metric(modes=2)                          # ℂ² as ℝ⁴
+```
 
-Two invariants hold across every signature:
+Storage follows (time, space, projective), except that a purely spatial space with a single projective direction is stored (projective, space).
 
-1. **The first spatial direction (x) is always index 1.** Only the presence of a
-   distinguished 0th direction changes — time in Lorentzian, the ideal/null
-   direction in PGA.
-2. **The base index is 0 exactly when the algebra carries a distinguished
-   non-spatial 0th direction.** A purely spatial Euclidean algebra starts at 1,
-   and its index 0 is forbidden.
+| Space | Order | Labels |
+|-------|-------|--------|
+| Euclidean | space | `1, ..., n` |
+| PGA | projective, space | `0, 1, ..., n` |
+| Spacetime | time, space | `0, 1, ..., n` |
+| Spacetime PGA | time, space, projective | `0, 1, ..., n, n + 1` |
+| Several projective | space, projective | `1, ..., n, n + 1, ...` |
+| Kähler | modes | `1, Dot(1), 2, Dot(2), ...` |
 
-The convention is *forced*, not optional: an out-of-range geometric index raises
-`IndexError` rather than silently resolving. One index has one meaning per
-signature.
+Two invariants hold in every layout:
+
+1. **The first spatial direction (x) is always index 1.**
+2. **Every other direction is labeled by its position.** Time and a leading projective direction are 0; trailing projective directions continue the spatial count. A mode's partner is labeled `Dot(m)`, displayed as ṁ.
+
+The convention is *forced*: a label the space does not carry raises `IndexError` rather than resolving silently. One index has one meaning per space.
+
+## Signature and Convention
+
+The sign convention is an argument of its own: `convention="mostly minus"` (the default, (+, -, -, -)) or `"mostly plus"` ((-, +, +, +)). It only matters when time is present; without time every spatial direction squares to +1.
+
+`Metric.signature` is the inertia `(p, q, r)` of the tensor, the counts of positive, negative, and zero eigenvalues, so it is correct for any symmetric tensor. `Metric.convention` is read back from the sign of the time direction. Two metrics are equal when their block layouts and tensors agree, so ℝ^{2,2} and ℝ^{1,3} are different spaces, and so are ℝ⁴ and ℂ².
+
+A metric that no factory produces, such as a non-diagonal tensor, is built directly: `Metric(data=g, blocks=(("time", 1), ("space", 3)))`.
 
 ## The Metric is the Single Authority
 
-Every geometric access point routes through the metric, so the convention lives
-in exactly one place.
+Every geometric access point routes through the metric, so the convention lives in exactly one place.
 
 ```python
 class Metric:
-    @property
-    def base_index(self) -> int: ...       # first valid geometric index
-    @property
-    def max_index(self) -> int: ...        # last valid geometric index (inclusive)
-    def to_internal(self, index) -> int: ...        # physics index -> storage slot
-    def to_user(self, internal) -> int: ...         # storage slot -> physics index
+    labels: tuple[int | Dot, ...]          # label of each storage slot
+    kinds: tuple[str, ...]                 # block kind of each storage slot
+    def to_internal(self, index) -> int: ...        # label -> storage slot
+    def to_user(self, internal) -> int | Dot: ...   # storage slot -> label
     def to_internal_multi(self, indices) -> list: ...
 ```
 
-The signature → base mapping is isolated in the module-level table
-`_SIGNATURE_BASE_INDEX`. This is deliberate: a future flexible layout (see below)
-replaces that one table without touching any call site.
+The labels are derived from the block layout in one function, `_block_labels`; nothing else in the package computes an index base.
 
 ### What routes through the metric
 
-- **Basis construction** — `basis_vector`, `basis_vectors`, `basis_element`,
-  `geometric_basis`, `pseudoscalar` take and emit user-facing geometric indices.
-  `basis_vector(1, euclidean_metric(3))` is the x direction.
-- **`.on[...]`** — geometric component access. `v.on[1]` is the x component;
-  `B.on[1, 2]` is the `e_12` component of a bivector, with antisymmetry
-  (`B.on[2, 1] == -B.on[1, 2]`) preserved through the translation.
-- **Visualization and projection** — `Scene(projection=...)`,
-  `Scene.set_projection`, `ProjectionConfig.axes`,
-  and `get_projection_axes` take and report user-facing geometric indices.
-  The default projection is `(1, 2, 3)`, x y z in every signature. Each element
-  translates the axes through its own metric at projection time
-  (`to_internal_multi`), so `Scene.set_projection((2, 3, 4))` shows `e_2 e_3
-  e_4` of a 4D Euclidean element and index 0 raises for it. Basis labels are
-  built from the same indices, and `draw_blade` default names use `to_user`.
-  Mesh helpers below this boundary take internal slots.
-- **Display** — when a labeled printer (`3 e_1 + ...`) is added, blade labels
-  should be produced via `to_user` so nothing leaks a 0-based storage index. The
-  current printer shows the raw component array and needs no translation.
+- **Basis construction**: `basis_vector`, `basis_vectors`, `basis_element`, `geometric_basis`, `pseudoscalar` take and emit labels. `basis_vector(1, metric(space=3))` is the x direction and `basis_vector(Dot(1), metric(modes=2))` is e_1̇.
+- **`.on[...]`**: geometric component access. `v.on[1]` is the x component; `B.on[1, 2]` is the `e_12` component of a bivector, with antisymmetry (`B.on[2, 1] == -B.on[1, 2]`) preserved through the translation.
+- **Visualization and projection**: `Scene(projection=...)`, `Scene.set_projection`, `ProjectionConfig.axes`, and `get_projection_axes` take and report labels. The default projection is `(1, 2, 3)`. Each element translates the axes through its own metric at projection time. Basis labels are built from the same indices, and `draw_blade` default names use `to_user`. Mesh helpers below this boundary take internal slots.
+- **Display**: blade labels are produced via `to_user`, so nothing leaks a 0-based storage index.
 
 ### What does NOT
 
-- **Lot (collection) axes** are always standard 0-based Python indexing,
-  consistent with NumPy. The index base is purely a geometric concern.
-- **`.at[...]`** — lot-only access, unchanged and 0-based.
-- **Plain `v[...]`** — raw positional slicing over the full `(*lot, *geo)` shape,
-  unchanged.
-- **Contraction** — `contract` / `IndexedTensor` label raw array axes, which stay
-  internal 0-based. The base is a boundary translation; the core array math never
-  sees it.
+- **Lot (collection) axes** are always standard 0-based Python indexing, consistent with NumPy. Labels are purely a geometric concern.
+- **`.at[...]`**: lot-only access, unchanged and 0-based.
+- **Plain `v[...]`**: raw positional slicing over the full `(*lot, *geo)` shape.
+- **Contraction**: `contract` / `IndexedTensor` label raw array axes, which stay internal 0-based.
+- **`metric[a, b]`**: indexes the tensor by storage slot.
 
-## Deferred: Flexible Index Layout
+## Deferred
 
-The current scheme derives the base from the signature and supports a single
-distinguished 0th direction. Two extensions are out of scope and will require the
-metric to carry an explicit index *layout* — which internal slots are spatial
-`e_1..e_n`, which are time, which are ideal — rather than a signature-derived
-base:
+The block layout leaves room for these without designing them now:
 
-- **Multiple projective dimensions**, with the extra directions parked at the
-  high end while `e_1` stays x.
-- **CONFORMAL / ROUND** structures, which involve null bases with their own
-  conventions.
-
-When that lands, the forced signature-driven scheme becomes the default case of
-the general one, and only `_SIGNATURE_BASE_INDEX` (and the converters that read
-it) change.
+- **A second time direction**, labeled -1.
+- **Conformal blocks**, whose null basis needs its own labels.

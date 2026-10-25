@@ -15,7 +15,7 @@ src/morphis/
 │   ├── vector.py               # Vector class (k-vectors)
 │   ├── multivector.py          # MultiVector class
 │   ├── frame.py                # Frame class
-│   ├── metric.py               # Metric, GASignature, GAStructure
+│   ├── metric.py               # Metric, Block, Dot, metric()
 │   ├── protocols.py            # Type protocols
 │   └── tests/
 │
@@ -29,6 +29,7 @@ src/morphis/
 │   ├── exponential.py          # exp_vector, log_versor, slerp
 │   ├── factorization.py        # factor, spanning_vectors
 │   ├── outermorphism.py        # outermorphism application
+│   ├── complex_structure.py    # structure bivector, Kähler angle, blade classes
 │   ├── subspaces.py            # join, meet
 │   ├── spectral.py             # eigendecomposition
 │   ├── matrix_rep.py           # matrix representations
@@ -51,6 +52,19 @@ src/morphis/
 │   ├── rotations.py            # rotor construction
 │   └── tests/
 │
+├── manifold/                    # Parametrized submanifolds
+│   ├── __init__.py
+│   ├── domain.py               # Interval, Circle, ComplexRegion, Domain
+│   ├── patch.py                # Patch
+│   ├── mesh.py                 # Mesh
+│   ├── atlas.py                # Atlas
+│   └── tests/
+│
+├── topology/                    # Combinatorial structure
+│   ├── __init__.py
+│   ├── cell_complex.py         # CellComplex
+│   └── tests/
+│
 ├── utils/                       # Utilities
 │   ├── __init__.py
 │   ├── easing.py               # Easing curves for animation timing
@@ -66,6 +80,7 @@ src/morphis/
 │   ├── contexts.py             # PGA-specific rendering
 │   ├── operations.py           # Operation visualization
 │   ├── projection.py           # nD -> 3D projection via Metric index translation
+│   ├── projective.py           # Projection: projective maps to the picture
 │   ├── model.py                # VisualModel for 3D meshes
 │   ├── text.py                 # Text annotations
 │   ├── backends/               # Rendering backend abstraction
@@ -99,7 +114,7 @@ src/morphis/
 | `vector.py` | `Vector` class, basis constructors |
 | `multivector.py` | `MultiVector` class |
 | `frame.py` | `Frame` class |
-| `metric.py` | `Metric`, `GASignature`, `GAStructure`, factory functions |
+| `metric.py` | `Metric`, `Block`, `Dot`, `metric()` and factory shorthands |
 | `protocols.py` | `Graded`, `Spanning`, `Transformable` protocols |
 
 ### `operations/`
@@ -115,6 +130,7 @@ src/morphis/
 | `exponential.py` | `exp_vector()`, `log_versor()`, `slerp()` |
 | `factorization.py` | `factor()`, `spanning_vectors()` |
 | `outermorphism.py` | `apply_exterior_power()`, `apply_outermorphism()` |
+| `complex_structure.py` | `structure_bivector()`, `complex_structure()`, `contraction_map()`, `kahler_angle()`, `is_complex()`, `is_isotropic()`, `is_lagrangian()` |
 | `subspaces.py` | `join()`, `meet()` |
 | `spectral.py` | `bivector_to_skew_matrix()`, `bivector_eigendecomposition()`, `principal_vectors()` |
 | `matrix_rep.py` | `vector_to_array()`, `vector_to_vector()`, `multivector_to_array()`, `array_to_multivector()`, `left_matrix()`, `right_matrix()`, `operator_to_matrix()` |
@@ -138,6 +154,23 @@ src/morphis/
 | `rotations.py` | `rotor()`, `rotation_about_point()` |
 | `actions.py` | `rotate()`, `translate()`, `transform()` |
 | `projective.py` | `point()`, `direction()`, `weight()`, `bulk()`, `euclidean()`, `is_point()`, `is_direction()`, `line()`, `plane()`, `translator()`, `screw()`, distance and incidence functions |
+
+### `manifold/`
+**Purpose**: Submanifolds of flat spaces of any dimension and signature
+
+| File | Contents |
+|------|----------|
+| `domain.py` | `Interval`, `Circle`, `ComplexRegion`, `Domain`: products with `*`, complex regions as `I + 1j * J`, `grid()`, `cells()` |
+| `patch.py` | `Patch`: `tangent_frame()`, `tangent_blade()`, `induced_metric()`, `volume_element()`, `tangent_part()`, `normal_part()`, `normal_frame()`, `normal_blade()`, `second_fundamental_form()`, `mean_curvature()`, `riemann_curvature()`, `ricci_curvature()`, `scalar_curvature()`, `gaussian_curvature()`, `causal_character()`, `mesh()` |
+| `mesh.py` | `Mesh`: `from_samples()`, `union()`, `welded()`, `piece()` |
+| `atlas.py` | `Atlas`: `mesh()` samples and welds every patch |
+
+### `topology/`
+**Purpose**: Combinatorial structure of sampled manifolds, independent of geometry
+
+| File | Contents |
+|------|----------|
+| `cell_complex.py` | `CellComplex`: `grid()`, `faces()`, `skeleton()`, `boundary()`, `euler_characteristic()`, `components()`, `quotient()`, `quotient_coincident()`, `triangles()` |
 
 ---
 

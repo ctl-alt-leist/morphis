@@ -262,7 +262,7 @@ v.at[::2]     # every other in first dim → lot=(5, 5)
 
 ### Geometric Accessor (`.on`)
 
-Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric: Euclidean starts at 1, Lorentzian and PGA start at 0 (time or ideal direction). See [Index Convention](../4_design/6_index-convention.md).
+Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric's block layout: x is always 1, time and a leading projective direction are 0, and modes are labeled `1, Dot(1), 2, Dot(2), ...`. See [Index Convention](../4_design/6_index-convention.md).
 
 ```python
 # b has grade=2 in a Euclidean metric, so geo=(d, d)
@@ -271,7 +271,7 @@ b.on[1]       # row for e_1 → grade=1
 b.on[0]       # IndexError: index 0 is forbidden in Euclidean
 ```
 
-Each integer index reduces the grade by one. Geometric slices are not supported through `.on` (they raise `TypeError`); use the raw `.data` array for advanced geometric slicing.
+Each index reduces the grade by one. Geometric slices are not supported through `.on` (they raise `TypeError`); use the raw `.data` array for advanced geometric slicing.
 
 ---
 
@@ -308,6 +308,8 @@ y = L.apply(v)  # explicit method
 # Composition
 L_composed = L1 * L2  # L1(L2(x))
 ```
+
+A grade-1 to grade-1 operator with no lot of its own acts pointwise, so it applies to a Vector of any lot.
 
 ### Inversion
 
@@ -416,6 +418,66 @@ B = log_versor(R)     # rotor → bivector
 # Interpolation
 R_mid = slerp(R0, R1, 0.5)  # halfway rotation
 ```
+
+### Complex Structure
+
+In a space with modes, `metric(modes=n)`, directions pair as `e_m` and `e_ṁ`:
+
+```python
+from morphis.elements import Dot, Vector, basis_vector, metric
+from morphis.operations import complex_structure, is_lagrangian, kahler_angle, structure_bivector
+
+g = metric(modes=2)                       # labels 1, Dot(1), 2, Dot(2)
+J = structure_bivector(g)                 # e_1 ∧ e_1̇ + e_2 ∧ e_2̇
+J_map = complex_structure(g)              # v ↦ v ⌋ J, an outermorphism
+
+e1, e2 = basis_vector(1, g), basis_vector(2, g)
+J_map(e1)                                 # e_1̇
+kahler_angle(e1 ^ J_map(e1))              # 0: a conjugate plane
+is_lagrangian(e1 ^ e2)                    # True
+
+v = Vector.from_amplitudes([0.6, 0.8j], g)
+v.amplitudes                              # [0.6, 0.8j]: v^m + i v^ṁ, no factor
+```
+
+### Manifolds
+
+A patch is a map from a coordinate domain into a flat space of any dimension and signature; every quantity is a function of the coordinates σ, and a grid of σ is the lot:
+
+```python
+from numpy import cos, exp, sin
+from morphis.elements import metric
+from morphis.manifold import Circle, Interval, Patch
+
+torus = Patch(lambda θ, φ: [cos(θ), sin(θ), cos(φ), sin(φ)], Circle() * Circle(), metric(space=4))
+σ = torus.grid((64, 64))                  # shape (64, 64, 2)
+torus(σ)                                  # points, a Vector with lot (64, 64)
+torus.tangent_frame(σ)                    # ∂_a X, a Frame of span 2
+torus.induced_metric(σ)                   # h_ab, shape (64, 64, 2, 2)
+torus.second_fundamental_form(σ)          # k_ab, a Vector with lot (64, 64, 2, 2)
+torus.gaussian_curvature(σ)               # 0: the Clifford torus is flat
+torus.cells((64, 64))                     # its CellComplex, periodic in both
+
+# A map into a space with modes may return amplitudes; a complex coordinate is holomorphic
+curve = Patch(lambda w: [w, (1 - w**5) ** (1 / 5)], Interval(0.1, 0.6) + 1j * Interval(-0.2, 0.2), metric(modes=2))
+curve.mean_curvature(curve.grid(16))      # 0: complex curves are minimal
+```
+
+Many patches of one manifold weld into one mesh, and a projection draws it:
+
+```python
+from morphis.manifold import Atlas
+from morphis.visuals.projective import Projection
+
+atlas = Atlas(patches)                    # e.g. the 25 sheets of z_1^5 + z_2^5 = 1
+mesh = atlas.mesh((33, 17))               # welded: mesh.cells.euler_characteristic() == -15
+Π = Projection.orthographic([e1, e2, cos(α) * f1 + sin(α) * f2])
+Π(mesh.vertices)                          # drawing coordinates, shape (n, 3)
+Π.pinching(x, frame)                      # 0 where the drawn surface pinches
+sketch.surface(Π(mesh.vertices), mesh.cells.cells, colors=..., dots=...)
+```
+
+`Projection.stereographic(pole)` sends the sphere of the pole's radius to the hyperplane through its center, and `@` composes maps.
 
 ### Frame Operations
 

@@ -6,6 +6,17 @@ projections, subspaces, and factorization.
 """
 
 # Products (geometric, wedge, reverse, inverse)
+# Complex structure
+from morphis.operations.complex_structure import (
+    complex_structure as complex_structure,
+    contraction_map as contraction_map,
+    is_complex as is_complex,
+    is_isotropic as is_isotropic,
+    is_lagrangian as is_lagrangian,
+    kahler_angle as kahler_angle,
+    structure_bivector as structure_bivector,
+)
+
 # Duality
 from morphis.operations.duality import (
     hodge_dual as hodge_dual,

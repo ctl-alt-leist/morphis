@@ -141,7 +141,7 @@ class Frame(GradedElement):
 | `vector.py` | `Vector` class + basis constructors |
 | `multivector.py` | `MultiVector` class |
 | `frame.py` | `Frame` class |
-| `metric.py` | `Metric`, `GASignature`, `GAStructure`, factory functions |
+| `metric.py` | `Metric`, `Block`, `Dot`, `metric()` and factory shorthands |
 | `protocols.py` | `Graded`, `Spanning`, `Transformable` protocols |
 
 ### `operations/`
@@ -157,6 +157,7 @@ class Frame(GradedElement):
 | `exponential.py` | `exp_vector()`, `log_versor()`, `slerp()` |
 | `factorization.py` | `factor()`, `spanning_vectors()` |
 | `outermorphism.py` | `apply_exterior_power()`, `apply_outermorphism()` |
+| `complex_structure.py` | `structure_bivector()`, `complex_structure()`, `contraction_map()`, `kahler_angle()`, `is_complex()`, `is_isotropic()`, `is_lagrangian()` |
 | `subspaces.py` | `join()`, `meet()` |
 | `spectral.py` | `bivector_eigendecomposition()` |
 | `matrix_rep.py` | `vector_to_array()`, `left_matrix()`, etc. |
@@ -179,6 +180,23 @@ class Frame(GradedElement):
 | `rotations.py` | `rotor()` construction |
 | `actions.py` | `rotate()`, `translate()`, `transform()` |
 | `projective.py` | PGA utilities: `point()`, `direction()`, `line()`, etc. |
+
+### `manifold/`
+**Purpose**: Submanifolds of flat spaces of any dimension and signature
+
+| File | Contents |
+|------|----------|
+| `domain.py` | `Interval`, `Circle`, `ComplexRegion`, `Domain` |
+| `patch.py` | `Patch` and its submanifold quantities |
+| `mesh.py` | `Mesh`: sampled vertices with their cell complex |
+| `atlas.py` | `Atlas`: patches welded into one manifold |
+
+### `topology/`
+**Purpose**: Combinatorial structure of sampled manifolds, independent of geometry
+
+| File | Contents |
+|------|----------|
+| `cell_complex.py` | `CellComplex` |
 
 ## Design Decisions
 

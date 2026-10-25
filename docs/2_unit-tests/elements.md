@@ -27,6 +27,23 @@ The standard Euclidean metric in $d$ dimensions:
 g = \mathbb{I}_d = \text{diag}(1, 1, \ldots, 1)
 ```
 
+### Block Layout
+
+A space is declared by its blocks. Storage order is (time, space, projective), or (projective, space) for a purely spatial space with one projective direction, and labels follow position with $x$ always 1:
+
+| Declaration | Diagonal | Labels |
+|-------------|----------|--------|
+| `metric(space=3)` | $(1, 1, 1)$ | $1, 2, 3$ |
+| `metric(space=3, projective=1)` | $(0, 1, 1, 1)$ | $0, 1, 2, 3$ |
+| `metric(time=1, space=3)` | $(1, -1, -1, -1)$ | $0, 1, 2, 3$ |
+| `metric(time=1, space=3, projective=1)` | $(1, -1, -1, -1, 0)$ | $0, 1, 2, 3, 4$ |
+| `metric(modes=2)` | $(1, 1, 1, 1)$ | $1, \dot 1, 2, \dot 2$ |
+
+Properties:
+- `signature` is the inertia $(p, q, r)$ of the tensor
+- `convention="mostly plus"` flips every sign of a space with time
+- Metrics are equal when layout and tensor agree: $\mathbb{R}^{2,2} \neq \mathbb{R}^{1,3}$ and $\mathbb{R}^4 \neq \mathbb{C}^2$
+
 ## Blade Construction
 
 A $k$-blade in $d$-dimensional space has components $B^{m_1 \ldots m_k}$ satisfying antisymmetry:

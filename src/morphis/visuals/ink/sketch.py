@@ -19,7 +19,7 @@ from typing import Any
 
 from matplotlib import rc_context
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.collections import LineCollection
+from matplotlib.collections import LineCollection, PolyCollection
 from matplotlib.figure import Figure
 from matplotlib.patches import Polygon
 from matplotlib.path import Path as MplPath
@@ -31,7 +31,9 @@ from numpy import (
     clip as clamp,
     concatenate,
     cos,
+    cross,
     cumsum,
+    einsum,
     exp as exponential,
     interp,
     linspace,
@@ -40,6 +42,7 @@ from numpy import (
     sin,
     sqrt,
     stack,
+    zeros,
 )
 from numpy.linalg import norm
 from numpy.random import default_rng
@@ -56,7 +59,7 @@ from morphis.visuals.ink.theme import RGB, InkTheme, get_ink_theme
 Point = Vector | tuple[float, float, float] | NDArray
 
 # Draw order of mark kinds; within a layer, farther marks are drawn first
-LAYERS = {"space": 1, "plane": 3, "construction": 5, "curve": 5, "vector": 6, "point": 7, "label": 9}
+LAYERS = {"space": 1, "surface": 2, "plane": 3, "construction": 5, "curve": 5, "vector": 6, "point": 7, "label": 9}
 
 # Stroke weights in points
 WEIGHTS = {"hair": 0.45, "fine": 0.8, "regular": 1.25, "bold": 1.9, "heavy": 2.6}
@@ -251,6 +254,55 @@ class Sketch:
 
         return position
 
+    def surface(
+        self,
+        points: Vector | NDArray,
+        cells: NDArray,
+        colors: str | RGB | list | None = None,
+        edges: str | None = "hair",
+        edge_level: float = 0.75,
+        light: tuple[float, float, float] = (-0.45, 0.6, 0.65),
+        dots: Vector | NDArray | None = None,
+        dot_radius: float = 3.0,
+        dot_color: str | RGB | None = "ink",
+    ) -> None:
+        """
+        Draw a shaded surface, its cells painted far to near so nearer cells hide farther ones.
+
+        Dots on the surface are painted in the same order, so a dot on a sheet
+        behind another is hidden by it.
+
+        Args:
+            points: Vertex positions, true-space Vectors (depicted) or drawing triples, shape (n, 3)
+            cells: Vertex indices per cell, squares in binary corner order (00, 10, 01, 11) or triangles
+            colors: One color for all cells, or one per cell; graphite by default
+            edges: Stroke weight of the cell edges, which draw the coordinate grid, or None
+            edge_level: Graphite level of the edges
+            light: Light direction in the camera frame (right, up, toward the eye)
+            dots: Points on the surface to mark, shape (n, 3)
+            dot_radius: Radius of the dots in points
+            dot_color: Color of the dots
+        """
+        drawn = self.drawn(points) if isinstance(points, Vector) else asarray(points, dtype=float)
+        cells = asarray(cells, dtype=int)
+        polygons = cells[:, [0, 1, 3, 2]] if cells.shape[1] == 4 else cells
+        marked = (
+            (self.drawn(dots) if isinstance(dots, Vector) else asarray(dots, dtype=float)).reshape(-1, 3)
+            if dots is not None
+            else zeros((0, 3))
+        )
+        style = {
+            "cells": polygons,
+            "colors": colors,
+            "edges": edges,
+            "edge_level": edge_level,
+            "light": light,
+            "dots": marked,
+            "dot_radius": dot_radius,
+            "dot_color": dot_color,
+        }
+        self.marks.append(Mark("surface", drawn.reshape(-1, 3), style))
+
     def label(
         self,
         text: str,
@@ -332,6 +384,7 @@ class Sketch:
     def save(self, path: str | Path, dpi: int = 200, bounds: tuple[NDArray, NDArray] | None = None) -> Path:
         """Render and write the sketch; the format follows the extension (png, svg, pdf)."""
         target = Path(path).expanduser()
+        target.parent.mkdir(parents=True, exist_ok=True)
         with rc_context(font_settings(self.theme.font)):
             figure = self.render(dpi=dpi, bounds=bounds)
             figure.savefig(target, dpi=dpi, facecolor=self.theme.paper)
@@ -386,6 +439,65 @@ class Sketch:
             keep = (depth_in > 0.002) & (rng.uniform(size=len(dots)) < clamp(density, 0.0, 1.0))
             sizes = rng.uniform(0.06, 0.32, size=int(keep.sum()))
             axes.scatter(*dots[keep].T, s=sizes, c=[self.theme.ink], linewidths=0, zorder=1)
+
+    def _render_surface(self, axes, page, mark, zorder, units_per_point, rng) -> None:
+        style = mark.style
+        polygons = style["cells"]
+        _, depth = self.camera.project(mark.points)
+        cell_depth = depth[polygons].mean(axis=-1)
+        order = (-cell_depth).argsort()
+        polygons, cell_depth = polygons[order], cell_depth[order]
+
+        # Two-sided Lambert shading from the cell normal in drawing space
+        corners = mark.points[polygons]
+        span_1 = corners[:, 2] - corners[:, 0]
+        span_2 = corners[:, -1] - corners[:, 1] if polygons.shape[1] == 4 else corners[:, 1] - corners[:, 0]
+        normals = cross(span_1, span_2)
+        normals = normals / clamp(norm(normals, axis=-1, keepdims=True), 1e-12, None)
+        light = einsum("ab, a -> b", self.camera.frame, asarray(style["light"], dtype=float))
+        light = light / norm(light)
+        shade = abs(normals @ light)
+
+        colors = style["colors"]
+        is_per_cell = isinstance(colors, (list, tuple)) and len(colors) == len(style["cells"]) and len(colors) != 3
+        base = (
+            asarray([self._ink(c) for c in colors])[order]
+            if is_per_cell
+            else asarray(self._ink(colors, 0.3) if colors is not None else self.theme.gray(0.3))[None, :]
+        )
+        paper = asarray(self.theme.paper)
+        brightness = (0.2 + 0.8 * shade)[:, None]
+        faces = paper + (base - paper) * (1.15 - 0.75 * brightness)
+        faces = clamp(faces, 0.0, 1.0)
+
+        # Dots sit just in front of the sheet they mark and split the far-to-near cell order
+        dot_page, dot_depth = self.camera.project(style["dots"])
+        nudge = 1e-3 * (depth.max() - depth.min())
+        dot_order = (-dot_depth).argsort()
+        splits = [int((cell_depth > dot_depth[n] - nudge).sum()) for n in dot_order]
+        bounds = [0, *splits, len(polygons)]
+
+        edges = style["edges"]
+        step = 1e-6
+        for count, (start, stop) in enumerate(zip(bounds[:-1], bounds[1:], strict=True)):
+            if stop > start:
+                collection = PolyCollection(
+                    page[polygons[start:stop]],
+                    facecolors=faces[start:stop],
+                    edgecolors=[self.theme.gray(style["edge_level"])] if edges else "face",
+                    linewidths=WEIGHTS[edges] if edges else 0.25,
+                    zorder=zorder + 2 * count * step,
+                )
+                axes.add_collection(collection)
+
+            if count < len(dot_order):
+                axes.scatter(
+                    *dot_page[dot_order[count]],
+                    s=style["dot_radius"] ** 2 * 3.2,
+                    c=[self._ink(style["dot_color"])],
+                    linewidths=0,
+                    zorder=zorder + (2 * count + 1) * step,
+                )
 
     def _render_plane(self, axes, page, mark, zorder, units_per_point, rng) -> None:
         style = mark.style

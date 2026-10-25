@@ -338,6 +338,7 @@ MODULE_GROUPS = {
             "morphis.operations.subspaces",
             "morphis.operations.spectral",
             "morphis.operations.outermorphism",
+            "morphis.operations.complex_structure",
             "morphis.operations.matrix_rep",
         ],
     },
@@ -358,6 +359,21 @@ MODULE_GROUPS = {
             "morphis.transforms.projective",
         ],
     },
+    "Manifolds": {
+        "description": "Parametrized submanifolds of flat spaces and their geometry.",
+        "modules": [
+            "morphis.manifold.domain",
+            "morphis.manifold.patch",
+            "morphis.manifold.mesh",
+            "morphis.manifold.atlas",
+        ],
+    },
+    "Topology": {
+        "description": "Combinatorial structure of sampled manifolds.",
+        "modules": [
+            "morphis.topology.cell_complex",
+        ],
+    },
     "Visualization": {
         "description": "Visualization and rendering tools.",
         "modules": [
@@ -366,6 +382,7 @@ MODULE_GROUPS = {
             "morphis.visuals.canvas",
             "morphis.visuals.theme",
             "morphis.visuals.projection",
+            "morphis.visuals.projective",
             "morphis.visuals.drawing.vectors",
             "morphis.visuals.contexts",
             "morphis.visuals.operations",
