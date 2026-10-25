@@ -24,6 +24,7 @@ from morphis.visuals.projection import (
     projection_slots,
     validate_projection_axes,
 )
+from morphis.visuals.projective import Orthographic, Perspective, Stereographic
 
 
 # =============================================================================
@@ -139,64 +140,55 @@ class TestProjectBlade:
 # =============================================================================
 
 
+def drawn(scene: Scene, point, metric) -> list[float]:
+    """Where the scene draws a point of the given space."""
+    return scene._picture(metric)(array(point, dtype=float))
+
+
 class TestSceneProjection:
     def test_default_projection(self):
         scene = Scene()
-        assert scene.projection == (1, 2, 3)
+        assert scene.projection == Orthographic(axes=(1, 2, 3))
         assert scene.basis_labels == basis_labels((1, 2, 3))
 
     def test_wrong_length_raises(self):
         with pytest.raises(ValueError):
-            Scene(projection=(1, 2))
+            Scene(projection=Orthographic(axes=(1, 2)))
 
     def test_default_projects_euclidean_xyz(self):
-        scene = Scene()
-        point = scene._project_point(POINT_4D, euclidean_metric(4))
-        assert_allclose(point, [10.0, 20.0, 30.0])
+        assert_allclose(drawn(Scene(), POINT_4D, euclidean_metric(4)), [10.0, 20.0, 30.0])
 
     def test_user_axes_translate_through_metric(self):
-        scene = Scene(projection=(2, 3, 4))
-        point = scene._project_point(POINT_4D, euclidean_metric(4))
-        assert_allclose(point, [20.0, 30.0, 40.0])
+        scene = Scene(projection=Orthographic(axes=(2, 3, 4)))
+        assert_allclose(drawn(scene, POINT_4D, euclidean_metric(4)), [20.0, 30.0, 40.0])
 
     def test_euclidean_zero_raises(self):
-        scene = Scene(projection=(0, 1, 2))
+        scene = Scene(projection=Orthographic(axes=(0, 1, 2)))
         with pytest.raises(IndexError):
-            scene._project_point(POINT_4D, euclidean_metric(4))
+            drawn(scene, POINT_4D, euclidean_metric(4))
 
     def test_lorentzian_default_skips_time(self):
-        scene = Scene()
-        point = scene._project_point(POINT_4D, lorentzian_metric(4))
-        assert_allclose(point, [20.0, 30.0, 40.0])
+        assert_allclose(drawn(Scene(), POINT_4D, lorentzian_metric(4)), [20.0, 30.0, 40.0])
 
     def test_lorentzian_time_axis(self):
-        scene = Scene(projection=(0, 1, 2))
-        point = scene._project_point(POINT_4D, lorentzian_metric(4))
-        assert_allclose(point, [10.0, 20.0, 30.0])
+        scene = Scene(projection=Orthographic(axes=(0, 1, 2)))
+        assert_allclose(drawn(scene, POINT_4D, lorentzian_metric(4)), [10.0, 20.0, 30.0])
 
     def test_pga_default_skips_ideal(self):
-        scene = Scene()
-        point = scene._project_point(POINT_4D, pga_metric(3))
-        assert_allclose(point, [20.0, 30.0, 40.0])
+        assert_allclose(drawn(Scene(), POINT_4D, pga_metric(3)), [20.0, 30.0, 40.0])
 
     def test_low_dim_drawn_in_own_coordinates(self):
-        scene = Scene(projection=(2, 3, 4))
-        point = scene._project_point([1.0, 2.0], euclidean_metric(2))
-        assert_allclose(point, [1.0, 2.0, 0.0])
+        scene = Scene(projection=Perspective(axes=(2, 3, 4)))
+        assert_allclose(drawn(scene, [1.0, 2.0], euclidean_metric(2)), [1.0, 2.0, 0.0])
 
     def test_set_projection_updates_labels(self):
         scene = Scene()
-        scene.set_projection((2, 3, 4))
-        assert scene.projection == (2, 3, 4)
+        scene.set_projection(Orthographic(axes=(2, 3, 4)))
+        assert scene.projection == Orthographic(axes=(2, 3, 4))
         assert scene.basis_labels == basis_labels((2, 3, 4))
 
-    def test_set_projection_wrong_length_raises(self):
-        scene = Scene()
-        with pytest.raises(ValueError):
-            scene.set_projection((1, 2, 3, 4))
-
     def test_add_euclidean_zero_raises(self):
-        scene = Scene(projection=(0, 1, 2))
+        scene = Scene(projection=Orthographic(axes=(0, 1, 2)))
         with pytest.raises(IndexError):
             scene.add(make_vector(POINT_4D, euclidean_metric(4)))
 
@@ -205,24 +197,25 @@ class TestSceneProjection:
         scene.add(make_vector(POINT_4D, euclidean_metric(4)))
 
         with pytest.raises(IndexError):
-            scene.set_projection((0, 1, 2))
+            scene.set_projection(Orthographic(axes=(0, 1, 2)))
 
         # A rejected projection leaves the scene unchanged
-        assert scene.projection == (1, 2, 3)
+        assert scene.projection == Orthographic()
 
     def test_backend_receives_labels(self):
         scene = Scene()
         scene.add(make_vector(POINT_4D, euclidean_metric(4)))
-        scene.set_projection((2, 3, 4))
+        scene.set_projection(Stereographic(axes=(2, 3, 4), pole=1))
         assert scene._backend._current_basis_labels == basis_labels((2, 3, 4))
 
     def test_initial_labels_follow_projection(self):
-        scene = Scene(projection=(2, 3, 4))
+        scene = Scene(projection=Orthographic(axes=(2, 3, 4)))
         scene.add(make_vector(POINT_4D, euclidean_metric(4)))
         assert scene._backend._current_basis_labels == basis_labels((2, 3, 4))
 
     def test_save_preserves_user_projection(self):
-        scene = Scene(projection=(2, 3, 4))
+        view = Perspective(axes=(2, 3, 4), distance=6.0)
+        scene = Scene(projection=view)
         scene.add(make_vector(POINT_4D, euclidean_metric(4)))
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -231,7 +224,7 @@ class TestSceneProjection:
 
             with open(path, "rb") as f:
                 data = pickle.load(f)
-            assert data.projection == (2, 3, 4)
+            assert data.projection == view
 
             loaded = Scene.load(path)
-            assert loaded.projection == (2, 3, 4)
+            assert loaded.projection == view
