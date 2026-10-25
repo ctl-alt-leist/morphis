@@ -313,6 +313,7 @@ class Sketch:
         points: Vector | NDArray,
         cells: NDArray,
         weight: str = "regular",
+        lip_weight: str = "bold",
         stipple: float = 1.0,
         light: tuple[float, float, float] = (-0.45, 0.6, 0.65),
         far_level: float = 0.4,
@@ -334,6 +335,13 @@ class Sketch:
         surface turns edge-on to the eye and heavier on the side away from the
         light. No grid is drawn.
 
+        The contour is cut at its cusps, where it turns back on the page. An
+        arc hidden behind a nearer sheet is drawn faintly, except where it
+        meets a visible arc at a cusp: that is the contour slipping out of
+        sight past the cusp, and a hand drawing leaves it out. Around the hole
+        of a torus this keeps the near lip and the far arc seen through the
+        tube, without the short arcs that join them.
+
         The shell is translucent, not transparent: anything a nearer sheet of
         it covers, whether its own far contour and stipple or the curves and
         dots given with it, is drawn at the strength veil. Covering is decided
@@ -343,6 +351,7 @@ class Sketch:
             points: Vertex positions, true-space Vectors (projected) or drawing triples, shape (n, 3)
             cells: Vertex indices per cell, squares in binary corner order (00, 10, 01, 11) or triangles
             weight: Stroke weight of the nearest contour
+            lip_weight: Stroke weight of a visible contour arc that ends in cusps, such as a hole's near rim
             stipple: Stipple density multiplier; 0 for the contour alone
             light: Light direction in the camera frame (right, up, toward the eye)
             far_level: Graphite level of the farthest marks in front of the shell
@@ -362,6 +371,7 @@ class Sketch:
         style = {
             "triangles": triangles,
             "weight": weight,
+            "lip_weight": lip_weight,
             "stipple": stipple,
             "light": light,
             "far_level": far_level,
@@ -604,9 +614,12 @@ class Sketch:
         facing = einsum("na, na -> n", unit, toward)
         vertex_facing = einsum("na, na -> n", vertex_normals, self._toward_eye(points))
 
-        # Contour: where the vertex facing changes sign
+        # Contour: where the vertex facing changes sign, drawn arc by arc between its cusps
         for contour in _contours(points, triangles, vertex_facing):
-            ink(*self.camera.project(contour), style["weight"], 0.6, zorder + 1e-5)
+            contour_page, contour_depth = self.camera.project(contour)
+            for arc, is_lip in _drawn_arcs(contour_page, buffer.covers(contour_page, contour_depth)):
+                weight = style["lip_weight"] if is_lip else style["weight"]
+                ink(contour_page[arc], contour_depth[arc], weight, 0.6, zorder + 1e-5)
 
         if style["stipple"] > 0:
             # Stipple: densest where the surface turns edge-on, heavier away from the light
@@ -926,6 +939,55 @@ class _DepthBuffer:
         nearest[is_on] = self.depth[pixels[is_on, 1], pixels[is_on, 0]]
 
         return nearest < asarray(depth) - self.tolerance
+
+
+def _drawn_arcs(page: NDArray, covered: NDArray, reversal: float = 2.0) -> list[tuple[NDArray, bool]]:
+    """
+    Index ranges of a contour's arcs between cusps, without the hidden arcs that meet a visible one.
+
+    Each comes with whether it is a lip: a visible arc that ends in cusps,
+    such as the near rim of a torus's hole.
+
+    A cusp is where the polyline turns back on the page by more than the
+    reversal angle, in radians. A closed contour wraps around, so its first
+    and last arcs are joined into one.
+    """
+    count = len(page)
+    is_closed = norm(page[0] - page[-1]) < 1e-9 * (1.0 + norm(page[0]))
+
+    # The turn at each interior point, and for a closed contour also at the seam, its first point
+    steps = page[1:] - page[:-1]
+    before, after = (concatenate([steps[-1:], steps[:-1]]), steps) if is_closed else (steps[:-1], steps[1:])
+    lengths = clamp(norm(before, axis=-1) * norm(after, axis=-1), 1e-15, None)
+    turns = einsum("na, na -> n", before, after) / lengths
+    offset = 0 if is_closed else 1
+    cusps = [n + offset for n, turn in enumerate(turns) if turn < cos(reversal)]
+    if not cusps:
+        arcs = [arange(count)]
+
+    elif is_closed:
+        # Start at the first cusp and go once around
+        ends = [*cusps, cusps[0] + count - 1]
+        arcs = [arange(start, stop + 1) % (count - 1) for start, stop in zip(ends[:-1], ends[1:], strict=True)]
+
+    else:
+        ends = [0, *cusps, count - 1]
+        arcs = [arange(start, stop + 1) for start, stop in zip(ends[:-1], ends[1:], strict=True)]
+
+    is_hidden = [bool(covered[arc].mean() > 0.5) for arc in arcs]
+    total = len(arcs)
+
+    def neighbors(n: int) -> list[int]:
+        around = [(n - 1) % total, (n + 1) % total] if is_closed else [n - 1, n + 1]
+        return [m for m in around if 0 <= m < total and m != n]
+
+    kept = [
+        (arc, bool(cusps) and not is_hidden[n])
+        for n, arc in enumerate(arcs)
+        if not (is_hidden[n] and any(not is_hidden[m] for m in neighbors(n)))
+    ]
+
+    return kept
 
 
 def _contours(points: NDArray, triangles: NDArray, values: NDArray) -> list[NDArray]:

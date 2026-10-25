@@ -441,3 +441,21 @@ class TestShell:
         marks_page, marks_depth = camera.project(array([toward, -toward]))
 
         assert buffer.covers(marks_page, marks_depth).tolist() == [False, True]
+
+    def test_hole_keeps_lip_and_far_arc_without_connectors(self):
+        from numpy import linspace, stack
+
+        from morphis.visuals.ink.sketch import _drawn_arcs
+
+        # A closed curve with four cusps: top arc, right side, bottom arc, left side
+        top = stack([linspace(-1, 1, 20), 0 * linspace(0, 1, 20) + 1], axis=-1)
+        right = stack([0 * linspace(0, 1, 8) + 1, linspace(1, -1, 8)], axis=-1)
+        bottom = stack([linspace(1, -1, 20), 0 * linspace(0, 1, 20) - 1], axis=-1)
+        left = stack([0 * linspace(0, 1, 8) - 1, linspace(-1, 1, 8)], axis=-1)
+        page = concatenate([top, right[1:], bottom[1:], left[1:]])
+        covered = page[:, 1] < 0.99  # only the top arc is visible
+
+        arcs = _drawn_arcs(page, covered, reversal=1.2)
+        drawn = [(round(float(page[arc][:, 1].mean()), 2), is_lip) for arc, is_lip in arcs]
+
+        assert sorted(drawn) == [(-1.0, False), (1.0, True)]
