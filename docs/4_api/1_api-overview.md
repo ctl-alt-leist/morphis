@@ -262,7 +262,7 @@ v.at[::2]     # every other in first dim → lot=(5, 5)
 
 ### Geometric Accessor (`.on`)
 
-Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric's block layout: x is always 1, time and a leading projective direction are 0, and modes are labeled `1, Dot(1), 2, Dot(2), ...`. See [Index Convention](../4_design/6_index-convention.md).
+Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric's block layout: x is always 1, time and a leading projective direction are 0, and modes are labeled `1, Dot(1), 2, Dot(2), ...`. See [Index Convention](../5_design/6_index-convention.md).
 
 ```python
 # b has grade=2 in a Euclidean metric, so geo=(d, d)
@@ -545,7 +545,7 @@ with scene.record("figures/turning-plane/turning-plane.gif"):  # or .mp4
         scene.capture(t)
 ```
 
-See [Visualization Architecture](../4_design/4_visuals_architecture.md).
+See [Visualization Architecture](../5_design/4_visuals_architecture.md).
 
 ### Ink Sketches
 
@@ -566,4 +566,4 @@ sketch.vector(e_a + f_b, label="$ψ$")       # Vectors are depicted; triples are
 sketch.save("figures/example.png")
 ```
 
-Pen-and-ink conceptual figures rendered with matplotlib. See [Visualization Architecture](../4_design/4_visuals_architecture.md) and `morphis.examples.conjugate_planes`.
+Pen-and-ink conceptual figures rendered with matplotlib. See [Visualization Architecture](../5_design/4_visuals_architecture.md) and `morphis.examples.conjugate_planes`.

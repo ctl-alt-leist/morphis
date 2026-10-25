@@ -26,8 +26,9 @@ essential nature.
 
 - [Project Overview](docs/0_project-overview.md) — Vision and scope
 - [Concepts](docs/1_concepts/) — Mathematical foundations (vectors, products, duality, transforms)
-- [API Reference](docs/3_api/api.md) — Public interface
-- [Architecture](docs/5_dev/1_architecture.md) — Design philosophy and decisions
+- [Examples](docs/2_examples/) — Worked examples, their mathematics and visualization styles
+- [API Reference](docs/4_api/1_api-overview.md) — Public interface
+- [Architecture](docs/6_dev/1_architecture.md) — Design philosophy and decisions
 
 ## Quick Start
 

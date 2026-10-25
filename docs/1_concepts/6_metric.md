@@ -15,7 +15,7 @@ This symmetric bilinear form encodes all geometric information about how vectors
 - **Minkowski**: signature $(+,-,-,-)$ or $(-,+,+,+)$
 - **Degenerate (PGA)**: some diagonal entries are zero
 
-A space is declared by its blocks, which fix the storage order and the label of every direction (see the index convention in `docs/4_design/`):
+A space is declared by its blocks, which fix the storage order and the label of every direction (see the index convention in `docs/5_design/`):
 
 ```python
 from morphis.elements import metric
