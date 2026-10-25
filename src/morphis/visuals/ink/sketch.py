@@ -21,6 +21,7 @@ needs an affine projection, one whose displacements have images of their own.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,8 @@ from matplotlib.patches import Polygon
 from matplotlib.path import Path as MplPath
 from matplotlib.patheffects import withStroke
 from numpy import (
+    abs as np_abs,
+    add,
     arange,
     arctan2,
     asarray,
@@ -47,9 +50,11 @@ from numpy import (
     linspace,
     meshgrid,
     pi,
+    repeat,
     sin,
     sqrt,
     stack,
+    where,
     zeros,
 )
 from numpy.linalg import norm
@@ -67,7 +72,17 @@ from morphis.visuals.projective import Orthographic, Projection, View, resolve
 Point = Vector | tuple[float, float, float] | NDArray
 
 # Draw order of mark kinds; within a layer, farther marks are drawn first
-LAYERS = {"space": 1, "surface": 2, "plane": 3, "construction": 5, "curve": 5, "vector": 6, "point": 7, "label": 9}
+LAYERS = {
+    "space": 1,
+    "shell": 2,
+    "surface": 2,
+    "plane": 3,
+    "construction": 5,
+    "curve": 5,
+    "vector": 6,
+    "point": 7,
+    "label": 9,
+}
 
 # Stroke weights in points
 WEIGHTS = {"hair": 0.45, "fine": 0.8, "regular": 1.25, "bold": 1.9, "heavy": 2.6}
@@ -286,6 +301,39 @@ class Sketch:
 
         return position
 
+    def shell(
+        self,
+        points: Vector | NDArray,
+        cells: NDArray,
+        weight: str = "regular",
+        stipple: float = 1.0,
+        light: tuple[float, float, float] = (-0.45, 0.6, 0.65),
+        far_level: float = 0.4,
+    ) -> None:
+        """
+        Draw a translucent surface in pen and stipple: its contour inked, its body shaded by stipple.
+
+        The contour is where the surface turns from facing the eye to facing
+        away, found between vertices from interpolated normals and inked with a
+        pen wobble, lighter the farther it is. Stipple is densest where the
+        surface turns edge-on to the eye, heavier on the side away from the
+        light, and lighter on the far sheets, so what lies behind still shows.
+        No grid is drawn.
+
+        Args:
+            points: Vertex positions, true-space Vectors (projected) or drawing triples, shape (n, 3)
+            cells: Vertex indices per cell, squares in binary corner order (00, 10, 01, 11) or triangles
+            weight: Stroke weight of the nearest contour
+            stipple: Stipple density multiplier; 0 for the contour alone
+            light: Light direction in the camera frame (right, up, toward the eye)
+            far_level: Graphite level of the farthest contour and of stipple on far sheets
+        """
+        drawn = self.drawn(points) if isinstance(points, Vector) else asarray(points, dtype=float)
+        cells = asarray(cells, dtype=int)
+        triangles = concatenate([cells[:, [0, 1, 3]], cells[:, [0, 3, 2]]]) if cells.shape[1] == 4 else cells
+        style = {"triangles": triangles, "weight": weight, "stipple": stipple, "light": light, "far_level": far_level}
+        self.marks.append(Mark("shell", drawn.reshape(-1, 3), style))
+
     def surface(
         self,
         points: Vector | NDArray,
@@ -471,6 +519,86 @@ class Sketch:
             keep = (depth_in > 0.002) & (rng.uniform(size=len(dots)) < clamp(density, 0.0, 1.0))
             sizes = rng.uniform(0.06, 0.32, size=int(keep.sum()))
             axes.scatter(*dots[keep].T, s=sizes, c=[self.theme.ink], linewidths=0, zorder=1)
+
+    def _render_shell(self, axes, page, mark, zorder, units_per_point, rng) -> None:
+        style = mark.style
+        points, triangles = mark.points, style["triangles"]
+        _, depth = self.camera.project(points)
+        near, far = depth.min(), depth.max()
+
+        def level(at_depth: NDArray) -> NDArray:
+            nearness = clamp((far - at_depth) / max(far - near, 1e-12), 0.0, 1.0)
+            return style["far_level"] + (1.0 - style["far_level"]) * nearness
+
+        # Facing: the normal against the direction toward the eye, per face and per vertex
+        corners = points[triangles]
+        normals = cross(corners[:, 1] - corners[:, 0], corners[:, 2] - corners[:, 0])
+        vertex_normals = zeros(points.shape)
+        for corner in range(3):
+            add.at(vertex_normals, triangles[:, corner], normals)
+
+        toward = self._toward_eye(corners.mean(axis=1))
+        unit = normals / clamp(norm(normals, axis=-1, keepdims=True), 1e-12, None)
+        facing = einsum("na, na -> n", unit, toward)
+        vertex_facing = einsum("na, na -> n", vertex_normals, self._toward_eye(points))
+
+        # Contour: where the vertex facing changes sign, inked lighter with depth
+        for contour in _contours(points, triangles, vertex_facing):
+            contour_page, contour_depth = self.camera.project(contour)
+            stroke = _wobble(contour_page, 0.6 * units_per_point, rng, samples=4 * len(contour_page))
+            shade = level(interp(linspace(0, 1, len(stroke)), linspace(0, 1, len(contour_depth)), contour_depth))
+            segments = stack([stroke[:-1], stroke[1:]], axis=1)
+            axes.add_collection(
+                LineCollection(
+                    segments,
+                    linewidths=WEIGHTS[style["weight"]] * (0.55 + 0.45 * shade[:-1]),
+                    colors=[self.theme.gray(value) for value in shade[:-1]],
+                    capstyle="round",
+                    zorder=zorder + 1e-5,
+                )
+            )
+
+        if style["stipple"] > 0:
+            # Stipple: densest where the surface turns edge-on, heavier away from the light, lighter far away
+            light = einsum("ab, a -> b", self.camera.frame, asarray(style["light"], dtype=float))
+            light = light / norm(light)
+            front = unit * where(facing >= 0, 1.0, -1.0)[:, None]
+            shadow = 0.5 * (1.0 - front @ light)
+            rim = exponential(-((np_abs(facing) / 0.28) ** 0.9))
+            density = style["stipple"] * (0.012 + 0.95 * rim * (0.3 + 0.7 * shadow))
+
+            page_corners = page[triangles]
+            first_side, second_side = page_corners[:, 1] - page_corners[:, 0], page_corners[:, 2] - page_corners[:, 0]
+            spans = first_side[:, 0] * second_side[:, 1] - first_side[:, 1] * second_side[:, 0]
+            spacing = 1.25 * units_per_point
+            counts = rng.poisson(0.5 * np_abs(spans) / spacing**2 * clamp(density, 0.0, 1.0))
+            owner = repeat(arange(len(triangles)), counts)
+            first, second = rng.uniform(size=(2, len(owner)))
+            is_folded = first + second > 1.0
+            first, second = where(is_folded, 1.0 - first, first), where(is_folded, 1.0 - second, second)
+            base = page_corners[owner, 0]
+            dots = (
+                base
+                + first[:, None] * (page_corners[owner, 1] - base)
+                + second[:, None] * (page_corners[owner, 2] - base)
+            )
+
+            shade = level(depth[triangles].mean(axis=1)[owner])
+            sizes = rng.uniform(0.08, 0.36, size=len(owner)) * (0.5 + 0.5 * shade)
+            colors = [self.theme.gray(value) for value in shade]
+            axes.scatter(*dots.T, s=sizes, c=colors, linewidths=0, zorder=zorder)
+
+    def _toward_eye(self, points: NDArray) -> NDArray:
+        """Unit directions from points toward the eye; for an orthographic camera, the view direction."""
+        if self.camera.fov > 0:
+            eye = asarray(self.camera.focal_point) + self.camera.distance * self.camera.view_direction
+            toward = eye - points
+            result = toward / norm(toward, axis=-1, keepdims=True)
+
+        else:
+            result = zeros(points.shape) + self.camera.view_direction
+
+        return result
 
     def _render_surface(self, axes, page, mark, zorder, units_per_point, rng) -> None:
         style = mark.style
@@ -675,6 +803,60 @@ def _wobble(polyline: NDArray, amplitude: float, rng, samples: int | None = None
     displaced = resampled + (amplitude * noise * envelope)[:, None] * normal
 
     return displaced
+
+
+def _contours(points: NDArray, triangles: NDArray, values: NDArray) -> list[NDArray]:
+    """
+    Polylines along the zero set of a function given at the vertices of a triangle mesh.
+
+    On each edge whose ends differ in sign the crossing is interpolated
+    linearly; the crossings of a triangle are joined, and segments sharing an
+    edge are chained, so a closed contour comes back as one closed polyline.
+    """
+    crossings = {}
+
+    def crossing(a: int, b: int) -> tuple[int, int]:
+        key = (min(a, b), max(a, b))
+        if key not in crossings:
+            low, high = key
+            share = values[low] / (values[low] - values[high])
+            crossings[key] = points[low] + share * (points[high] - points[low])
+
+        return key
+
+    segments = []
+    for a, b, c in triangles:
+        keys = [crossing(i, j) for i, j in ((a, b), (b, c), (c, a)) if (values[i] > 0) != (values[j] > 0)]
+        if len(keys) == 2:
+            segments.append(keys)
+
+    touching = defaultdict(list)
+    for n, keys in enumerate(segments):
+        for key in keys:
+            touching[key].append(n)
+
+    used = [False] * len(segments)
+    chains = []
+    for n in range(len(segments)):
+        if not used[n]:
+            used[n] = True
+            chain = list(segments[n])
+            for is_forward in (True, False):
+                end = chain[-1] if is_forward else chain[0]
+                following = [m for m in touching[end] if not used[m]]
+                while following:
+                    m = following[0]
+                    used[m] = True
+                    end = segments[m][1] if segments[m][0] == end else segments[m][0]
+                    if is_forward:
+                        chain.append(end)
+                    else:
+                        chain.insert(0, end)
+                    following = [k for k in touching[end] if not used[k]]
+
+            chains.append(stack([crossings[key] for key in chain]))
+
+    return chains
 
 
 def _arrowhead(axes, tail: NDArray, tip: NDArray, length: float, color: RGB, zorder: float) -> None:

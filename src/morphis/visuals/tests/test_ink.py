@@ -381,3 +381,47 @@ class TestSurface:
         sketch.surface(mesh.vertices.data, mesh.cells.cells, colors=colors, dots=mesh.vertices.data[:3])
         path = sketch.save(tmp_path / "nested" / "torus.png", dpi=40)
         assert path.exists()
+
+
+class TestShell:
+    def sphere(self):
+        from numpy import cos, sin
+
+        from morphis.elements import metric
+        from morphis.manifold import Circle, Interval, Patch
+
+        return Patch(
+            lambda u, v: [sin(v) * cos(u), sin(v) * sin(u), cos(v)], Circle() * Interval(0.05, 3.09), metric(space=3)
+        ).mesh((64, 32))
+
+    def test_contour_of_a_sphere_is_its_silhouette(self):
+        from numpy import concatenate
+
+        from morphis.visuals.ink.sketch import _contours
+
+        mesh = self.sphere()
+        points = mesh.vertices.data
+        camera = Camera(azimuth=0.0, elevation=0.0, fov=0.0)
+        cells = mesh.cells.cells
+        triangles = concatenate([cells[:, [0, 1, 3]], cells[:, [0, 3, 2]]])
+        normals_toward_eye = points @ camera.view_direction  # a sphere's normal is its position
+
+        # The silhouette great circle, cut in two by the open caps at the poles
+        contours = _contours(points, triangles, normals_toward_eye)
+        assert len(contours) == 2
+        for contour in contours:
+            assert_allclose(contour @ camera.view_direction, 0.0, atol=1e-12)
+            assert norm(contour, axis=-1).min() > 0.99
+
+    def test_renders_contour_and_stipple(self, tmp_path):
+        mesh = self.sphere()
+        sketch = Sketch(camera=Camera(azimuth=20.0, elevation=25.0), seed=2)
+        sketch.shell(mesh.vertices.data, mesh.cells.cells)
+        axes = sketch.render(dpi=40).axes[0]
+
+        assert any(
+            len(collection.get_segments()) > 10
+            for collection in axes.collections
+            if hasattr(collection, "get_segments")
+        )
+        assert any(collection.get_offsets().shape[0] > 100 for collection in axes.collections)
