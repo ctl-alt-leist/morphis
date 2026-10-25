@@ -157,7 +157,7 @@ animate(partial(create_torus_sketch, theme), times, output, frame_rate=FRAME_RAT
 
 ## The State Itself
 
-The torus is where the state goes once its global phase is set aside. The second figure keeps everything, and draws $\mathbf{ψ}(t)$ as the conjugate-planes figure draws its qubit, an arrow in the state space $\mathcal{V}$ with the path it has traced, without drawing any conjugate plane. With $c_k$ the amplitude on $|k⟩$ at $t = 0$, the state is:
+The torus is where the state goes once its global phase is set aside. The second figure keeps everything, and draws $\mathbf{ψ}(t)$ as the conjugate-planes figure draws its qubit, in the state space $\mathcal{V}$ with the path it has traced, without drawing any conjugate plane. The state is drawn as a point at the head of its path. With $c_k$ the amplitude on $|k⟩$ at $t = 0$, the state is:
 
 ```math
 \mathbf{ψ}(t) = \sum_k \left[ \mathrm{Re}\left( c_k \, e^{-i E_k t} \right) \mathbf{e}_k + \mathrm{Im}\left( c_k \, e^{-i E_k t} \right) \mathbf{e}_{\dot k} \right]
@@ -205,12 +205,13 @@ Under this map each mode's circle of radius $a_k$ in its conjugate plane is draw
 ```python
 path = STATE_SCALE * sketch.drawn(evolved_state(linspace(0.0, t, count)))
 ...
-sketch.vector(evolved_state(t), scale=STATE_SCALE, weight="heavy", label=r"$\mathbf{ψ}$", label_offset=14, label_size=15)
+sketch.point(path[-1], radius=4.0)
+sketch.label(r"$\mathbf{ψ}$", path[-1], offset=(10, 8), size=15)
 ```
 
-The still ends at $t = 47.14$, where the drawn state lies broadside to the page, and the animation traces the path from $t = 0$ to 50.
+The still shows the path from $t = 0$ to 50 with the state at its end, and the animation traces it.
 
-![The state ψ as an arrow in a stippled state space, with the tangled path of loops and cusps it has traced, and a key of six equal basis directions set out at the side](../../figures/qutrit-evolution/qutrit-trajectory.png)
+![The state ψ as a point in a stippled state space, at the head of the tangled path of loops and cusps it has traced, and a key of six equal basis directions set out at the side](../../figures/qutrit-evolution/qutrit-trajectory.png)
 
 ![The state ψ turning and tracing its path, the three modes beating at their own rates](../../figures/qutrit-evolution/qutrit-trajectory.gif)
 

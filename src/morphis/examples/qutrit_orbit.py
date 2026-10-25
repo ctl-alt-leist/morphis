@@ -203,13 +203,10 @@ EQUIANGULAR = Projection.linear(
 )
 
 TRAJECTORY_DURATION = 50.0
-
-# The still ends where the drawn state lies broadside to the page
-TRAJECTORY_STILL = 47.14
 TRAJECTORY_SAMPLES = 7501
 TRAJECTORY_CAMERA = Camera(azimuth=180.0, elevation=20.0, distance=14.0, fov=16.0)
 
-# Where the state is drawn from and how large, and where the key of the six directions is set out
+# How large the state's path is drawn, and where the key of the six directions is set out
 STATE_SCALE = 2.3
 KEY_ORIGIN = (2.45, 0.0, -1.0)
 KEY_LENGTH = 0.7
@@ -226,8 +223,8 @@ def evolved_state(t: NDArray) -> Vector:
     return Vector.from_amplitudes(turned, SPACE)
 
 
-def create_trajectory_sketch(theme: str = "ink", t: float = TRAJECTORY_STILL) -> Sketch:
-    """The state ψ(t) and the path it has traced up to time t, through the equiangular projection."""
+def create_trajectory_sketch(theme: str = "ink", t: float = TRAJECTORY_DURATION) -> Sketch:
+    """The state ψ(t), as a point, and the path it has traced up to time t, through the equiangular projection."""
     sketch = Sketch(camera=TRAJECTORY_CAMERA, projection=EQUIANGULAR, size=(8.0, 6.0), seed=6, theme=theme)
     sketch.space(OrganicSpace(seed=3, stretch=(1.45, 1.15, 1.1), size=2.45))
 
@@ -245,9 +242,9 @@ def create_trajectory_sketch(theme: str = "ink", t: float = TRAJECTORY_STILL) ->
         level = TRAJECTORY_INK[1] + (TRAJECTORY_INK[0] - TRAJECTORY_INK[1]) * nearness
         sketch.curve(path[start : stop + 1], weight="fine", level=float(level))
 
-    state = evolved_state(t)
-    sketch.vector(state, scale=STATE_SCALE, weight="heavy", label=r"$\mathbf{ψ}$", label_offset=14, label_size=15)
-    sketch.point((0.0, 0.0, 0.0), radius=3.6)
+    # The state now, as a point at the head of its path
+    sketch.point(path[-1], radius=4.0)
+    sketch.label(r"$\mathbf{ψ}$", path[-1], offset=(10, 8), size=15)
 
     # The key: the six basis directions as drawn, each at the same length and the same angle to the others
     key = array(KEY_ORIGIN)
