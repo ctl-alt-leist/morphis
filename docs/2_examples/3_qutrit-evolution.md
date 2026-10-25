@@ -1,13 +1,15 @@
-# Qutrit Orbit
+# Qutrit Evolution
 
-The [conjugate-planes](2_conjugate-planes.md) qubit lives in $\mathbb{R}^4$, small enough that its two conjugate planes can be laid out side by side. A qutrit has three modes, so its state space is $\mathbb{C}^3 = \mathbb{R}^6$, and this example draws no planes at all. It draws the state's evolution $\mathbf{ψ}(t) = e^{-iHt} \mathbf{ψ}(0)$ through its phase space, the same kind of evolution as the qubit's, with three modes instead of two: the populations are conserved, the unobservable global phase is removed, and what is left is a 2-torus of relative phases, over which the state winds along a line that never closes. The torus sits on a 3-sphere, and a stereographic projection draws it in three dimensions as a torus of revolution. The code is the `qutrit_orbit` example:
+The [conjugate-planes](2_conjugate-planes.md) qubit lives in $\mathbb{R}^4$, small enough that its two conjugate planes can be laid out side by side. A qutrit has three modes, so its state space is $\mathbb{C}^3 = \mathbb{R}^6$, and this example draws no planes at all. It draws the state's evolution $\mathbf{ψ}(t) = e^{-iHt} \mathbf{ψ}(0)$, the same kind of evolution as the qubit's with three modes instead of two, in two figures.
+
+The first draws the state through its phase space with the unobservable global phase removed. The populations are conserved, and what is left is a 2-torus of relative phases, over which the state winds along a line that never closes. The torus sits on a 3-sphere, and a stereographic projection draws it as a torus of revolution. The second draws the state itself, global phase and all, as the qubit figure draws its state, through a linear projection that treats the six directions of $\mathbb{R}^6$ alike; there the three energies each turn the state at their own rate, and the trajectory's pattern is their beating. The code is the `qutrit_orbit` example:
 
 ```
-uv run python -m morphis.examples.qutrit_orbit
-uv run python -m morphis.examples.qutrit_orbit --animate
+uv run python -m morphis.examples.qutrit_orbit [torus | trajectory | all] [ink | parchment | chalkboard]
+uv run python -m morphis.examples.qutrit_orbit all ink --animate
 ```
 
-The first writes `figures/qutrit-orbit/qutrit-orbit.png` and the second `figures/qutrit-orbit/qutrit-orbit.gif`. Both print the numerical checks quoted below.
+It writes `qutrit-relative-phases` and `qutrit-trajectory`, each as a `.png` still and a `.gif` animation, to `figures/qutrit-evolution/`, and prints the numerical checks quoted below.
 
 ## The Qutrit
 
@@ -140,7 +142,7 @@ sketch.shell(
 
 The still shows the whole run, 60 time units, with the state at its end.
 
-![The torus of relative phases drawn translucent in pen and stipple as a torus of revolution, wound by the dark orbit of the state, which nearly follows the curve that turns twice around the tube for each turn around the axis](../../figures/qutrit-orbit/qutrit-orbit.png)
+![The torus of relative phases drawn translucent in pen and stipple as a torus of revolution, wound by the dark orbit of the state, which nearly follows the curve that turns twice around the tube for each turn around the axis](../../figures/qutrit-evolution/qutrit-relative-phases.png)
 
 ## The Animation
 
@@ -148,9 +150,68 @@ The animation draws 300 frames over the 60 time units. Each frame builds the ske
 
 ```python
 times = linspace(0.0, DURATION, int(ANIMATION_SECONDS * FRAME_RATE) + 1)[1:]
-animate(lambda t: create_sketch(theme, t), times, output, frame_rate=FRAME_RATE, dpi=ANIMATION_DPI)
+animate(partial(create_torus_sketch, theme), times, output, frame_rate=FRAME_RATE, dpi=ANIMATION_DPI)
 ```
 
-![The state tracing its orbit over the torus of relative phases, each loop landing beside the previous one](../../figures/qutrit-orbit/qutrit-orbit.gif)
+![The state tracing its orbit over the torus of relative phases, each loop landing beside the previous one](../../figures/qutrit-evolution/qutrit-relative-phases.gif)
 
-The same projection, from a 3-sphere to a torus of revolution, draws the qubit's [Clifford torus](4_clifford-torus.md), where the two populations are equal and the torus is minimal in $S^3$.
+## The State Itself
+
+The torus is where the state goes once its global phase is set aside. The second figure keeps everything, and draws $\mathbf{ψ}(t)$ as the conjugate-planes figure draws its qubit, an arrow in the state space $\mathcal{V}$ with the path it has traced, without drawing any conjugate plane. With $c_k$ the amplitude on $|k⟩$ at $t = 0$, the state is:
+
+```math
+\mathbf{ψ}(t) = \sum_k \left[ \mathrm{Re}\left( c_k \, e^{-i E_k t} \right) \mathbf{e}_k + \mathrm{Im}\left( c_k \, e^{-i E_k t} \right) \mathbf{e}_{\dot k} \right]
+```
+
+a rotation by $-E_k t$ in each of the three conjugate planes at once, at three different rates. The periods $2π / |E_k|$ are 8.36, 25.03, and 4.83, and $E_1 < 0$, so mode 1 turns the other way from modes 2 and 3.
+
+```python
+def evolved_state(t: NDArray) -> Vector:
+    amplitudes = EIGENSTATES.conj().T @ INITIAL_STATE
+    turned = exp(-1j * ENERGIES * array(t, dtype=float)[..., None]) * amplitudes
+
+    return Vector.from_amplitudes(turned, SPACE)
+```
+
+### A Projection That Favors No Direction
+
+A view onto three of the six axes would draw three directions at full length and drop the other three. The figure instead sends each basis direction to its own diagonal of an icosahedron. The six diagonals are equiangular lines, every pair meeting at $\arccos(1/\sqrt{5}) ≈ 63.4°$, and they form a tight frame: for the unit diagonals $\mathbf{d}_a$,
+
+```math
+\sum_{a=1}^{6} \mathbf{d}_a \mathbf{d}_a^{\mathsf{T}} = 2 \, \mathbb{1}
+```
+
+so the map $\mathbf{e}_a \mapsto \mathbf{d}_a / \sqrt{2}$ has orthonormal rows. It is the orthogonal projection of $\mathbb{R}^6$ onto a 3-space at 45° to every basis direction, so every direction is drawn at the same length, $1 / \sqrt{2}$. In code it is a `Projection.linear`:
+
+```python
+GOLDEN = (1 + sqrt(5)) / 2
+DIAGONALS = array([
+    [0, 1, GOLDEN],
+    [GOLDEN, 0, 1],
+    [0, 1, -GOLDEN],
+    [-GOLDEN, 0, 1],
+    [1, GOLDEN, 0],
+    [-1, GOLDEN, 0],
+]) / sqrt(1 + GOLDEN**2)
+
+LABELS = (1, Dot(1), 2, Dot(2), 3, Dot(3))
+EQUIANGULAR = Projection.linear(SPACE, {label: tuple(image / sqrt(2)) for label, image in zip(LABELS, DIAGONALS, strict=True)})
+```
+
+The sign of each diagonal and the camera are chosen together so the six drawn directions also spread evenly on the page: from azimuth 180° and elevation 20° the key of the six directions, set out beside the state, is nearly a regular hexagon, its arrows 59° apart.
+
+Under this map each mode's circle of radius $a_k$ in its conjugate plane is drawn as an ellipse with semi-axes $0.851 \, a_k$ and $0.526 \, a_k$, the same shape for all three modes and in three different planes of the drawing. The drawn state is the sum of three points running around those ellipses at the rates $E_k$. The pattern of the trajectory is that sum. Its loops come from the fast mode 3 riding on the slower two, its cusps are where the velocity of the drawn point in 3D points straight at the eye, and it never repeats, since the rates are incommensurate. The path is inked darker the nearer it is.
+
+```python
+path = STATE_SCALE * sketch.drawn(evolved_state(linspace(0.0, t, count)))
+...
+sketch.vector(evolved_state(t), scale=STATE_SCALE, weight="heavy", label=r"$\mathbf{ψ}$", label_offset=14, label_size=15)
+```
+
+The still ends at $t = 47.14$, where the drawn state lies broadside to the page, and the animation traces the path from $t = 0$ to 50.
+
+![The state ψ as an arrow in a stippled state space, with the tangled path of loops and cusps it has traced, and a key of six equal basis directions set out at the side](../../figures/qutrit-evolution/qutrit-trajectory.png)
+
+![The state ψ turning and tracing its path, the three modes beating at their own rates](../../figures/qutrit-evolution/qutrit-trajectory.gif)
+
+The same projection as the first figure, from a 3-sphere to a torus of revolution, draws the qubit's [Clifford torus](4_clifford-torus.md), where the two populations are equal and the torus is minimal in $S^3$.

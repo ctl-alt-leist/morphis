@@ -125,4 +125,4 @@ The parallels crowd together on the inner side of the drawn torus. They are even
 
 ![The Clifford torus drawn by stereographic projection as a torus of revolution in hairline circles around a dashed vertical axis, with one bold phase orbit running as a slanted circle from ψ to e to the iα times ψ](../../figures/higher-dimensional/clifford-torus.png)
 
-The [qutrit orbit](3_qutrit-orbit.md) draws a torus of relative phases with unequal populations by the same kind of projection, and there the orbit of the state is a line of irrational slope instead of a $(1, 1)$ circle.
+The [qutrit evolution](3_qutrit-evolution.md) draws a torus of relative phases with unequal populations by the same kind of projection, and there the orbit of the state is a line of irrational slope instead of a $(1, 1)$ circle.

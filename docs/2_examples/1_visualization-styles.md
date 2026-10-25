@@ -166,7 +166,7 @@ GIF frame delays are whole centiseconds and browsers slow any delay under 20 ms,
 | Example | Space | Renderer | Projection |
 |---|---|---|---|
 | [Conjugate planes](2_conjugate-planes.md) | a qubit's two modes, $\mathbb{R}^4$ | `Sketch` | `Projection.linear`, unfaithful by design |
-| [Qutrit orbit](3_qutrit-orbit.md) | a spin-1, $\mathbb{C}^3 = \mathbb{R}^6$ | `Sketch` | orthographic to $\mathbb{R}^4$, then stereographic from a 3-sphere |
+| [Qutrit evolution](3_qutrit-evolution.md) | a spin-1, $\mathbb{C}^3 = \mathbb{R}^6$ | `Sketch` | orthographic to $\mathbb{R}^4$, then stereographic from a 3-sphere; and an equiangular linear map of all six directions |
 | [Clifford torus](4_clifford-torus.md) | a qubit, $S^3 \subset \mathbb{R}^4$ | `Sketch` | `Stereographic` |
 | [Tesseract](5_tesseract.md) | $\mathbb{R}^4$ | `Scene` | `Orthographic` and `Perspective` |
 | [Calabi–Yau slice](6_calabi-yau-slice.md) | a complex curve in $\mathbb{C}^2 = \mathbb{R}^4$ | `Sketch` | `Projection.orthographic` onto a tilted screen |

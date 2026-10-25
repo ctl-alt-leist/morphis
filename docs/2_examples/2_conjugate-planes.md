@@ -60,7 +60,7 @@ R(t) &= \exp\left( -\tfrac{1}{2} ω_a t \, \mathbf{e}_{a \dot a} \right) \exp\le
 
 The two blades share no direction, so they commute, and the product of the two exponentials is the exponential of the sum $-\tfrac{1}{2} t \, (ω_a \mathbf{e}_{a \dot a} + ω_b \mathbf{e}_{b \dot b})$. That generator is not a simple bivector: it is a double rotation of $\mathbb{R}^4$, of the same kind as the isoclinic turn of the [tesseract](5_tesseract.md), with unequal rates here. Each factor turns its plane from $\mathbf{e}_m$ toward $\mathbf{e}_{\dot m}$, the right-handed sense of $\mathbf{e}_{m \dot m}$, and keeps the shadow's length. This is the evolution $z^m \mapsto e^{i ω_m t} z^m$. The Schrödinger evolution $e^{-i E_m t / \hbar}$ turns each plane the opposite way, and the example chooses the right-handed sense for the drawing.
 
-The frequencies are $ω_a = 1$ and $ω_b = 2$. Their ratio is rational, so the state returns to its start after the period $2π / ω_a$, and its path in $\mathcal{V}$ is a closed curve on the torus of fixed $|z^a|$ and $|z^b|$, winding once around plane $a$ while it winds twice around plane $b$. A ratio that is irrational gives an orbit that never closes, which is the case of the [qutrit orbit](3_qutrit-orbit.md). The whole orbit is computed once, as a lot of 721 rotors on a time grid:
+The frequencies are $ω_a = 1$ and $ω_b = 2$. Their ratio is rational, so the state returns to its start after the period $2π / ω_a$, and its path in $\mathcal{V}$ is a closed curve on the torus of fixed $|z^a|$ and $|z^b|$, winding once around plane $a$ while it winds twice around plane $b$. A ratio that is irrational gives an orbit that never closes, which is the case of the [qutrit evolution](3_qutrit-evolution.md). The whole orbit is computed once, as a lot of 721 rotors on a time grid:
 
 ```python
 from morphis.transforms import rotor
@@ -141,4 +141,4 @@ animate(lambda t: create_sketch(theme, t), times, output, frame_rate=FRAME_RATE,
 
 ![The state and its two shadows turning over one period, the shadow in plane b twice as fast as the shadow in plane a](../../figures/conjugate-planes/conjugate-planes.gif)
 
-The next example, the [qutrit orbit](3_qutrit-orbit.md), adds a third mode. Its state space is $\mathbb{R}^6$, three conjugate planes are too many to lay out this way, and that figure draws the state's path through its phase space instead.
+The next example, the [qutrit evolution](3_qutrit-evolution.md), adds a third mode. Its state space is $\mathbb{R}^6$, three conjugate planes are too many to lay out this way, and that figure draws the state's path through its phase space instead.
