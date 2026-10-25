@@ -22,7 +22,7 @@ rigid rotation by ω_m t inside each conjugate plane, the sandwich
 
 The two factors commute because the planes are orthogonal. Each shadow turns
 in the right-handed sense of its plane, from e_m toward e_ṁ, keeping its length,
-and the drawn state is the depiction of the evolved 4D state at every instant.
+and the drawn state is the projection of the evolved 4D state at every instant.
 The Schrödinger rotor U = e^{H t/2} with H = E_m e_{mṁ} turns the opposite way;
 the right-handed sense is chosen here.
 
@@ -30,7 +30,7 @@ In code, e_m is `E_M` and its partner e_ṁ is `F_M`.
 
 Run:
     uv run python -m morphis.examples.conjugate_planes [output.png] [ink|parchment|chalkboard]
-    uv run python -m morphis.examples.conjugate_planes --animate [output.mp4] [theme]
+    uv run python -m morphis.examples.conjugate_planes --animate [output.gif | output.mp4] [theme]
 """
 
 import sys
@@ -41,7 +41,8 @@ from numpy.linalg import norm
 
 from morphis.elements import Vector, basis_vectors, euclidean_metric
 from morphis.transforms import rotor
-from morphis.visuals.ink import Camera, Depiction, OrganicSpace, Sketch, animate
+from morphis.visuals.ink import Camera, OrganicSpace, Sketch, animate
+from morphis.visuals.projective import Projection
 
 
 # Mode frequencies ω_m = E_m / ħ; their ratio sets the closed path the state traces
@@ -97,12 +98,13 @@ def create_sketch(theme: str = "ink", t: float = 0.0) -> Sketch:
     state = evolve(INITIAL_STATE, t)
     shadow_a, shadow_b = shadows(state)
 
-    # Depiction: both mode directions e_a and e_b along x; plane a stands upright, plane b lies flat
-    depiction = Depiction(METRIC, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
+    # The deliberately unfaithful linear projection: both mode directions e_a and e_b along x;
+    # plane a stands upright, plane b lies flat
+    projection = Projection.linear(METRIC, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
 
     sketch = Sketch(
         camera=Camera(azimuth=-24.0, elevation=34.0, distance=16.0, fov=16.0),
-        depiction=depiction,
+        projection=projection,
         size=(8.0, 6.0),
         seed=4,
         theme=theme,
@@ -164,7 +166,7 @@ if __name__ == "__main__":
     arguments = [a for a in sys.argv[1:] if a != "--animate"]
     is_animation = "--animate" in sys.argv[1:]
     default = (
-        "figures/conjugate-planes/conjugate-planes.mp4"
+        "figures/conjugate-planes/conjugate-planes.gif"
         if is_animation
         else "figures/conjugate-planes/conjugate-planes.png"
     )

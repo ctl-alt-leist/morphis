@@ -7,8 +7,16 @@ so the layout, the stroke scale, and the depth ordering are all settled from
 the complete scene.
 
 Geometry passed as a morphis Vector is true-space geometry, carried into the
-drawing through the sketch's Depiction. Geometry passed as a plain triple is a
-drawing-space placement: where the figure chooses to put something.
+drawing through the sketch's projection: a View (Orthographic, Perspective,
+Stereographic) resolved against the vector's metric, or a given Projection such
+as Projection.linear, the deliberately unfaithful map that sends each true
+direction to a chosen drawing direction. Geometry passed as a plain triple is
+a drawing-space placement: where the figure chooses to put something.
+
+Points (positions, curves, surfaces, labels) may go through any projection.
+Marks that also take displacements (a vector's arrow, a plane's spanning
+vectors, a circle's plane) set them out from a drawing-space placement, which
+needs an affine projection, one whose displacements have images of their own.
 """
 
 from __future__ import annotations
@@ -50,10 +58,10 @@ from numpy.typing import NDArray
 
 from morphis.elements.vector import Vector
 from morphis.visuals.ink.camera import Camera
-from morphis.visuals.ink.depiction import Depiction
 from morphis.visuals.ink.fonts import font_settings
 from morphis.visuals.ink.space import OrganicSpace
 from morphis.visuals.ink.theme import RGB, InkTheme, get_ink_theme
+from morphis.visuals.projective import Orthographic, Projection, View, resolve
 
 
 Point = Vector | tuple[float, float, float] | NDArray
@@ -81,7 +89,8 @@ class Sketch:
     Args:
         camera: Viewpoint onto the drawing space
         theme: Ink theme name or InkTheme ("ink", "parchment", "chalkboard")
-        depiction: Map from the true space into the drawing space
+        projection: View or Projection from the true space into the drawing space;
+            orthographic onto the directions 1, 2, 3 by default
         size: Figure size in inches
         seed: Seed for stipple and pen wobble, so renders are repeatable
     """
@@ -90,13 +99,13 @@ class Sketch:
         self,
         camera: Camera | None = None,
         theme: str | InkTheme = "ink",
-        depiction: Depiction | None = None,
+        projection: View | Projection | None = None,
         size: tuple[float, float] = (8.0, 6.0),
         seed: int = 0,
     ):
         self.camera = camera or Camera()
         self.theme = get_ink_theme(theme)
-        self.depiction = depiction
+        self.projection = Orthographic() if projection is None else projection
         self.size = size
         self.seed = seed
         self.marks: list[Mark] = []
@@ -107,10 +116,32 @@ class Sketch:
     # =========================================================================
 
     def drawn(self, point: Point) -> NDArray:
-        """Drawing coordinates of a true-space Vector or a drawing-space triple."""
-        coordinates = self.depiction(point) if isinstance(point, Vector) else asarray(point, dtype=float)
+        """Drawing coordinates of a true-space point (a Vector of any lot) or a drawing-space triple."""
+        is_true = isinstance(point, Vector)
+        coordinates = resolve(self.projection, point.metric)(point) if is_true else asarray(point, dtype=float)
 
         return coordinates
+
+    def carried(self, displacement: Point) -> NDArray:
+        """
+        Drawing displacement of a true-space Vector, or a drawing-space triple as given.
+
+        Raises:
+            ValueError: if the projection is not affine, since a central
+                projection draws a displacement differently at every point.
+        """
+        is_true = isinstance(displacement, Vector)
+        if is_true:
+            projection = resolve(self.projection, displacement.metric)
+            if not projection.is_affine:
+                raise ValueError(f"{projection!r} is not affine, so a displacement has no drawing of its own")
+
+            result = projection(displacement) - projection(zeros(displacement.dim))
+
+        else:
+            result = asarray(displacement, dtype=float)
+
+        return result
 
     def _ink(self, color: str | RGB | None, level: float | None = None) -> RGB:
         """Resolve a color name, RGB triple, or graphite level."""
@@ -158,7 +189,7 @@ class Sketch:
             tone: Stipple density of the face
             color: Edge ink
         """
-        origin, du, dv = self.drawn(at), self.drawn(u), self.drawn(v)
+        origin, du, dv = self.drawn(at), self.carried(u), self.carried(v)
         (s0, s1), (t0, t1) = span
         corners = asarray([origin + s * du + t * dv for s, t in ((s0, t0), (s1, t0), (s1, t1), (s0, t1))])
         style = {"grid": grid, "tone": tone, "color": color, "origin": origin, "du": du, "dv": dv, "span": span}
@@ -189,7 +220,7 @@ class Sketch:
             Drawing coordinates of the tip, for attaching labels and construction lines
         """
         tail = self.drawn(at)
-        tip = tail + scale * self.drawn(v)
+        tip = tail + scale * self.carried(v)
         style = {
             "weight": weight,
             "color": color,
@@ -227,7 +258,7 @@ class Sketch:
         level: float = 0.6,
     ) -> None:
         """Draw a circle (or arc) of the given radius in the plane of unit directions u and v."""
-        du, dv = self.drawn(u), self.drawn(v)
+        du, dv = self.carried(u), self.carried(v)
         du, dv = du / norm(du), dv / norm(dv)
         angles = linspace(arc[0], arc[1], 160)
         points = self.drawn(center) + radius * (cos(angles)[:, None] * du + sin(angles)[:, None] * dv)
@@ -236,14 +267,15 @@ class Sketch:
 
     def curve(
         self,
-        points: list[Point] | NDArray,
+        points: Vector | list[Point] | NDArray,
         dashed: bool = False,
         arrow: bool = False,
         weight: str = "fine",
         level: float = 0.6,
     ) -> None:
-        """Draw a polyline through drawing-space points (true-space Vectors are depicted)."""
-        drawn = asarray([self.drawn(p) for p in points]) if isinstance(points, list) else asarray(points, dtype=float)
+        """Draw a polyline through points: a true-space Vector with a lot, a list of points, or drawing triples."""
+        is_list = isinstance(points, list)
+        drawn = asarray([self.drawn(p) for p in points]) if is_list else self.drawn(points).reshape(-1, 3)
         style = {"weight": weight, "level": level, "arrow": arrow, "dashed": dashed}
         self.marks.append(Mark("curve", drawn, style))
 

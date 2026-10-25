@@ -1,7 +1,7 @@
 """
 Unit tests for ink sketches.
 
-Covers the camera projection, the depiction from a true space into the drawing
+Covers the camera projection, the projection from a true space into the drawing
 space, the seeded organic space, the ink themes, and an end-to-end render. No
 window is opened; sketches render to an off-screen matplotlib Figure or file.
 """
@@ -12,8 +12,9 @@ from numpy.linalg import norm
 from numpy.testing import assert_allclose
 
 from morphis.elements import Vector, basis_vectors, euclidean_metric, lorentzian_metric, pga_metric
-from morphis.visuals.ink import CHALKBOARD, INK, Camera, Depiction, OrganicSpace, Sketch, animate, get_ink_theme
+from morphis.visuals.ink import CHALKBOARD, INK, Camera, OrganicSpace, Sketch, animate, get_ink_theme
 from morphis.visuals.ink.sketch import Mark
+from morphis.visuals.projective import Orthographic, Projection, Stereographic
 
 
 # =============================================================================
@@ -64,64 +65,66 @@ class TestCamera:
 
 
 # =============================================================================
-# Depiction
+# Projection into the Drawing Space
 # =============================================================================
 
 
-class TestDepiction:
+class TestDrawingProjection:
     def test_identity_for_3d_euclidean(self):
         g = euclidean_metric(3)
         v = Vector(array([1.0, 2.0, 3.0]), grade=1, metric=g)
 
-        assert_allclose(Depiction(g)(v), [1.0, 2.0, 3.0])
+        assert_allclose(Sketch().drawn(v), [1.0, 2.0, 3.0])
 
     def test_images_keyed_by_user_index(self):
         g = euclidean_metric(4)
         e1, e2, e3, e4 = basis_vectors(g)
-        depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
+        sketch = Sketch(projection=Projection.linear(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)}))
 
-        assert_allclose(depiction(e1), [1, 0, 0])
-        assert_allclose(depiction(e2), [0, 0, 1])
-        assert_allclose(depiction(e3), [1, 0, 0])
-        assert_allclose(depiction(e4), [0, 1, 0])
+        assert_allclose(sketch.drawn(e1), [1, 0, 0])
+        assert_allclose(sketch.drawn(e2), [0, 0, 1])
+        assert_allclose(sketch.drawn(e3), [1, 0, 0])
+        assert_allclose(sketch.drawn(e4), [0, 1, 0])
 
     def test_shared_image_adds(self):
         # Two true directions drawn along one page direction combine in the drawing
         g = euclidean_metric(4)
-        depiction = Depiction(g, {1: (1, 0, 0), 3: (1, 0, 0)})
+        sketch = Sketch(projection=Projection.linear(g, {1: (1, 0, 0), 3: (1, 0, 0)}))
         v = Vector(array([0.5, 9.0, 0.25, 9.0]), grade=1, metric=g)
 
-        assert_allclose(depiction(v), [0.75, 0.0, 0.0])
-
-    def test_linear(self):
-        g = euclidean_metric(4)
-        depiction = Depiction(g, {1: (1, 2, 0), 2: (0, 1, 3), 3: (2, 0, 1), 4: (0, 0, 1)})
-        u = Vector(array([1.0, -2.0, 0.5, 3.0]), grade=1, metric=g)
-        v = Vector(array([0.0, 1.0, -1.0, 2.0]), grade=1, metric=g)
-
-        assert_allclose(depiction(u + 2.0 * v), depiction(u) + 2.0 * depiction(v))
+        assert_allclose(sketch.drawn(v), [0.75, 0.0, 0.0])
 
     def test_lot_vectors(self):
         g = euclidean_metric(3)
         v = Vector(array([[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]]), grade=1, metric=g)
 
-        assert Depiction(g)(v).shape == (2, 3)
+        assert Sketch().drawn(v).shape == (2, 3)
 
     def test_euclidean_index_zero_raises(self):
         with pytest.raises(IndexError):
-            Depiction(euclidean_metric(4), {0: (1, 0, 0)})
+            Projection.linear(euclidean_metric(4), {0: (1, 0, 0)})
 
     def test_lorentzian_time_is_index_zero(self):
         g = lorentzian_metric(4)
         t = Vector(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=g)
 
-        assert_allclose(Depiction(g, {0: (0, 0, 1)})(t), [0, 0, 1])
+        assert_allclose(Sketch(projection=Projection.linear(g, {0: (0, 0, 1)})).drawn(t), [0, 0, 1])
 
     def test_pga_ideal_is_index_zero(self):
         g = pga_metric(3)
         ideal = Vector(array([1.0, 0.0, 0.0, 0.0]), grade=1, metric=g)
 
-        assert_allclose(Depiction(g, {0: (0, 1, 0)})(ideal), [0, 1, 0])
+        assert_allclose(Sketch(projection=Projection.linear(g, {0: (0, 1, 0)})).drawn(ideal), [0, 1, 0])
+
+    def test_central_projection_draws_points_not_displacements(self):
+        g = euclidean_metric(4)
+        e1, _, _, e4 = basis_vectors(g)
+        sketch = Sketch(projection=Stereographic(radius=2.0))
+        sketch.curve(Vector(array([[1.0, 0, 0, 0], [0, 1.0, 0, 1.0]]), grade=1, metric=g))
+
+        assert_allclose(sketch.marks[-1].points[1], [0.0, 2.0, 0.0])
+        with pytest.raises(ValueError):
+            sketch.vector(e1, at=e4)
 
 
 # =============================================================================
@@ -213,8 +216,8 @@ class TestInkTheme:
 def conjugate_sketch() -> Sketch:
     g = euclidean_metric(4)
     e_a, f_a, _, f_b = basis_vectors(g)
-    depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
-    sketch = Sketch(depiction=depiction, size=(4.0, 3.0))
+    projection = Projection.linear(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
+    sketch = Sketch(projection=projection, size=(4.0, 3.0))
     sketch.space(OrganicSpace(seed=3))
     sketch.plane(e_a, f_a, at=(-2.0, 0.0, 0.0))
     tip = sketch.vector(e_a + f_b, label="$ψ$")
@@ -230,20 +233,20 @@ class TestSketch:
     def test_vector_is_depicted(self):
         g = euclidean_metric(4)
         e1, _, _, e4 = basis_vectors(g)
-        sketch = Sketch(depiction=Depiction(g, {1: (1, 0, 0), 4: (0, 1, 0)}))
+        sketch = Sketch(projection=Projection.linear(g, {1: (1, 0, 0), 4: (0, 1, 0)}))
         tip = sketch.vector(e1 + e4, at=(0.0, 0.0, 1.0), scale=2.0)
 
         assert_allclose(tip, [2.0, 2.0, 1.0])
 
     def test_triples_are_placements(self):
-        sketch = Sketch(depiction=Depiction(euclidean_metric(4), {}))
+        sketch = Sketch(projection=Orthographic())
 
         assert_allclose(sketch.drawn((1.0, 2.0, 3.0)), [1.0, 2.0, 3.0])
 
     def test_plane_corners(self):
         g = euclidean_metric(3)
         e1, _, e3 = basis_vectors(g)
-        sketch = Sketch(depiction=Depiction(g))
+        sketch = Sketch()
         sketch.plane(e1, e3, at=(1.0, 0.0, 0.0), span=((0.0, 2.0), (0.0, 1.0)))
         mark: Mark = sketch.marks[-1]
 
@@ -291,7 +294,7 @@ class TestSketch:
 def moving_sketch(t: float) -> Sketch:
     g = euclidean_metric(3)
     e1, e2, _ = basis_vectors(g)
-    sketch = Sketch(depiction=Depiction(g), size=(3.0, 2.0))
+    sketch = Sketch(size=(3.0, 2.0))
     sketch.space(OrganicSpace(seed=3))
     sketch.vector((1.0 - t) * e1 + t * e2, label="$v$")
     sketch.curve(array([[0.0, 0.0, 0.0], [t, t, 0.0], [t, 0.0, t]]), dashed=True)
@@ -368,7 +371,9 @@ class TestSurface:
         from morphis.manifold import Circle, Patch
 
         torus = Patch(
-            lambda θ, φ: [(2 + cos(φ)) * cos(θ), (2 + cos(φ)) * sin(θ), sin(φ)], Circle() * Circle(), metric(space=3)
+            lambda theta, phi: [(2 + cos(phi)) * cos(theta), (2 + cos(phi)) * sin(theta), sin(phi)],
+            Circle() * Circle(),
+            metric(space=3),
         )
         mesh = torus.mesh((12, 8))
         sketch = Sketch(seed=1)

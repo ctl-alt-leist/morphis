@@ -388,7 +388,6 @@ MODULE_GROUPS = {
             "morphis.visuals.operations",
             "morphis.visuals.ink.sketch",
             "morphis.visuals.ink.animate",
-            "morphis.visuals.ink.depiction",
             "morphis.visuals.ink.space",
             "morphis.visuals.ink.camera",
             "morphis.visuals.ink.theme",
