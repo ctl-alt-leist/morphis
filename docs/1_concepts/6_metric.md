@@ -167,10 +167,10 @@ The metric connects $V$ to $V^*$ via index raising and lowering:
 
 **Raising** (musical sharp $\sharp$):
 ```math
-\omega^\sharp = g^{-1}(\omega, \cdot) \in V, \quad \omega^m = g^{mn} \omega_n
+ω^\sharp = g^{-1}(ω, \cdot) \in V, \quad ω^m = g^{mn} ω_n
 ```
 
-where $g^{mn}$ is the inverse metric satisfying $g^{mp} g_{pn} = \delta^m_n$.
+where $g^{mn}$ is the inverse metric satisfying $g^{mp} g_{pn} = δ^m_n$.
 
 ## Metric-Dependent Operations
 

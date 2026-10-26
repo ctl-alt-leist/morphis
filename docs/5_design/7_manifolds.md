@@ -10,7 +10,7 @@ The aim is to make the mathematics of the physics notebook executable in the for
 
 **The lot is the coordinate grid.** A grid of $σ$ is a lot of shape $(N_1, \ldots, N_k)$, one axis per intrinsic coordinate, and lot axis $a$ is the $σ^a$ direction. Every operation in morphis already broadcasts over it. A field on a manifold is therefore a `Vector` whose lot is the grid; no separate field class is needed until bundles need sections.
 
-**Everything lives in the ambient algebra.** The tangent frame $\partial_a \mathbf{X}$, the tangent blade $\mathbf{t}$, the projector $P$, the normal space, and the second fundamental form $\mathbf{k}_{ab}$ are all ambient objects, so one formula holds in every dimension and signature. Quantities with manifold indices, such as $h_{ab}$, are plain $k \times k$ arrays per point. They are not `Metric` objects, because a `Metric` is a constant flat context.
+**Everything lives in the ambient algebra.** The tangent frame $∂_a \mathbf{X}$, the tangent blade $\mathbf{t}$, the projector $P$, the normal space, and the second fundamental form $\mathbf{k}_{ab}$ are all ambient objects, so one formula holds in every dimension and signature. Quantities with manifold indices, such as $h_{ab}$, are plain $k \times k$ arrays per point. They are not `Metric` objects, because a `Metric` is a constant flat context.
 
 **Frames compute; blades are views.** morphis stores a grade-$r$ element with all $d^r$ components:
 
@@ -20,7 +20,7 @@ The aim is to make the mathematics of the physics notebook executable in the for
 | tangent 3-blade in $\mathbb{R}^6$ | 216 |
 | tangent 6-blade in $\mathbb{R}^8$ (quintic threefold) | 262 144 |
 
-The tangent `Frame`, of shape $k \times d$, is what the code computes with. $\det h$ is its Gram determinant, $P(\mathbf{v}) = h^{ab} \, (\mathbf{v} \cdot \partial_b \mathbf{X}) \, \partial_a \mathbf{X}$, the normal space is its metric null space, and the Kähler angle is read from it directly. The blade $\mathbf{t}$ is built when asked for.
+The tangent `Frame`, of shape $k \times d$, is what the code computes with. $\det h$ is its Gram determinant, $P(\mathbf{v}) = h^{ab} (\mathbf{v} \cdot ∂_b \mathbf{X}) ∂_a \mathbf{X}$, the normal space is its metric null space, and the Kähler angle is read from it directly. The blade $\mathbf{t}$ is built when asked for.
 
 **The algebra specifies; the closed form implements.** Where a geometric algebra formula is exponential in $d$ when evaluated densely, the code uses the equivalent closed form, and a test checks the two agree in low dimension. The perspective meet $(\mathbf{c} \wedge \mathbf{p}) \vee \mathbf{s}$ is the main case.
 
@@ -64,14 +64,14 @@ Two complex objects are native, and they are kept distinct.
 
 **Complex dimensions**, $\mathbb{R}^{2n}$ with a structure bivector: the unit $i$ is the bivector $\mathbf{J}$, an element of the algebra. A space declared with modes pairs each representative direction $\mathbf{e}_m$ with its partner $\mathbf{e}_{\dot m}$, in the adjacent order $1, \dot 1, 2, \dot 2, \ldots$, and carries
 
-$$
+```math
 \begin{aligned}
-\mathbf{J} &= \mathbf{e}_m \wedge \mathbf{e}_{\dot m} \\ \\
+\mathbf{J} &= \mathbf{e}_m \wedge \mathbf{e}_{\dot m} \\
 J(\mathbf{v}) &= \mathbf{v} \lrcorner \mathbf{J}
 \end{aligned}
-$$
+```
 
-Every real vector of such a space has a complex reading: `v.amplitudes` returns the $n$ mode amplitudes $v^m + i \, v^{\dot m}$, just as `.on[...]` returns real components, and `Vector.from_amplitudes(z, metric)` builds the real vector from them. The amplitude carries no normalization factor; under the ket convention, which places $1 / \sqrt{2}$ in the basis, the ket amplitudes are these divided by $\sqrt{2}$. Holomorphic maps are written in ordinary complex arithmetic and land as real vectors.
+Every real vector of such a space has a complex reading: `v.amplitudes` returns the $n$ mode amplitudes $v^m + i v^{\dot m}$, just as `.on[...]` returns real components, and `Vector.from_amplitudes(z, metric)` builds the real vector from them. The amplitude carries no normalization factor; under the ket convention, which places $1 / \sqrt{2}$ in the basis, the ket amplitudes are these divided by $\sqrt{2}$. Holomorphic maps are written in ordinary complex arithmetic and land as real vectors.
 
 The vocabulary follows the Kähler appendix:
 
@@ -98,21 +98,21 @@ The vocabulary follows the Kähler appendix:
 
 ## Manifolds
 
-`Domain`, in `morphis.manifold`, is the coordinate region: a product of `Interval`s, `Circle`s, and complex regions, written with `*`, and a complex region is written with the imaginary unit, `Interval(0, π/2) + 1j * Interval(-1, 1)`. A complex coordinate $w = σ^1 + i \, σ^2$ is native: the map receives $w$ itself, and its two real coordinates are derived.
+`Domain`, in `morphis.manifold`, is the coordinate region: a product of `Interval`s, `Circle`s, and complex regions, written with `*`, and a complex region is written with the imaginary unit, `Interval(0, π/2) + 1j * Interval(-1, 1)`. A complex coordinate $w = σ^1 + i σ^2$ is native: the map receives $w$ itself, and its two real coordinates are derived.
 
-`Patch(map, domain, metric)` is a parametrization $\mathbf{X}: U \to V$. The map takes one argument per factor and returns the point as a `Vector`, as its real components, or, in a space with modes, as its complex amplitudes, so a holomorphic map is written in ordinary complex arithmetic. Derivatives are fourth-order central differences of the map, evaluated at $σ \pm h$ and $σ \pm 2h$ rather than at grid neighbors, so periodic coordinates need no care. A map of a complex coordinate is holomorphic in it, and the derivative along $\mathrm{Im} \, w$ is computed as $i$ times the derivative along $\mathrm{Re} \, w$, so $\partial_2 \mathbf{X} = J(\partial_1 \mathbf{X})$ holds exactly.
+`Patch(map, domain, metric)` is a parametrization $\mathbf{X}: U \to V$. The map takes one argument per factor and returns the point as a `Vector`, as its real components, or, in a space with modes, as its complex amplitudes, so a holomorphic map is written in ordinary complex arithmetic. Derivatives are fourth-order central differences of the map, evaluated at $σ \pm h$ and $σ \pm 2h$ rather than at grid neighbors, so periodic coordinates need no care. A map of a complex coordinate is holomorphic in it, and the derivative along $\mathrm{Im} w$ is computed as $i$ times the derivative along $\mathrm{Re} w$, so $∂_2 \mathbf{X} = J(∂_1 \mathbf{X})$ holds exactly.
 
 | Mathematics | Code |
 |-------------|------|
 | $\mathbf{X}(σ)$ | `X(σ)` |
-| $\partial_a \mathbf{X}$ | `X.tangent_frame(σ)` |
+| $∂_a \mathbf{X}$ | `X.tangent_frame(σ)` |
 | $\mathbf{t}$ | `X.tangent_blade(σ)` |
 | $h_{ab}$ | `X.induced_metric(σ)` |
 | $\sqrt{\lvert \det h \rvert}$ | `X.volume_element(σ)` |
 | $P(\mathbf{v})$, $P_\perp(\mathbf{v})$ | `X.tangent_part(v, σ)`, `X.normal_part(v, σ)` |
 | normal space | `X.normal_frame(σ)`, `X.normal_blade(σ)` |
-| $\mathbf{k}_{ab} = P_\perp(\partial_a \partial_b \mathbf{X})$ | `X.second_fundamental_form(σ)` |
-| $\mathbf{k} = \frac{1}{k} h^{ab} \, \mathbf{k}_{ab}$ | `X.mean_curvature(σ)` |
+| $\mathbf{k}_{ab} = P_\perp(∂_a ∂_b \mathbf{X})$ | `X.second_fundamental_form(σ)` |
+| $\mathbf{k} = \frac{1}{k} h^{ab} \mathbf{k}_{ab}$ | `X.mean_curvature(σ)` |
 | $R_{abcd} = \mathbf{k}_{ac} \cdot \mathbf{k}_{bd} - \mathbf{k}_{ad} \cdot \mathbf{k}_{bc}$ | `X.riemann_curvature(σ)` |
 | $R_{bd} = h^{ac} R_{abcd}$, $R = h^{bd} R_{bd}$ | `X.ricci_curvature(σ)`, `X.scalar_curvature(σ)` |
 | $K = R_{1212} / \det h$ | `X.gaussian_curvature(σ)` |
@@ -126,7 +126,7 @@ The intrinsic dimension is `span`, as for `Frame`; `dim` is always the ambient d
 
 `Atlas(patches)` is a set of patches of one manifold. `atlas.mesh(shape)` samples every patch, takes their disjoint union, and welds samples that coincide, so a many-sheeted or closed manifold becomes one complex whose Euler characteristic and boundary are those of the manifold. Each cell keeps the patch it came from, so the welded surface can still be colored patch by patch. The 25 patches of the Fermat quintic curve weld to $χ = -15$ with 5 boundary circles.
 
-`LevelSet(f)` is a manifold given as $f^p(\mathbf{x}) = 0$. Its normal frame comes from the gradients $\nabla f^p = \mathbf{e}^m \, \partial_m f^p$, and a Newton step $\mathbf{x}' = \mathbf{x} - D^{+} f(\mathbf{x})$ moves points onto it. The geometric quantities share the patch's names, evaluated at ambient points instead of coordinates.
+`LevelSet(f)` is a manifold given as $f^p(\mathbf{x}) = 0$. Its normal frame comes from the gradients $∇ f^p = \mathbf{e}^m ∂_m f^p$, and a Newton step $\mathbf{x}' = \mathbf{x} - D^{+} f(\mathbf{x})$ moves points onto it. The geometric quantities share the patch's names, evaluated at ambient points instead of coordinates.
 
 `transport(frame, curve, X)` carries a frame along a curve by the Levi-Civita rule of an embedded manifold: step forward, project onto the next tangent space, re-orthonormalize. The holonomy of a closed curve is the rotor relating the final frame to the initial one.
 
@@ -174,7 +174,7 @@ Each layer is tested against worked examples from the notebook, and each complet
 | perspective | agrees with the PGA meet in $d = 4, 5$ |
 | stereographic Clifford torus | a torus of revolution |
 | qubit phase orbit | the $(1, 1)$ curve on the torus of constant populations |
-| transport around colatitude $θ_0$ | rotation by $2π \, (1 - \cos θ_0)$ |
+| transport around colatitude $θ_0$ | rotation by $2π (1 - \cos θ_0)$ |
 
 ## Phases
 

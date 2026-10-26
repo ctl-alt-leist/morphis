@@ -24,7 +24,7 @@ with scene.record(output):
         t += dt
 ```
 
-Each element type has a fixed depiction. A grade-1 `Vector` is drawn as arrows from an origin, a `Frame` as its exact vectors with the parallelogram or parallelepiped they span when `filled=True`, and a mesh as its vertices re-read on every capture. A bare bivector has a plane, a magnitude, and an orientation, and no preferred pair of factors, so it is drawn as an oriented disk of area $|B|$ in its plane with a circulation arrow. A trivector is drawn as an oriented ball of volume $|T|$ with its handedness marked on the equator. A depiction is computed from the element alone at each frame, so a smoothly changing element gives a smoothly changing picture.
+Each element type has a fixed depiction. A grade-1 `Vector` is drawn as arrows from an origin, a `Frame` as its exact vectors with the parallelogram or parallelepiped they span when `filled=True`, and a mesh as its vertices re-read on every capture. A bare bivector $b$ has a plane, a magnitude, and an orientation, and no preferred pair of factors, so it is drawn as an oriented disk of area $|b|$ in its plane with a circulation arrow. A trivector $w$ is drawn as an oriented ball of volume $|w|$ with its handedness marked on the equator. A depiction is computed from the element alone at each frame, so a smoothly changing element gives a smoothly changing picture.
 
 The ink `Sketch` draws pen-and-ink conceptual figures with matplotlib: stippled enclosing spaces, planes with dashed grids, arrows, construction lines, curves, and labels. Marks are recorded in 3D drawing coordinates as they are added and rendered to the page on `save`, once the whole figure is known, so the page bounds, the stroke scale, and the depth order come from the complete figure. A still figure is a function that builds a sketch; an animation is that function evaluated at each time, and `animate` writes the frames:
 
@@ -66,15 +66,15 @@ for `axes=(a, b, c)`. It is a linear map, so parallel lines stay parallel, and i
 `Perspective(axes, distance)` puts an eye at distance $D$ along the dropped directions and draws a point by central projection:
 
 ```math
-\mathbf{x} \mapsto \frac{D \, \mathbf{x}_{\text{axes}}}{D - Σ \, x_{\text{dropped}}}
+\mathbf{x} \mapsto \frac{D \mathbf{x}_{\text{axes}}}{D - Σ x_{\text{dropped}}}
 ```
 
-From $\mathbb{R}^4$ the eye sits at $D \, \mathbf{e}_4$, so a point with larger $x^4$ is nearer the eye and drawn farther from the center. The dropped coordinate becomes visible as scale, which separates the near and far cells of a tesseract.
+From $\mathbb{R}^4$ the eye sits at $D \mathbf e_4$, so a point with larger $x^4$ is nearer the eye and drawn farther from the center. The dropped coordinate becomes visible as scale, which separates the near and far cells of a tesseract.
 
-`Stereographic(axes, pole, radius)` projects the sphere of radius $ρ$ from its pole $ρ \, \mathbf{n}$ onto the hyperplane through the origin perpendicular to $\mathbf{n}$, and then orthographically onto the axes:
+`Stereographic(axes, pole, radius)` projects the sphere of radius $ρ$ from its pole $ρ \mathbf{n}$ onto the hyperplane through the origin perpendicular to $\mathbf{n}$, and then orthographically onto the axes:
 
 ```math
-\mathbf{y} = \frac{ρ \, \mathbf{x}_\perp}{ρ - \mathbf{n} \cdot \mathbf{x}}
+\mathbf{y} = \frac{ρ \mathbf{x}_\perp}{ρ - \mathbf{n} \cdot \mathbf{x}}
 ```
 
 On the sphere it is a conformal bijection from everything except the pole onto the whole hyperplane. A circle on the sphere is drawn as a circle, and a circle through the pole as a straight line. It is the natural view of the unit sphere $S^3$ of a qubit's state space, and the pole may not also be one of the axes.
@@ -96,7 +96,7 @@ A `Projection` is a projective map from a space of dimension $d$ to a picture of
 
 ```math
 \begin{aligned}
-(\mathbf{y}, w) &= M (\mathbf{x}, 1) \\ \\
+(\mathbf{y}, w) &= M (\mathbf{x}, 1) \\
 Π(\mathbf{x}) &= \mathbf{y} / w
 \end{aligned}
 ```
@@ -106,7 +106,7 @@ The last row of $M$ gives the weight $w$. An orthographic map has a constant wei
 | Constructor | Map |
 |---|---|
 | `Projection.linear(metric, images)` | each labeled basis direction sent to a chosen picture vector |
-| `Projection.orthographic(screen)` | picture coordinate $c$ is $\mathbf{e}_c \cdot \mathbf{x}$ for an orthonormal screen |
+| `Projection.orthographic(screen)` | picture coordinate $c$ is $\mathbf e_c \cdot \mathbf{x}$ for an orthonormal screen |
 | `Projection.stereographic(pole)` | the sphere of radius $|\text{pole}|$, projected from the pole |
 
 `Projection.linear` is the deliberately unfaithful map. Directions left out of `images` are drawn as zero, and two directions may share one image. The conjugate-planes figure uses it to draw both mode directions of a qubit along the same page direction, so that each mode's plane can be laid out on its own:
@@ -133,13 +133,13 @@ Points, and everything built from points, are mapped point by point: arrow tails
 A bare blade has no points beyond the one it is attached at, so the Scene carries it into the picture by the differential of the projection there. For $Π(\mathbf{x}) = \mathbf{y} / w$, with linear block $A$ and weight row $\mathbf{c}$, the differential at $\mathbf{x}$ is:
 
 ```math
-dΠ(\mathbf{v}) = \frac{A \mathbf{v} - Π(\mathbf{x}) \, (\mathbf{c} \cdot \mathbf{v})}{w}
+dΠ(\mathbf{v}) = \frac{A \mathbf{v} - Π(\mathbf{x}) (\mathbf{c} \cdot \mathbf{v})}{w}
 ```
 
 A $k$-vector is pushed forward by the outermorphism $∧^k dΠ$. For a bivector:
 
 ```math
-B'^{pq} = dΠ^p{}_a \, dΠ^q{}_b \, B^{ab}
+b'^{pq} = dΠ^p{}_m dΠ^q{}_n b^{mn}
 ```
 
 so its plane becomes the image plane and its magnitude the drawn area. The Scene draws the result by its invariants, a disk for a bivector and a ball for a trivector, which carry exactly what the blade carries. Under an orthographic view onto basis directions, the pushforward is the sub-array of components at those directions. `Projection.pushforward` and `Projection.blade` are public, and `Projection.pinching` measures from $dΠ$ how nearly the map collapses a tangent plane, as the [Calabi–Yau slice](6_calabi-yau-slice.md) uses to find its pinch points.

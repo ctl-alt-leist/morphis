@@ -16,13 +16,13 @@ It writes `qutrit-relative-phases` and `qutrit-trajectory`, each as a `.png` sti
 The system is a spin-1 in a magnetic field tilted from $z$ by an angle $β$, with a quadratic shift $D$ along $z$:
 
 ```math
-H = \cos β \, S_z + \sin β \, S_x + D \, S_z^2
+H = \cos β S_z + \sin β S_x + D S_z^2
 ```
 
 in units of the field strength, on the lab states $m = +1, 0, -1$. The example takes $β = 0.9$ and $D = 0.4$. The Hamiltonian has three energies:
 
 ```math
-(E_1, E_2, E_3) = (-0.7517, \, +0.2510, \, +1.3007)
+(E_1, E_2, E_3) = (-0.7517, +0.2510, +1.3007)
 ```
 
 The state starts in the lab state $m = 0$.
@@ -47,13 +47,13 @@ GAPS = ENERGIES[1:] - ENERGIES[0]                       # ω_21, ω_31
 The state space $\mathbb{C}^3$ is the space with three modes, $\mathbb{R}^6$ with directions $1, \dot 1, 2, \dot 2, 3, \dot 3$, and the modes are taken to be the energy eigenstates $|k⟩$. In that basis the evolution is diagonal. Each amplitude keeps its modulus $a_k$ and turns its phase at its own rate:
 
 ```math
-z^k(t) = a_k \, e^{-i E_k t}
+z^k(t) = a_k e^{-i E_k t}
 ```
 
 with $Σ_k a_k^2 = 1$. In $\mathbb{R}^6$ this is a rotation by $-E_k t$ in each of the three conjugate planes, the three-mode version of the rotor evolution of the qubit. For the initial state $m = 0$ the populations $a_k^2$ are:
 
 ```math
-(a_1^2, a_2^2, a_3^2) = (0.4568, \, 0.3460, \, 0.1972)
+(a_1^2, a_2^2, a_3^2) = (0.4568, 0.3460, 0.1972)
 ```
 
 Fixing the three moduli leaves the three phases free, so the state stays on a 3-torus $T^3$ of fixed populations inside the unit sphere $S^5$.
@@ -61,13 +61,13 @@ Fixing the three moduli leaves the three phases free, so the state stays on a 3-
 The overall phase $e^{iα}$ of a state cannot be observed, and it moves all three phases together. Measuring the phases from the ground state's removes it: the ground amplitude becomes the constant $a_1$, real and positive, and the two remaining phases are coordinates $(u, v)$ on a 2-torus of relative phases:
 
 ```math
-\mathbf{X}(u, v) = a_1 \, \mathbf{e}_1 + a_2 \left( \cos u \, \mathbf{e}_2 + \sin u \, \mathbf{e}_{\dot 2} \right) + a_3 \left( \cos v \, \mathbf{e}_3 + \sin v \, \mathbf{e}_{\dot 3} \right)
+\mathbf{X}(u, v) = a_1 \mathbf{e}_1 + a_2 \left( \cos u \mathbf{e}_2 + \sin u \mathbf{e}_{\dot 2} \right) + a_3 \left( \cos v \mathbf{e}_3 + \sin v \mathbf{e}_{\dot 3} \right)
 ```
 
 On it the state moves along a straight line of the torus coordinates, at the gap frequencies $ω_{k1} = E_k - E_1$:
 
 ```math
-(u, v) = -(ω_{21} t, \, ω_{31} t)
+(u, v) = -(ω_{21} t, ω_{31} t)
 ```
 
 with $ω_{21} = 1.0027$ and $ω_{31} = 2.0525$. A line on a torus closes only when its slope is rational. The slope here is:
@@ -104,7 +104,7 @@ The script checks this picture against the lab-frame evolution $\mathbf{ψ}(t) =
 
 Two steps carry the torus from $\mathbb{R}^6$ into the drawing space, and neither one loses information about it.
 
-The first drops the ground mode. On the torus the coordinates along $\mathbf{e}_1$ and $\mathbf{e}_{\dot 1}$ are the constants $a_1$ and 0, so the orthographic map onto the four directions $2, \dot 2, 3, \dot 3$ is one-to-one on the torus. Its image lies on the 3-sphere of radius:
+The first drops the ground mode. On the torus the coordinates along $\mathbf e_1$ and $\mathbf e_{\dot 1}$ are the constants $a_1$ and 0, so the orthographic map onto the four directions $2, \dot 2, 3, \dot 3$ is one-to-one on the torus. Its image lies on the 3-sphere of radius:
 
 ```math
 ρ = \sqrt{a_2^2 + a_3^2} = 0.7370
@@ -112,9 +112,9 @@ The first drops the ground mode. On the torus the coordinates along $\mathbf{e}_
 
 since $a_2^2 + a_3^2 = 1 - a_1^2$ is the population outside the ground state.
 
-The second is stereographic projection of that 3-sphere from the pole $ρ \, \mathbf{e}_{\dot 3}$ onto the hyperplane through the origin perpendicular to it. The pole is the point $z^2 = 0$, $z^3 = i ρ$, which the torus never reaches because $a_2 > 0$, so the whole torus is drawn, one-to-one and conformally. The picture coordinates are the directions $2, \dot 2, 3$ in order. A turn of $u$ is a rotation in the $\mathbf{e}_{2 \dot 2}$-plane, which fixes the pole and is drawn as a rotation about the vertical axis, so the torus is drawn as a torus of revolution. Circles of constant $v$ are its horizontal circles, and circles of constant $u$ its meridians. In a meridian half-plane the image of the circle of constant $u$ is a circle whose center radius $R$ and tube radius $r$ satisfy $R / r = ρ / a_3 = 1.66$.
+The second is stereographic projection of that 3-sphere from the pole $ρ \mathbf e_{\dot 3}$ onto the hyperplane through the origin perpendicular to it. The pole is the point $z^2 = 0$, $z^3 = i ρ$, which the torus never reaches because $a_2 > 0$, so the whole torus is drawn, one-to-one and conformally. The picture coordinates are the directions $2, \dot 2, 3$ in order. A turn of $u$ is a rotation in the $\mathbf e_{2 \dot 2}$-plane, which fixes the pole and is drawn as a rotation about the vertical axis, so the torus is drawn as a torus of revolution. Circles of constant $v$ are its horizontal circles, and circles of constant $u$ its meridians. In a meridian half-plane the image of the circle of constant $u$ is a circle whose center radius $R$ and tube radius $r$ satisfy $R / r = ρ / a_3 = 1.66$.
 
-The two steps are one `Projection`, built by composition. `EXCITED.target` is the Euclidean $\mathbb{R}^4$ of the four kept directions, and its fourth direction is $\mathbf{e}_{\dot 3}$:
+The two steps are one `Projection`, built by composition. `EXCITED.target` is the Euclidean $\mathbb{R}^4$ of the four kept directions, and its fourth direction is $\mathbf e_{\dot 3}$:
 
 ```python
 from morphis.elements import Dot, basis_vector
@@ -160,7 +160,7 @@ animate(partial(create_torus_sketch, theme), times, output, frame_rate=FRAME_RAT
 The torus is where the state goes once its global phase is set aside. The second figure keeps everything, and draws $\mathbf{ψ}(t)$ as the conjugate-planes figure draws its qubit, in the state space $\mathcal{V}$ with the path it has traced, without drawing any conjugate plane. The state is drawn as a point at the head of its path. With $c_k$ the amplitude on $|k⟩$ at $t = 0$, the state is:
 
 ```math
-\mathbf{ψ}(t) = \sum_k \left[ \mathrm{Re}\left( c_k \, e^{-i E_k t} \right) \mathbf{e}_k + \mathrm{Im}\left( c_k \, e^{-i E_k t} \right) \mathbf{e}_{\dot k} \right]
+\mathbf{ψ}(t) = \sum_k \left[ \mathrm{Re}\left( c_k e^{-i E_k t} \right) \mathbf{e}_k + \mathrm{Im}\left( c_k e^{-i E_k t} \right) \mathbf{e}_{\dot k} \right]
 ```
 
 a rotation by $-E_k t$ in each of the three conjugate planes at once, at three different rates. The periods $2π / |E_k|$ are 8.36, 25.03, and 4.83, and $E_1 < 0$, so mode 1 turns the other way from modes 2 and 3.
@@ -175,13 +175,13 @@ def evolved_state(t: NDArray) -> Vector:
 
 ### A Projection That Favors No Direction
 
-A view onto three of the six axes would draw three directions at full length and drop the other three. The figure instead sends each basis direction to its own diagonal of an icosahedron. The six diagonals are equiangular lines, every pair meeting at $\arccos(1/\sqrt{5}) ≈ 63.4°$, and they form a tight frame: for the unit diagonals $\mathbf{d}_a$,
+A view onto three of the six axes would draw three directions at full length and drop the other three. The figure instead sends each basis direction to its own diagonal of an icosahedron. The six diagonals are equiangular lines, every pair meeting at $\arccos(1/\sqrt{5}) ≈ 63.4°$, and they form a tight frame: for the unit diagonals $\mathbf d_a$,
 
 ```math
-\sum_{a=1}^{6} \mathbf{d}_a \mathbf{d}_a^{\mathsf{T}} = 2 \, \mathbb{1}
+\sum_{a=1}^{6} \mathbf{d}_a \mathbf{d}_a^{\mathsf{T}} = 2 \mathbb{1}
 ```
 
-so the map $\mathbf{e}_a \mapsto \mathbf{d}_a / \sqrt{2}$ has orthonormal rows. It is the orthogonal projection of $\mathbb{R}^6$ onto a 3-space at 45° to every basis direction, so every direction is drawn at the same length, $1 / \sqrt{2}$. In code it is a `Projection.linear`:
+so the map $\mathbf e_a \mapsto \mathbf d_a / \sqrt{2}$ has orthonormal rows. It is the orthogonal projection of $\mathbb{R}^6$ onto a 3-space at 45° to every basis direction, so every direction is drawn at the same length, $1 / \sqrt{2}$. In code it is a `Projection.linear`:
 
 ```python
 GOLDEN = (1 + sqrt(5)) / 2
@@ -200,7 +200,7 @@ EQUIANGULAR = Projection.linear(SPACE, {label: tuple(image / sqrt(2)) for label,
 
 The sign of each diagonal and the camera are chosen together so the six drawn directions also spread evenly on the page: from azimuth 180° and elevation 20° the key of the six directions, set out beside the state, is nearly a regular hexagon, its arrows 59° apart.
 
-Under this map each mode's circle of radius $a_k$ in its conjugate plane is drawn as an ellipse with semi-axes $0.851 \, a_k$ and $0.526 \, a_k$, the same shape for all three modes and in three different planes of the drawing. The drawn state is the sum of three points running around those ellipses at the rates $E_k$. The pattern of the trajectory is that sum. Its loops come from the fast mode 3 riding on the slower two, its cusps are where the velocity of the drawn point in 3D points straight at the eye, and it never repeats, since the rates are incommensurate. The path is inked darker the nearer it is.
+Under this map each mode's circle of radius $a_k$ in its conjugate plane is drawn as an ellipse with semi-axes $0.851 a_k$ and $0.526 a_k$, the same shape for all three modes and in three different planes of the drawing. The drawn state is the sum of three points running around those ellipses at the rates $E_k$. The pattern of the trajectory is that sum. Its loops come from the fast mode 3 riding on the slower two, its cusps are where the velocity of the drawn point in 3D points straight at the eye, and it never repeats, since the rates are incommensurate. The path is inked darker the nearer it is.
 
 ```python
 path = STATE_SCALE * sketch.drawn(evolved_state(linspace(0.0, t, count)))

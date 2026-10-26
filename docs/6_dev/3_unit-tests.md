@@ -156,20 +156,20 @@ The difference of two Vectors follows:
 
 **Scalar Multiplication**
 
-For scalar $\alpha$ and Vector $\mathbf{B}$:
+For scalar $α$ and Vector $\mathbf{B}$:
 
 ```math
-(\alpha \mathbf{B})^{m_1 \ldots m_k} = \alpha B^{m_1 \ldots m_k}
+(α \mathbf{B})^{m_1 \ldots m_k} = α B^{m_1 \ldots m_k}
 ```
 
-This satisfies commutativity: $\alpha \mathbf{B} = \mathbf{B} \alpha$.
+This satisfies commutativity: $α \mathbf{B} = \mathbf{B} α$.
 
 **Scalar Division**
 
-Division by nonzero scalar $\alpha$:
+Division by nonzero scalar $α$:
 
 ```math
-\left(\frac{\mathbf{B}}{\alpha}\right)^{m_1 \ldots m_k} = \frac{B^{m_1 \ldots m_k}}{\alpha}
+\left(\frac{\mathbf{B}}{α}\right)^{m_1 \ldots m_k} = \frac{B^{m_1 \ldots m_k}}{α}
 ```
 
 **Negation**
@@ -297,7 +297,7 @@ Any vector wedged with itself vanishes:
 This extends to linear dependence:
 
 ```math
-\mathbf{u} = \alpha \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
+\mathbf{u} = α \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
 ```
 
 **Associativity**
@@ -408,7 +408,7 @@ Complement operations map between dual grades using the Levi-Civita symbol.
 For grade-$k$ Vector in $d$ dimensions:
 
 ```math
-\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
+\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
 ```
 
 This maps grade $k$ to grade $(d - k)$:
@@ -422,7 +422,7 @@ This maps grade $k$ to grade $(d - k)$:
 The left complement:
 
 ```math
-\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = \varepsilon_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
+\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = ε_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
 ```
 
 also maps grade $k$ to grade $(d - k)$.
@@ -454,7 +454,7 @@ Applying complement twice recovers the original (up to sign):
 The Hodge dual incorporates the metric structure:
 
 ```math
-(\star \mathbf{B})^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} \varepsilon^{m_1 \ldots m_d}
+(\star \mathbf{B})^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} ε^{m_1 \ldots m_d}
 ```
 
 **Grade Mapping**
@@ -480,7 +480,7 @@ where $\mathbb{1}$ is the pseudoscalar (grade $d$).
 In 3D Euclidean space, the dual of a vector is a bivector:
 
 ```math
-\star \mathbf{v} = v^m \varepsilon^{mnp} \mathbf{e}_{np}
+\star \mathbf{v} = v^m ε^{mnp} \mathbf{e}_{np}
 ```
 
 This creates the familiar cross-product-like correspondence.
@@ -656,7 +656,7 @@ For vectors $\mathbf{u}$, $\mathbf{v}$:
 For orthogonal basis vectors:
 
 ```math
-\mathbf{e}_m \cdot \mathbf{e}_n = g_{mn} = \delta_{mn}
+\mathbf{e}_m \cdot \mathbf{e}_n = g_{mn} = δ_{mn}
 ```
 
 giving:
@@ -725,13 +725,13 @@ For $\mathbf{v} = (1, 1, 0, 0)$ onto $\mathbf{e}_1 = (1, 0, 0, 0)$:
 
 ### Bivector Exponential
 
-For bivector $\mathbf{B}$ where $\mathbf{B}^2 = \lambda$ is scalar:
+For bivector $\mathbf{B}$ where $\mathbf{B}^2 = λ$ is scalar:
 
 ```math
 e^{\mathbf{B}} = \begin{cases}
-\cos\sqrt{-\lambda} + \frac{\mathbf{B}}{\sqrt{-\lambda}} \sin\sqrt{-\lambda} & \text{if } \lambda < 0 \\
-\cosh\sqrt{\lambda} + \frac{\mathbf{B}}{\sqrt{\lambda}} \sinh\sqrt{\lambda} & \text{if } \lambda > 0 \\
-1 + \mathbf{B} & \text{if } \lambda = 0
+\cos\sqrt{-λ} + \frac{\mathbf{B}}{\sqrt{-λ}} \sin\sqrt{-λ} & \text{if } λ < 0 \\
+\cosh\sqrt{λ} + \frac{\mathbf{B}}{\sqrt{λ}} \sinh\sqrt{λ} & \text{if } λ > 0 \\
+1 + \mathbf{B} & \text{if } λ = 0
 \end{cases}
 ```
 
@@ -740,15 +740,15 @@ e^{\mathbf{B}} = \begin{cases}
 For unit bivector $\hat{\mathbf{B}}$ with $\hat{\mathbf{B}}^2 = -1$:
 
 ```math
-e^{\theta \hat{\mathbf{B}}} = \cos\theta + \hat{\mathbf{B}}\sin\theta
+e^{θ \hat{\mathbf{B}}} = \cos θ + \hat{\mathbf{B}}\sin θ
 ```
 
 **Rotor Construction**
 
-A rotor for rotation by angle $\theta$ in the plane of unit bivector $\hat{\mathbf{B}}$:
+A rotor for rotation by angle $θ$ in the plane of unit bivector $\hat{\mathbf{B}}$:
 
 ```math
-R = e^{-\hat{\mathbf{B}}\theta/2} = \cos(\theta/2) - \hat{\mathbf{B}}\sin(\theta/2)
+R = e^{-\hat{\mathbf{B}}θ/2} = \cos(θ/2) - \hat{\mathbf{B}}\sin(θ/2)
 ```
 
 **Rotor Normalization**
@@ -756,7 +756,7 @@ R = e^{-\hat{\mathbf{B}}\theta/2} = \cos(\theta/2) - \hat{\mathbf{B}}\sin(\theta
 Rotors satisfy $R\tilde{R} = 1$:
 
 ```math
-|R|^2 = \cos^2(\theta/2) + \sin^2(\theta/2) = 1
+|R|^2 = \cos^2(θ/2) + \sin^2(θ/2) = 1
 ```
 
 ### Versor Logarithm
@@ -808,12 +808,12 @@ The sign of a permutation indicates parity.
 
 **Definition**
 
-For permutation $\sigma$:
+For permutation $σ$:
 
 ```math
-\text{sgn}(\sigma) = \begin{cases}
-+1 & \text{if } \sigma \text{ is even} \\
--1 & \text{if } \sigma \text{ is odd}
+\text{sgn}(σ) = \begin{cases}
++1 & \text{if } σ \text{ is even} \\
+-1 & \text{if } σ \text{ is odd}
 \end{cases}
 ```
 
@@ -856,7 +856,7 @@ Antisymmetrization projects tensors onto the antisymmetric subspace.
 For rank-$k$ tensor $T$:
 
 ```math
-T^{[m_1 \ldots m_k]} = \sum_{\sigma \in S_k} \text{sgn}(\sigma) T^{m_{\sigma(1)} \ldots m_{\sigma(k)}}
+T^{[m_1 \ldots m_k]} = \sum_{σ \in S_k} \text{sgn}(σ) T^{m_{σ(1)} \ldots m_{σ(k)}}
 ```
 
 (without $1/k!$ normalization).
@@ -888,7 +888,7 @@ The Levi-Civita symbol is the fully antisymmetric tensor.
 For $d$ dimensions:
 
 ```math
-\varepsilon^{m_1 \ldots m_d} = \begin{cases}
+ε^{m_1 \ldots m_d} = \begin{cases}
 +1 & \text{if } (m_1, \ldots, m_d) \text{ is even permutation of } (0, 1, \ldots, d-1) \\
 -1 & \text{if odd permutation} \\
 0 & \text{if any indices repeat}
@@ -900,7 +900,7 @@ For $d$ dimensions:
 Self-contraction gives the factorial:
 
 ```math
-\varepsilon^{abc} \varepsilon_{abc} = d! = 6 \quad \text{for } d = 3
+ε^{abc} ε_{abc} = d! = 6 \quad \text{for } d = 3
 ```
 
 ### Generalized Kronecker Delta
@@ -910,7 +910,7 @@ The generalized delta antisymmetrizes under contraction.
 **Definition**
 
 ```math
-\delta^{m_1 \ldots m_k}_{n_1 \ldots n_k} = \frac{1}{k!} \sum_{\sigma \in S_k} \text{sgn}(\sigma) \delta^{m_1}_{n_{\sigma(1)}} \cdots \delta^{m_k}_{n_{\sigma(k)}}
+δ^{m_1 \ldots m_k}_{n_1 \ldots n_k} = \frac{1}{k!} \sum_{σ \in S_k} \text{sgn}(σ) δ^{m_1}_{n_{σ(1)}} \cdots δ^{m_k}_{n_{σ(k)}}
 ```
 
 **Contraction**
@@ -918,13 +918,13 @@ The generalized delta antisymmetrizes under contraction.
 Self-contraction counts combinations:
 
 ```math
-\delta^{ab}_{ab} = \binom{d}{k}
+δ^{ab}_{ab} = \binom{d}{k}
 ```
 
 For $k = 2$, $d = 3$:
 
 ```math
-\delta^{ab}_{ab} = \binom{3}{2} = 3
+δ^{ab}_{ab} = \binom{3}{2} = 3
 ```
 
 ## Projective Operations Tests
@@ -994,7 +994,7 @@ This bivector represents the line through points $\mathbf{p}$ and $\mathbf{q}$.
 **Plane through Three Points**
 
 ```math
-\pi = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
+π = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
 ```
 
 This trivector represents the plane containing $\mathbf{p}$, $\mathbf{q}$, $\mathbf{r}$.
@@ -1020,7 +1020,7 @@ d(\mathbf{p}, \ell) = \frac{|\mathbf{p} \wedge \ell|}{|\ell|}
 **Point-to-Plane Distance**
 
 ```math
-d(\mathbf{p}, \pi) = \frac{|\mathbf{p} \wedge \pi|}{|\pi|}
+d(\mathbf{p}, π) = \frac{|\mathbf{p} \wedge π|}{|π|}
 ```
 
 ### Incidence Predicates
@@ -1045,18 +1045,18 @@ Point $\mathbf{p}$ lies on line $\ell$ if:
 
 **Point on Plane**
 
-Point $\mathbf{p}$ lies on plane $\pi$ if:
+Point $\mathbf{p}$ lies on plane $π$ if:
 
 ```math
-\mathbf{p} \wedge \pi = 0
+\mathbf{p} \wedge π = 0
 ```
 
 **Tolerance**
 
-All incidence tests use tolerance $\epsilon = 10^{-10}$:
+All incidence tests use tolerance $ε = 10^{-10}$:
 
 ```math
-||\mathbf{A} \wedge \mathbf{B}|| < \epsilon
+||\mathbf{A} \wedge \mathbf{B}|| < ε
 ```
 
 ## Integration Tests

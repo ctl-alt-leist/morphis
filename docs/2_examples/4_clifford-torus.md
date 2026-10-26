@@ -85,13 +85,13 @@ The global phase $e^{iα} \mathbf{ψ}$ moves $θ$ and $φ$ together, $(θ, φ) \
 
 ## The Drawing
 
-The torus lies in $S^3$, and stereographic projection draws all of $S^3$ but one point in three dimensions. The figure projects from the pole $\mathbf{e}_{\dot 2}$ onto the hyperplane of the directions $1, \dot 1, 2$, which become the drawing's $x$, $y$, $z$:
+The torus lies in $S^3$, and stereographic projection draws all of $S^3$ but one point in three dimensions. The figure projects from the pole $\mathbf e_{\dot 2}$ onto the hyperplane of the directions $1, \dot 1, 2$, which become the drawing's $x$, $y$, $z$:
 
 ```math
 \mathbf{y} = \frac{\mathbf{x}_\perp}{1 - \mathbf{e}_{\dot 2} \cdot \mathbf{x}}
 ```
 
-The pole has $|z^2| = 1$, which no point of the Clifford torus reaches, so the whole torus is drawn, one-to-one and conformally. A turn of $θ$ is a rotation in the $\mathbf{e}_{1 \dot 1}$-plane, which fixes the pole and is drawn as a rotation about the vertical axis, so the image is a torus of revolution. In a meridian half-plane the circle of constant $θ$ is drawn as a circle of radius 1 whose center lies at distance $\sqrt{2}$ from the axis. The axis itself is the image of the great circle $z^1 = 0$, which passes through the pole and is therefore drawn as a straight line.
+The pole has $|z^2| = 1$, which no point of the Clifford torus reaches, so the whole torus is drawn, one-to-one and conformally. A turn of $θ$ is a rotation in the $\mathbf e_{1 \dot 1}$-plane, which fixes the pole and is drawn as a rotation about the vertical axis, so the image is a torus of revolution. In a meridian half-plane the circle of constant $θ$ is drawn as a circle of radius 1 whose center lies at distance $\sqrt{2}$ from the axis. The axis itself is the image of the great circle $z^1 = 0$, which passes through the pole and is therefore drawn as a straight line.
 
 Stereographic projection sends circles on the sphere to circles, so each Hopf fiber, a great circle of $S^3$, is drawn as a circle. On the torus of revolution these are neither meridians nor parallels: they are the slanted Villarceau circles, each winding once around the axis and once through the hole.
 

@@ -16,13 +16,13 @@ It checks every claim below numerically and writes the four figures to `figures/
 
 ## The Space
 
-$\mathbb{C}^2$ is the space with two modes. Each mode $m$ owns a direction $\mathbf{e}_m$ and its partner $\mathbf{e}_{\dot m}$, and a real vector reads as the complex amplitudes
+$\mathbb{C}^2$ is the space with two modes. Each mode $m$ owns a direction $\mathbf e_m$ and its partner $\mathbf e_{\dot m}$, and a real vector reads as the complex amplitudes
 
 ```math
 z^m = v^m + i v^{\dot m}
 ```
 
-Multiplication by $i$ is the complex structure $J$, the quarter turn $J \mathbf{e}_m = \mathbf{e}_{\dot m}$, so the complex arithmetic of $\mathbb{C}^2$ is ordinary geometry in $\mathbb{R}^4$.
+Multiplication by $i$ is the complex structure $J$, the quarter turn $J \mathbf e_m = \mathbf e_{\dot m}$, so the complex arithmetic of $\mathbb{C}^2$ is ordinary geometry in $\mathbb{R}^4$.
 
 ```python
 from morphis.elements import Dot, Vector, basis_vector, metric
@@ -53,7 +53,7 @@ The map is holomorphic in $w$, which fixes the local geometry. Moving $w$ by $i$
 ∂_θ \mathbf{X} = J (∂_ξ \mathbf{X})
 ```
 
-Each tangent plane is therefore a complex line, closed under $J$, with Kähler angle 0. A complex curve is a minimal surface: its mean curvature vanishes, $\mathbf{k} = 0$. In coordinates where $h_{ab}$ is a multiple of $δ_{ab}$, minimality means $\mathbf{k}_{22} = -\mathbf{k}_{11}$, and the Gauss equation gives a curvature that is never positive:
+Each tangent plane is therefore a complex line, closed under $J$, with Kähler angle 0. A complex curve is a minimal surface: its mean curvature vanishes, $\mathbf{k} = 0$. In coordinates where $h_{ab}$ is a multiple of $δ_{ab}$, minimality means $\mathbf k_{22} = -\mathbf k_{11}$, and the Gauss equation gives a curvature that is never positive:
 
 ```math
 K = -\frac{\mathbf{k}_{11} \cdot \mathbf{k}_{11} + \mathbf{k}_{12} \cdot \mathbf{k}_{12}}{\det h}
@@ -142,7 +142,7 @@ The complex knows nothing of positions or metric. The same `CellComplex` methods
 
 ## Stage 4: The Projection
 
-**The mathematics.** Drawing in three dimensions discards one direction of $\mathbb{R}^4$. The figures use the orthographic projection onto $\mathbf{e}_1$, $\mathbf{e}_2$, and a blend of the two imaginary directions:
+**The mathematics.** Drawing in three dimensions discards one direction of $\mathbb{R}^4$. The figures use the orthographic projection onto $\mathbf e_1$, $\mathbf e_2$, and a blend of the two imaginary directions:
 
 ```math
 \mathbf{s} = \cos α \mathbf{e}_{\dot 1} + \sin α \mathbf{e}_{\dot 2}

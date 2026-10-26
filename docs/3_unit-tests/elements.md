@@ -121,13 +121,13 @@ Preserves grade and dimension:
 
 ### Scalar Multiplication
 
-For scalar $\alpha$ and blade $\mathbf{B}$:
+For scalar $α$ and blade $\mathbf{B}$:
 
 ```math
-(\alpha \mathbf{B})^{m_1 \ldots m_k} = \alpha B^{m_1 \ldots m_k}
+(α \mathbf{B})^{m_1 \ldots m_k} = α B^{m_1 \ldots m_k}
 ```
 
-Commutative: $\alpha \mathbf{B} = \mathbf{B} \alpha$
+Commutative: $α \mathbf{B} = \mathbf{B} α$
 
 ### Negation
 
@@ -263,9 +263,9 @@ Via `L1 * L2` or `L1.compose(L2)`.
 ### Permutation Sign
 
 ```math
-\text{sgn}(\sigma) = \begin{cases}
-+1 & \text{if } \sigma \text{ is even} \\
--1 & \text{if } \sigma \text{ is odd}
+\text{sgn}(σ) = \begin{cases}
++1 & \text{if } σ \text{ is even} \\
+-1 & \text{if } σ \text{ is odd}
 \end{cases}
 ```
 
@@ -279,7 +279,7 @@ Examples:
 For rank-$k$ tensor $T$:
 
 ```math
-T^{[m_1 \ldots m_k]} = \sum_{\sigma \in S_k} \text{sgn}(\sigma) T^{m_{\sigma(1)} \ldots m_{\sigma(k)}}
+T^{[m_1 \ldots m_k]} = \sum_{σ \in S_k} \text{sgn}(σ) T^{m_{σ(1)} \ldots m_{σ(k)}}
 ```
 
 Properties:
@@ -289,7 +289,7 @@ Properties:
 ### Levi-Civita Symbol
 
 ```math
-\varepsilon^{m_1 \ldots m_d} = \begin{cases}
+ε^{m_1 \ldots m_d} = \begin{cases}
 +1 & \text{even permutation of } (0, \ldots, d-1) \\
 -1 & \text{odd permutation} \\
 0 & \text{repeated indices}
@@ -299,13 +299,13 @@ Properties:
 Self-contraction:
 
 ```math
-\varepsilon^{abc} \varepsilon_{abc} = d!
+ε^{abc} ε_{abc} = d!
 ```
 
 ### Generalized Kronecker Delta
 
 ```math
-\delta^{m_1 \ldots m_k}_{n_1 \ldots n_k} = \frac{1}{k!} \sum_{\sigma \in S_k} \text{sgn}(\sigma) \delta^{m_1}_{n_{\sigma(1)}} \cdots \delta^{m_k}_{n_{\sigma(k)}}
+δ^{m_1 \ldots m_k}_{n_1 \ldots n_k} = \frac{1}{k!} \sum_{σ \in S_k} \text{sgn}(σ) δ^{m_1}_{n_{σ(1)}} \cdots δ^{m_k}_{n_{σ(k)}}
 ```
 
 Antisymmetric in both upper and lower indices.

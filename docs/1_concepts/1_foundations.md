@@ -4,16 +4,16 @@ This document establishes the mathematical structures underlying geometric algeb
 
 ## Vector Spaces
 
-We begin with a finite-dimensional real vector space $V$ of dimension $d$. The **dual space** $V^*$ consists of all linear functionals $\omega: V \to \mathbb{R}$. The natural pairing between $V$ and $V^*$ is given by evaluation:
+We begin with a finite-dimensional real vector space $V$ of dimension $d$. The **dual space** $V^*$ consists of all linear functionals $ω: V \to \mathbb{R}$. The natural pairing between $V$ and $V^*$ is given by evaluation:
 
 ```math
-\langle \omega, v \rangle = \omega(v)
+\langle ω, v \rangle = ω(v)
 ```
 
 Given a basis $\lbrace \mathbf{e}_m \rbrace$ for $V$, there exists a unique **dual basis** $\lbrace \mathbf{e}^m \rbrace$ for $V^*$ satisfying:
 
 ```math
-\mathbf{e}^m(\mathbf{e}_n) = \delta^m_n
+\mathbf{e}^m(\mathbf{e}_n) = δ^m_n
 ```
 
 In morphis, the dimension is determined by the `Metric`:
@@ -55,11 +55,7 @@ The index 0 is reserved for special directions that extend Euclidean space:
 | **PGA** (Projective) | ideal direction ($\mathbf{e}_0^2 = 0$) | $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ |
 | **Lorentzian** | time direction ($\mathbf{e}_0^2 = -1$) | $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ |
 
-In code, the geometric index follows this convention directly. `basis_vector(1, g)`
-is $\mathbf{e}_1$ (the x direction) in every signature; Euclidean is indexed from 1
-(index 0 is invalid), while PGA and Lorentzian are indexed from 0 for their
-distinguished direction. `basis_vectors()` returns the basis in index order, so the
-unpacking names match the indices:
+In code, the geometric index follows this convention directly. `basis_vector(1, g)` is $\mathbf{e}_1$ (the x direction) in every signature; Euclidean is indexed from 1 (index 0 is invalid), while PGA and Lorentzian are indexed from 0 for their distinguished direction. `basis_vectors()` returns the basis in index order, so the unpacking names match the indices:
 
 ```python
 from morphis.elements import euclidean_metric, pga_metric, basis_vectors
@@ -73,9 +69,7 @@ h = pga_metric(3)
 e0, e1, e2, e3 = basis_vectors(h)
 ```
 
-Component access follows the same convention: `v.on[1]` is the x component, and for
-a bivector `B.on[1, 2]` is the $\mathbf{e}_{12}$ component (with `B.on[2, 1]` its
-negative). See the design note on the index convention for the full rules.
+Component access follows the same convention: `v.on[1]` is the x component, and for a bivector `B.on[1, 2]` is the $\mathbf{e}_{12}$ component (with `B.on[2, 1]` its negative). See the design note on the index convention for the full rules.
 
 ## Tensors
 
@@ -171,10 +165,10 @@ b = b^{mn} \mathbf{e}_{mn}
 where the "symmetric" components $b^{mn}$ are used with the unordered (conceptual) basis, and the antisymmetric components $\tilde{b}^{mn}$ incorporate the full alternating structure:
 
 ```math
-\tilde{b}^{mn} = b^{mn} \varepsilon^{mn}
+\tilde{b}^{mn} = b^{mn} ε^{mn}
 ```
 
-The $k$-index antisymmetric symbol $\varepsilon^{m_1 \ldots m_k}$ automatically handles sign changes from index ordering. For a bivector in 2D:
+The $k$-index antisymmetric symbol $ε^{m_1 \ldots m_k}$ automatically handles sign changes from index ordering. For a bivector in 2D:
 
 ```math
 b = \frac{1}{2}(u^1 v^2 - u^2 v^1) \mathbf{e}_{12}
