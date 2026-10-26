@@ -5,8 +5,8 @@ The Scene draws what it is handed. It holds references to the user's elements,
 and every capture(t) re-reads their current state and redraws them. All the
 mathematics of what the elements are doing (rotations, evolutions, simulations)
 happens outside the Scene; the only mathematics inside is depiction: projecting
-higher-dimensional elements to 3D, and turning each element into something
-drawable.
+higher-dimensional elements to 3D through the scene's View, and turning each
+element into something drawable.
 
     Vector, grade 1    arrows from an origin
     Vector, grade 2    an oriented disk: area |B| in the bivector's plane, with a circulation arrow
@@ -17,6 +17,12 @@ drawable.
 
 Depictions are stateless: each frame is computed from the element alone, so a
 smoothly changing element gives a smoothly changing picture.
+
+Under the projection Π, points and everything built from them (arrow tails and
+tips, the corners of a frame, mesh vertices) are mapped point by point, which
+keeps straight edges exact under perspective too. A bare blade has no points
+of its own beyond where it is attached, so it is carried into the picture by
+the outermorphism of dΠ there and drawn by its invariants.
 
 Recording wraps the capture loop:
 
@@ -41,7 +47,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from numpy import array, ix_, zeros
+from numpy import array, stack, zeros
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
@@ -50,13 +56,9 @@ from morphis.elements.frame import Frame
 from morphis.elements.metric import Metric
 from morphis.elements.vector import Vector
 from morphis.visuals.backends import get_backend
-from morphis.visuals.drawing.blades import oriented_ball, oriented_disk, pad_to_3d
-from morphis.visuals.projection import (
-    DEFAULT_PROJECTION,
-    basis_labels,
-    projection_slots,
-    validate_projection_axes,
-)
+from morphis.visuals.drawing.blades import oriented_ball, oriented_disk
+from morphis.visuals.projection import basis_labels
+from morphis.visuals.projective import DEFAULT_AXES, Orthographic, Projection, View, resolve
 from morphis.visuals.recording import Recording
 from morphis.visuals.theme import Color, Theme, get_theme
 
@@ -76,7 +78,7 @@ class SceneData:
 
     theme_name: str
     size: tuple[int, int]
-    projection: tuple[int, ...]  # User-facing geometric indices
+    projection: View | Projection
     show_basis: bool
     elements: list[dict]
 
@@ -173,20 +175,23 @@ class Scene:
         scene.show()
 
     Projection:
-        Elements of dimension greater than 3 are projected onto three axes
-        given as user-facing geometric indices, the same indices used by
-        basis_vector and .on[...]. The default (1, 2, 3) is x, y, z in every
-        signature. Each element translates the axes through its own metric,
-        so an out-of-range index (0 in a Euclidean metric) raises IndexError.
-        Elements of dimension 3 or less are drawn in their own coordinates.
+        Elements of dimension greater than 3 are drawn through a View: the
+        kind of projection and the three directions, by label, that become
+        x, y, z. Each element resolves the view against its own metric, so an
+        axis that is not one of its directions raises IndexError. Elements of
+        dimension 3 or less are drawn in their own coordinates.
 
-        scene = Scene(projection=(1, 2, 3))  # e_1, e_2, e_3
-        scene.set_projection((2, 3, 4))      # e_2, e_3, e_4
+        scene = Scene(projection=Orthographic(axes=(1, 2, 3)))   # the default
+        scene.set_projection(Perspective(axes=(1, 2, 3), distance=3.0))
+        scene.set_projection(Stereographic(axes=(1, 2, 3), pole=4))
+
+        A Projection to 3D may be given instead of a view, for a map no view
+        names, such as an orthographic screen tilted out of the basis.
     """
 
     def __init__(
         self,
-        projection: tuple[int, ...] | None = None,
+        projection: View | Projection | None = None,
         theme: str | Theme = "obsidian",
         size: tuple[int, int] = (1280, 800),  # MEDIUM
         frame_rate: int = 30,
@@ -201,7 +206,7 @@ class Scene:
         self._theme = theme
         self._size = size
         self._frame_rate = frame_rate
-        self._projection = DEFAULT_PROJECTION if projection is None else validate_projection_axes(projection)
+        self._projection = Orthographic() if projection is None else projection
         self._show_basis = show_basis
         self._auto_camera = auto_camera
         self._window = window
@@ -240,14 +245,16 @@ class Scene:
         return self._window
 
     @property
-    def projection(self) -> tuple[int, int, int]:
-        """Projection axes as user-facing geometric indices."""
+    def projection(self) -> View | Projection:
+        """The view, or given projection, that elements of dimension above 3 are drawn through."""
         return self._projection
 
     @property
     def basis_labels(self) -> tuple[str, ...]:
-        """Labels for the drawn basis axes, derived from the projection axes."""
-        return basis_labels(self._projection)
+        """Labels for the drawn basis axes: the view's axes."""
+        axes = self._projection.axes if isinstance(self._projection, View) else DEFAULT_AXES
+
+        return basis_labels(axes)
 
     # =========================================================================
     # Backend Management
@@ -345,7 +352,8 @@ class Scene:
         from morphis.visuals.model import VisualModel
 
         if isinstance(element, (Surface, VisualModel)):
-            shapes = {"mesh": Shape("mesh", {"vertices": element.vertices.data, "faces": element.faces})}
+            vertices = self._picture(element.vertices.metric)(element.vertices)
+            shapes = {"mesh": Shape("mesh", {"vertices": vertices, "faces": element.faces})}
 
         elif isinstance(element, Frame):
             shapes = self._depict_frame(element, options)
@@ -361,31 +369,41 @@ class Scene:
 
         return shapes
 
+    def _picture(self, metric: Metric) -> Projection:
+        """The map from the element's space to the drawing space."""
+        return resolve(self._projection, metric)
+
     def _origins(self, element: Element, options: dict, count: int) -> NDArray:
-        """Projected origins for each lot entry (or the single element)."""
+        """Where each lot entry (or the single element) is attached, in the element's own space."""
         is_lot = count > 1 or bool(element.lot)
         given = options.get("origins") if is_lot else options.get("origin")
-        raw = zeros((count, 3)) if given is None else array(given, dtype=float).reshape(count, -1)
-        origins = array([self._project_point(point, element.metric) for point in raw])
+        origins = zeros((count, element.dim)) if given is None else array(given, dtype=float).reshape(count, -1)
 
         return origins
 
     def _depict_vectors(self, element: Vector, options: dict) -> dict[str, Shape]:
-        directions = self._project_vectors(element.data, element.metric)
-        origins = self._origins(element, options, len(directions))
+        """Arrows from each origin, drawn as the segment between the images of the tail and the tip."""
+        projection = self._picture(element.metric)
+        vectors = element.data.reshape(-1, element.dim)
+        origins = self._origins(element, options, len(vectors))
+        tails = projection(origins)
+        tips = projection(origins + vectors)
 
-        return {"arrows": Shape("arrows", {"origins": origins, "directions": directions})}
+        return {"arrows": Shape("arrows", {"origins": tails, "directions": tips - tails})}
 
     def _depict_oriented(self, element: Vector, options: dict) -> dict[str, Shape]:
         """Oriented disks for bivectors, oriented balls for trivectors, one per lot entry."""
         grade = element.grade
+        projection = self._picture(element.metric)
         entries = element.data.reshape(-1, *element.data.shape[-grade:])
-        centers = self._origins(element, options, len(entries))
+        origins = self._origins(element, options, len(entries))
 
         shapes = {}
-        for n, (components, center) in enumerate(zip(entries, centers, strict=True)):
-            projected = self._project_components(components, grade, element.metric)
-            depiction = oriented_disk(projected, center) if grade == 2 else oriented_ball(projected[0, 1, 2], center)
+        for n, (components, origin) in enumerate(zip(entries, origins, strict=True)):
+            blade = Vector(components, grade=grade, metric=element.metric)
+            drawn = projection.blade(blade, at=origin)
+            center = projection(origin)
+            depiction = oriented_disk(drawn, center) if grade == 2 else oriented_ball(drawn[0, 1, 2], center)
             shapes[f"fill/{n}"] = Shape("mesh", {"vertices": depiction.surface, "faces": depiction.faces}, FILL_OPACITY)
             shapes[f"rim/{n}"] = Shape("line", {"points": depiction.rim})
             shapes[f"sense/{n}"] = Shape("mesh", {"vertices": depiction.head, "faces": depiction.head_faces})
@@ -393,12 +411,17 @@ class Scene:
         return shapes
 
     def _depict_frame(self, element: Frame, options: dict) -> dict[str, Shape]:
-        """The frame's exact vectors, and the shape they span when filled."""
+        """The frame's exact vectors, and the shape they span when filled, from the images of its corners."""
         from morphis.visuals.drawing.vectors import create_frame_mesh
 
         origin = self._origins(element, options, 1)[0]
-        vectors = self._project_vectors(element.data, element.metric)
-        edges, faces, marker = create_frame_mesh(origin, vectors, filled=options.get("filled", False))
+        vectors = element.data.reshape(-1, element.dim)
+
+        # Corner n is the origin plus vector j for every bit j set in n
+        k = len(vectors)
+        corners = stack([origin + array([(n >> j) & 1 for j in range(k)]) @ vectors for n in range(2**k)])
+        drawn = self._picture(element.metric)(corners)
+        edges, faces, marker = create_frame_mesh(drawn, filled=options.get("filled", False))
 
         meshes = {"edges": (edges, 1.0), "faces": (faces, FRAME_FACE_OPACITY), "origin": (marker, 1.0)}
         shapes = {
@@ -461,74 +484,32 @@ class Scene:
             if name in shapes:
                 self._update_part(part, shapes[name])
 
-    # -------------------------------------------------------------------------
-    # Projection of components
-    # -------------------------------------------------------------------------
-
-    def _project_point(self, point: NDArray, metric: Metric) -> NDArray:
-        """
-        Project a point to 3D using the current projection axes.
-
-        Points of dimension 3 or less are zero-padded and drawn in their own
-        coordinates. Higher-dimensional points take the components at the
-        projection axes, translated to storage slots through the metric.
-        """
-        point = array(point, dtype=float)
-        if len(point) <= 3:
-            result = zeros(3)
-            result[: len(point)] = point
-        else:
-            slots = projection_slots(self._projection, metric)
-            result = point[list(slots)]
-
-        return result
-
-    def _project_vectors(self, vectors: NDArray, metric: Metric) -> NDArray:
-        """Project vectors of shape (..., dim) to an array of shape (k, 3)."""
-        vectors = array(vectors, dtype=float)
-        flat = vectors.reshape(-1, vectors.shape[-1])
-        result = array([self._project_point(v, metric) for v in flat])
-
-        return result
-
-    def _project_components(self, components: NDArray, grade: int, metric: Metric) -> NDArray:
-        """Project the components of one grade-2 or grade-3 element to 3D."""
-        if metric.dim <= 3:
-            result = pad_to_3d(components, grade)
-        else:
-            slots = list(projection_slots(self._projection, metric))
-            result = components[ix_(*([slots] * grade))]
-
-        return result
-
     # =========================================================================
     # Projection
     # =========================================================================
 
-    def set_projection(self, axes: tuple[int, ...]) -> None:
+    def set_projection(self, projection: View | Projection) -> None:
         """
-        Set projection axes for nD -> 3D.
+        Draw elements of dimension above 3 through a new view, or a given projection.
 
         Args:
-            axes: Three user-facing geometric indices, e.g. (2, 3, 4) to show
-                e_2, e_3, e_4. The basis labels follow the same indices.
+            projection: An Orthographic, Perspective, or Stereographic view, or
+                a Projection to 3D. The basis labels follow the view's axes.
 
         Raises:
-            ValueError: if axes is not exactly three integers.
-            IndexError: if an axis is out of range for the metric of any
-                element of dimension greater than 3 already in the scene.
+            IndexError: if an axis or pole is not a direction of an element
+                already in the scene.
+            ValueError: if a given Projection cannot draw such an element.
 
-        Every element already in the scene is redrawn under the new axes.
+        Every element already in the scene is redrawn through it.
         """
-        axes = validate_projection_axes(axes)
-
         # Validate against every projected element before changing state
         for tracked in self._elements.values():
             metric = getattr(tracked.element, "metric", None)
             if metric is not None and metric.dim > 3:
-                projection_slots(axes, metric)
+                resolve(projection, metric)
 
-        self._projection = axes
+        self._projection = projection
 
         if self._backend_initialized:
             self._backend.set_basis_labels(self.basis_labels)

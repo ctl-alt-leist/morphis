@@ -9,8 +9,10 @@ Main classes:
 - Canvas: High-level 3D drawing surface
 - Text: 3D text annotations
 
-Projection axes and basis labels use user-facing geometric indices, translated
-through each element's Metric: (1, 2, 3) is x, y, z in every signature.
+Elements of any dimension are drawn through a View (Orthographic, Perspective,
+Stereographic), which names the directions drawn as x, y, z by their labels
+and resolves against each element's Metric: (1, 2, 3) is x, y, z in every
+signature.
 
 For PGA-specific visualization, see the contexts submodule. For pen-and-ink
 conceptual figures, see morphis.visuals.ink.
@@ -54,6 +56,15 @@ from morphis.visuals.operations import (
 from morphis.visuals.projection import (
     ProjectionConfig as ProjectionConfig,
     project_blade as project_blade,
+)
+
+# Views and projective maps from any dimension to the drawing space
+from morphis.visuals.projective import (
+    Orthographic as Orthographic,
+    Perspective as Perspective,
+    Projection as Projection,
+    Stereographic as Stereographic,
+    View as View,
 )
 from morphis.visuals.recording import Recording as Recording
 from morphis.visuals.scene import Scene as Scene

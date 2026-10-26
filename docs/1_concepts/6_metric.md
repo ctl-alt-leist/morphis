@@ -15,22 +15,22 @@ This symmetric bilinear form encodes all geometric information about how vectors
 - **Minkowski**: signature $(+,-,-,-)$ or $(-,+,+,+)$
 - **Degenerate (PGA)**: some diagonal entries are zero
 
-A space is declared by its blocks, which fix the storage order and the label of every direction (see the index convention in `docs/4_design/`):
+A space is declared by its blocks, which fix the storage order and the label of every direction (see the index convention in `docs/5_design/`):
 
 ```python
 from morphis.elements import metric
 
 g = metric(space=3)                                     # diag(1, 1, 1), labels 1, 2, 3
 h = metric(space=3, projective=1)                       # diag(0, 1, 1, 1), labels 0, 1, 2, 3
-η = metric(time=1, space=3)                             # diag(1, -1, -1, -1), labels 0, 1, 2, 3
-η_plus = metric(time=1, space=3, convention="mostly plus")  # diag(-1, 1, 1, 1)
+spacetime = metric(time=1, space=3)                     # η = diag(1, -1, -1, -1), labels 0, 1, 2, 3
+spacetime_plus = metric(time=1, space=3, convention="mostly plus")  # diag(-1, 1, 1, 1)
 k = metric(modes=2)                                     # ℂ² as ℝ⁴, labels 1, 1̇, 2, 2̇
 
-g.dim          # 3
-g.data         # the metric matrix
-η.signature    # (1, 3, 0): counts of positive, negative, zero eigenvalues
-η.convention   # "mostly minus"
-k.labels       # (1, Dot(1), 2, Dot(2))
+g.dim                 # 3
+g.data                # the metric matrix
+spacetime.signature   # (1, 3, 0): counts of positive, negative, zero eigenvalues
+spacetime.convention  # "mostly minus"
+k.labels              # (1, Dot(1), 2, Dot(2))
 ```
 
 `euclidean_metric(d)`, `pga_metric(d)`, and `lorentzian_metric(d)` are shorthands for the first three.
@@ -167,10 +167,10 @@ The metric connects $V$ to $V^*$ via index raising and lowering:
 
 **Raising** (musical sharp $\sharp$):
 ```math
-\omega^\sharp = g^{-1}(\omega, \cdot) \in V, \quad \omega^m = g^{mn} \omega_n
+ω^\sharp = g^{-1}(ω, \cdot) \in V, \quad ω^m = g^{mn} ω_n
 ```
 
-where $g^{mn}$ is the inverse metric satisfying $g^{mp} g_{pn} = \delta^m_n$.
+where $g^{mn}$ is the inverse metric satisfying $g^{mp} g_{pn} = δ^m_n$.
 
 ## Metric-Dependent Operations
 

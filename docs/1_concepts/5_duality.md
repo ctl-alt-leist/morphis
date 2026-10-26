@@ -29,13 +29,13 @@ Complements map between grades $k$ and $(d - k)$ using only the **Levi-Civita sy
 For a grade-$k$ k-vector $b$:
 
 ```math
-\bar{b}^{m_{k + 1} \ldots m_d} = b^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
+\bar{b}^{m_{k + 1} \ldots m_d} = b^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
 ```
 
 ### Left Complement
 
 ```math
-\underline{b}^{m_1 \ldots m_{d - k}} = \varepsilon_{m_1 \ldots m_d} b^{m_{d - k + 1} \ldots m_d}
+\underline{b}^{m_1 \ldots m_{d - k}} = ε_{m_1 \ldots m_d} b^{m_{d - k + 1} \ldots m_d}
 ```
 
 ### Orthogonality
@@ -106,7 +106,7 @@ where $G$ applies the metric to raise/lower indices.
 In components:
 
 ```math
-(\star v)^{m_{k + 1} \ldots m_d} = \frac{1}{k!} g^{m_{k + 1} n_{k + 1}} \cdots g^{m_d n_d} v^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
+(\star v)^{m_{k + 1} \ldots m_d} = \frac{1}{k!} g^{m_{k + 1} n_{k + 1}} \cdots g^{m_d n_d} v^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
 ```
 
 The key distinction:

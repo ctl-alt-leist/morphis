@@ -56,7 +56,7 @@ v' = R v \tilde{R}
 ### Construction from Bivector
 
 ```math
-R = e^{-b\theta/2} = \cos(\theta/2) - \sin(\theta/2) \hat{b}
+R = e^{-bθ/2} = \cos(θ/2) - \sin(θ/2) \hat{b}
 ```
 
 where $\hat{b}$ is the unit bivector defining the rotation plane.
@@ -82,7 +82,7 @@ v_rotated = R * e1 * ~R  # e1 -> e2
 The rotation action expands to:
 
 ```math
-x' = x + \sin(\theta) b \cdot x + (1 - \cos(\theta)) b \cdot (b \cdot x)
+x' = x + \sin(θ) b \cdot x + (1 - \cos(θ)) b \cdot (b \cdot x)
 ```
 
 ### Two Reflections = One Rotation
@@ -247,7 +247,7 @@ is_direction(d)  # True
 
 **Plane through three points**:
 ```math
-\pi = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
+π = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
 ```
 
 ```python
@@ -300,7 +300,7 @@ d = distance_point_to_line(p, l)
 All motor transformations preserve:
 
 - **Distance**: $d(\mathbf{p}'_1, \mathbf{p}'_2) = d(\mathbf{p}_1, \mathbf{p}_2)$
-- **Angle**: $\cos\theta' = \cos\theta$
+- **Angle**: $\cos θ' = \cos θ$
 - **Orientation**: $\det(M) = +1$
 
 These are the defining properties of rigid motions (Euclidean isometries).

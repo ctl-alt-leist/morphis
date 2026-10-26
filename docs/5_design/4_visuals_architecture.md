@@ -33,7 +33,8 @@ src/morphis/visuals/
 ├── model.py          # VisualModel: mesh whose vertices are GA Vectors
 ├── text.py           # Text, TextStyle: 3D text annotations (data only)
 ├── theme.py          # Colors, palettes, themes, window sizes
-├── projection.py     # nD -> 3D projection, index translation, basis labels
+├── projective.py     # Projection (projective maps), View: Orthographic, Perspective, Stereographic
+├── projection.py     # Basis labels; ProjectionConfig and project_blade for the Canvas path
 ├── contexts.py       # PGA interpretation (points, lines, planes)
 ├── operations.py     # Meet, join, and dual visualizations
 ├── backends/         # Rendering backend abstraction used by Scene
@@ -45,7 +46,6 @@ src/morphis/visuals/
 ├── ink/              # Pen-and-ink conceptual figures (matplotlib)
 │   ├── sketch.py     # Sketch: records marks in 3D, renders them to the page
 │   ├── animate.py    # animate(): one sketch per time -> MP4 or GIF
-│   ├── depiction.py  # Depiction: true space -> 3D drawing space
 │   ├── space.py      # OrganicSpace: seeded enclosing space and its silhouette
 │   ├── camera.py     # Camera: orbiting view, orthographic or perspective
 │   ├── theme.py      # InkTheme: paper, ink, graphite, accents, font
@@ -62,7 +62,7 @@ src/morphis/visuals/
 │  contexts (PGA), operations (meet/join/dual)                │
 ├─────────────────────────────────────────────────────────────┤
 │  Depiction                                                  │
-│  projection: user indices -> Metric -> storage slots        │
+│  projective: View -> Metric -> Projection to the drawing    │
 │  drawing/blades.py: oriented disks and balls                │
 ├─────────────────────────────────────────────────────────────┤
 │  Backend Abstraction                                        │
@@ -83,7 +83,8 @@ Scene talks only to the backend protocol. Canvas, `contexts.py`, and `operations
 | For | shaded 3D scenes, live or recorded | pen-and-ink conceptual figures |
 | Renderer | PyVista/VTK through `RenderBackend` | matplotlib |
 | Motion | mutate elements, then `capture(t)` | `build(t)` returns the figure at time t |
-| Output | window; `record()` to .mp4 / .gif; `save()` to .scene / .obj | `save()` to PNG/SVG/PDF; `animate()` to .mp4 / .gif |
+| Projection | `View` or `Projection` | `View` or `Projection` |
+| Output | window; `record()` to .gif / .mp4; `save()` to .scene / .obj | `save()` to PNG/SVG/PDF; `animate()` to .gif / .mp4 |
 | Size | pixels (`size=(1280, 800)`) | inches (`size=(8, 6)`) at a dpi |
 | Frame rate | `frame_rate` | `frame_rate` |
 
@@ -111,7 +112,7 @@ scene.show()
 # Recording, off screen and as fast as frames render
 scene = Scene(window=False)
 scene.add(B)
-with scene.record("figures/turn/turn.mp4"):
+with scene.record("figures/turn/turn.gif"):
     for t in times:
         B.data[...] = turned(t)
         scene.capture(t)
@@ -124,7 +125,7 @@ with scene.record("figures/turn/turn.mp4"):
 - `remove(element_id)`
 - `capture(t)`: redraw every element from its current state; with a window, keep pace with wall-clock time `t`; inside `record()`, append one frame
 - `record(path, frame_rate=None)`: context manager; every capture inside the block becomes a frame of `path` (.mp4 or .gif), finalized on exit, even if the block raises. The frame rate defaults to the scene's. Yields the `Recording`, whose `frame_count` and `written_count` tell what was captured and written
-- `set_projection(axes)`: choose the three geometric indices shown; every element already in the scene is redrawn under the new axes
+- `set_projection(projection)`: draw through a new `View` or `Projection` (see Projection); every element already in the scene is redrawn through it
 - `show()`: show the window and block until it is closed
 - `fade_in(element, t, duration)`, `fade_out(element, t, duration)`: schedule opacity effects
 - `camera(position, focal_point, up)`, `reset_camera()`, `set_clipping_range(near, far)`
@@ -132,49 +133,64 @@ with scene.record("figures/turn/turn.mp4"):
 - `save(path)`, `Scene.load(path, window=True)`: persist and restore
 - `close()`, `is_closed()`
 
-**Properties:** `theme`, `frame_rate`, `window`, `projection` (user-facing indices), `basis_labels`.
+**Properties:** `theme`, `frame_rate`, `window`, `projection` (the `View` or `Projection`), `basis_labels`.
 
 **Update path.** Each element's depiction is a fixed set of named shapes (for a bivector: `fill/0`, `rim/0`, `sense/0`), determined by its type, grade, and lot. `add()` creates one backend object per shape. `capture(t)` recomputes the shapes from the element's current data and moves each backend object to its new geometry (`update_arrows`, `update_lines`, `update_mesh`, or `replace_mesh` when the topology can change, as for frames), then applies effect opacity.
 
-## Projection (`projection.py`)
+## Projection (`projective.py`)
 
-Elements of dimension greater than 3 are projected onto three axes for display. Projection axes are **user-facing geometric indices**, the same indices accepted by `basis_vector` and `.on[...]` (see [Index Convention](6_index-convention.md)):
+The metric decides the geometry; the projection decides the picture. Elements of any dimension are drawn through a projective map to the 3D drawing space, and both renderers, the Scene and the ink Sketch, take the same two kinds of setting.
+
+**Views.** A `View` names the kind of projection and the three directions that become x, y, z, by their labels, the same labels accepted by `basis_vector` and `.on[...]` (see [Index Convention](6_index-convention.md)). It holds no metric: the Scene is built before it sees any element, so each element resolves the view against its own metric with `view.resolve(metric)`, which returns a `Projection`.
 
 ```python
-scene = Scene(projection=(1, 2, 3))  # e_1, e_2, e_3 (the default)
-scene.set_projection((2, 3, 4))      # switch to e_2, e_3, e_4
+from morphis.visuals import Orthographic, Perspective, Scene, Stereographic
+
+scene = Scene(projection=Orthographic(axes=(1, 2, 3)))            # the default
+scene.set_projection(Orthographic(axes=(2, 3, 4)))               # e_2, e_3, e_4
+scene.set_projection(Perspective(axes=(1, 2, 3), distance=3.0))  # an eye on the e_4 axis
+scene.set_projection(Stereographic(axes=(1, 2, 3), pole=4))      # from the pole of the unit sphere
 ```
 
-Translation rules:
+| View | Map | Parameters |
+|------|-----|------------|
+| `Orthographic(axes)` | the components along the axes; every other direction dropped | |
+| `Perspective(axes, distance)` | $\mathbf{x} \mapsto D \mathbf{x}_{\text{axes}} / (D - Σ x_{\text{dropped}})$ | `distance` $D$ of the eye |
+| `Stereographic(axes, pole, radius)` | from the pole of the sphere of that radius onto the hyperplane through the origin, then orthographic onto the axes | `pole` label (last direction by default), `radius` |
 
-- The default `DEFAULT_PROJECTION = (1, 2, 3)` is x, y, z in every signature, because x is always index 1.
-- Scene is built before it sees any metric, so it stores the user indices and translates them per element at projection time through `Metric.to_internal_multi`. A 4D Euclidean element maps `(1, 2, 3)` to slots `(0, 1, 2)`; a 3D PGA element (dim 4) maps it to slots `(1, 2, 3)`, skipping the ideal direction.
-- An out-of-range index raises `IndexError`. Index 0 is forbidden for a Euclidean element and selects time or the ideal direction for Lorentzian and PGA elements.
-- `set_projection` checks the new axes against every element of dimension greater than 3 already in the scene before changing anything.
-- Elements of dimension 3 or less are drawn in their own coordinates (zero-padded to 3D) and are not projected.
-- Basis labels come from the same indices: `basis_labels((2, 3, 4))` gives e₂, e₃, e₄. Scene passes them to the backend before the basis is first drawn and again on every `set_projection`.
+The perspective weight row is $1 - Σ x_{\text{dropped}} / D$, so its center of projection is the flat where the axes components vanish and $Σ x_{\text{dropped}} = D$: from ℝ⁴ the eye sits at $D \mathbf{e}_4$, and the far cell of a tesseract is drawn inside the near one. Every view draws a space of dimension 3 or less in its own coordinates, zero-padded. The axes must be three distinct labels of the element's space, so an axis outside it raises `IndexError` (0 is forbidden in a Euclidean space and is time or the ideal direction in a Lorentzian or PGA space), and a stereographic pole may not also be an axis. The default `axes=(1, 2, 3)` is x, y, z in every signature, because x is always 1. Views are frozen pydantic models, compared by value and saved with a scene.
 
-Module contents:
+**Projections.** `Projection` holds the $(m + 1) \times (d + 1)$ matrix of a projective map $\mathbb{RP}^d \to \mathbb{RP}^m$ on homogeneous coordinates; its kernel is the center of projection. A projection to 3D may be given wherever a view is, for a map no view names: a screen tilted out of the basis, a deliberately unfaithful linear depiction, or a chain of maps.
 
-| Name | Role |
+| Constructor or method | Role |
 |------|------|
-| `DEFAULT_PROJECTION` | `(1, 2, 3)` |
-| `validate_projection_axes(axes)` | requires exactly three integers, raises `ValueError` otherwise |
-| `projection_slots(axes, metric)` | user indices to internal slots via the metric |
-| `basis_labels(axes)` | LaTeX labels `$\mathbf{e}_{n}$` for the given indices |
-| `ProjectionConfig(axes, method, target_dim)` | blade projection settings; `axes` are user indices, `method` is `"slice"` or `"principal"` |
-| `project_blade(blade, config)` | project a grade 0 to 4 blade to `target_dim` |
-| `get_projection_axes(blade, config)` | the user indices a projection would show |
+| `Projection.linear(metric, images)` | each labeled direction sent to a chosen picture vector; the deliberately unfaithful depiction, in which two directions may share one image |
+| `Projection.orthographic(screen)` | picture coordinate $c$ is $\mathbf{e}_c \cdot \mathbf{x}$ for an orthonormal screen `Frame` |
+| `Projection.stereographic(pole)` | the sphere of the pole's radius, from the pole |
+| `P @ Q` | composition, first Q then P |
+| `P(points)` | picture coordinates of points of any lot |
+| `P.pushforward(points, vectors)` | the differential $dΠ$ on tangent vectors |
+| `P.blade(b, at)` | a k-vector at a point carried by the outermorphism $∧^k dΠ$ |
+| `P.pinching(points, frame)` | $s_{\min} / s_{\max}$ of $dΠ$ on a tangent frame, 0 at a pinch point |
+| `P.is_affine` | whether the weight is constant, so displacements have images of their own |
 
-The `"principal"` method (also used when `axes` is `None`) picks the internal slots with the largest components, and `get_projection_axes` reports them back through `Metric.to_user`.
+`resolve(projection, metric)` is the single entry the renderers use: a view is resolved against the metric, and a given projection is checked to draw that space in 3D.
 
-Below the projection layer, `create_blade_mesh`, `create_frame_mesh`, and `create_quadvector_mesh` take a `projection_axes` argument of **internal storage slots**. Their callers translate through the metric first; the drawing code does only array math. Scene projects the components itself before depicting: grade-1 points take the components at the projection slots, and grade-2 and grade-3 components take the sub-array at those slots on every axis.
+**What is mapped how.** Points, and everything built from points, are mapped point by point: arrow tails and tips, the $2^k$ corners of a frame's cell, mesh vertices, and ink curves. A projective map sends lines to lines and flats to flats, so the edges and faces drawn between mapped corners are exact under perspective too, where a parallelogram is drawn as a general quadrilateral. A bare blade carries no points beyond where it is attached, so the Scene carries it into the picture by `P.blade` at its origin and draws the result by its invariants (an oriented disk or ball). Under an orthographic view onto basis directions, `P.blade` is the sub-array of components at those directions.
+
+Ink marks that also take displacements (a vector's arrow, a plane's spanning vectors, a circle's plane) set them out from a drawing-space placement, which needs an affine projection; given a central one, `Sketch.carried` raises `ValueError`. Points, curves, surfaces, and labels go through any projection.
+
+**Labels.** `basis_labels(axes)` in `projection.py` gives the LaTeX labels of the drawn basis, $\mathbf{e}_2, \mathbf{e}_3, \mathbf{e}_4$ for axes `(2, 3, 4)`. The Scene passes them to the backend before the basis is first drawn and again on every `set_projection`. A given `Projection` has no axes, and the basis is labeled 1, 2, 3.
+
+**The Canvas path.** `ProjectionConfig` and `project_blade` in `projection.py` remain for the Canvas helpers in `drawing/vectors.py`, `contexts.py`, and `operations.py`, which slice components at chosen axes. They are to move onto views as those helpers are revisited.
 
 ## Recording (`recording.py`)
 
 `Recording(path, frame_rate)` is the one writer behind `Scene.record` and `ink.animate`. Frames go in as RGB image arrays; the suffix picks the format, `.mp4` (H.264 via imageio-ffmpeg) or `.gif` (looping). It is a context manager that finalizes the file on exit.
 
 GIF frame delays are whole centiseconds, and browsers slow any delay under 20 ms, so a GIF plays at most 50 frames per second. The writer uses the nearest delay of at least 20 ms and, when frames arrive faster, keeps the frames that fall on the GIF's own ticks, so the clip keeps its real duration. Video writes every frame at the given rate.
+
+The example animations default to `.gif`, which plays inline wherever the docs are read; `.mp4` remains a suffix away. A GIF of stippled ink grows quickly with resolution, so the ink examples render their animation frames at a lower `dpi` than their stills.
 
 ## Ink Sketches (`ink/`)
 
@@ -183,26 +199,27 @@ Pen-and-ink conceptual figures in the style of a hand-drawn monograph illustrati
 The design separates **what is true** from **how it is drawn**:
 
 - **True geometry** is ordinary morphis objects in their own space and dimension, with their exact relationships (for example a realified qubit in ℝ⁴ and the exact shadows of a state in two conjugate planes).
-- **`Depiction`** is the figure's deliberate linear map from the true space into a 3D drawing space, stated once by naming the drawing direction that stands for each basis direction. Keys are user-facing geometric indices through the true space's `Metric`, so `1` is `e_1`. Two true directions may share one drawing direction when the figure needs it.
-- **Placement**: a `Vector` passed to a mark is true geometry and goes through the depiction; a plain `(x, y, z)` triple is a drawing-space position chosen by the figure, such as where a plane is set out.
+- **The projection** carries the true space into a 3D drawing space: a `View` as for the Scene, or a `Projection`. The figure's deliberately unfaithful linear map is `Projection.linear`, stated once by naming the drawing direction that stands for each basis direction. Keys are labels of the true space's `Metric`, so `1` is `e_1`, and two true directions may share one drawing direction when the figure needs it. The default is `Orthographic()`.
+- **Placement**: a `Vector` passed to a mark is true geometry and goes through the projection; a plain `(x, y, z)` triple is a drawing-space position chosen by the figure, such as where a plane is set out.
 - **`Camera`** orbits a focal point (`azimuth`, `elevation`, `distance`, `fov`; `fov=0` is orthographic) and maps drawing coordinates to the page plus depth.
 
 ```python
 from morphis.elements import basis_vectors, euclidean_metric
-from morphis.visuals.ink import Camera, Depiction, OrganicSpace, Sketch
+from morphis.visuals import Projection
+from morphis.visuals.ink import Camera, OrganicSpace, Sketch
 
 g = euclidean_metric(4)
 e_a, f_a, e_b, f_b = basis_vectors(g)  # e_m and its partner e_ṁ (as f_m)
-depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
+projection = Projection.linear(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
 
-sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), depiction=depiction)
+sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), projection=projection)
 sketch.space(OrganicSpace(seed=3, stretch=(1.6, 1.25, 1.05)))
 sketch.plane(e_a, f_a, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)), grid=6)
 sketch.vector(e_a + f_b, label="$ψ$")
 sketch.save("figures/example.png")
 ```
 
-**Marks.** `space`, `plane` (stippled parallelogram with a dashed grid), `vector` (pen arrowhead, optional label beside the shaft midpoint), `line` (dashed construction line), `circle` (circle or arc in a plane, optional arrow), `curve` (polyline, solid or dotted), `point`, and `label`. Marks are recorded in drawing coordinates and rendered only on `save`/`render`, so page bounds, stroke scale, and depth order come from the whole figure. Order is by layer (space, planes, construction lines and curves, vectors, points, labels), then far to near.
+**Marks.** `space`, `plane` (stippled parallelogram with a dashed grid), `vector` (pen arrowhead, optional label beside the shaft midpoint), `line` (dashed construction line), `circle` (circle or arc in a plane, optional arrow), `curve` (polyline through points or a lot-shaped `Vector`, solid or dotted), `shell` (a translucent mesh in pen and stipple, with no grid: its contour inked arc by arc between cusps, a visible arc ending in cusps bold as a lip and a hidden arc meeting a visible one at a cusp left out, and its body stippled densest where it turns edge-on; whatever a nearer sheet covers, including curves and dots given with it, is veiled, decided against a depth buffer of the shell), `surface` (an opaque shaded mesh painted far to near), `point`, and `label`. Marks are recorded in drawing coordinates and rendered only on `save`/`render`, so page bounds, stroke scale, and depth order come from the whole figure. Order is by layer (space, planes, construction lines and curves, vectors, points, labels), then far to near.
 
 **Organic space.** `OrganicSpace` is a star-shaped surface whose radius along a unit direction u is `1 + lumpiness · Σ a_k cos(π f_k (u · d_k) + φ_k) / Σ a_k`, with seeded random directions d_k, frequencies f_k up to `detail`, phases φ_k, and amplitudes a_k ∝ 1/f_k. It is then scaled per axis by `stretch` and by `size`. The silhouette is computed for the camera by projecting a Fibonacci-spiral sampling of the surface and keeping the farthest point at each angle about the projected center, so it stays correct as the camera moves. Shading is rim stipple: dot density falls off exponentially inward from the silhouette and is heavier on a chosen shadow side.
 
@@ -343,7 +360,7 @@ scene.show()
 
 | Extension | Format | Use case |
 |-----------|--------|----------|
-| `.scene` | Pickle of `SceneData` | Reloadable with theme, size, projection (user indices), basis flag, and per-element color, opacity, and options |
+| `.scene` | Pickle of `SceneData` | Reloadable with theme, size, projection (the `View` or `Projection`), basis flag, and per-element color, opacity, and options |
 | `.obj` | Wavefront OBJ | View in 3D apps (macOS Preview, Blender, etc.) |
 
 **CLI viewing:**
@@ -392,11 +409,11 @@ scene.show()        →  Blocking show, waits for close
 
 5. **Backend abstraction:** Scene depends on the `RenderBackend` protocol only.
 
-6. **Metric-routed projection:** projection axes and basis labels use user-facing geometric indices, translated per element through its `Metric`. No visuals code converts indices with an ad-hoc offset.
+6. **Metric-routed projection:** a view names its axes by label and resolves against each element's `Metric`; basis labels use the same labels. No visuals code converts indices with an ad-hoc offset.
 
 7. **Real-time sync on screen, full speed off screen:** with a window, `capture(t)` waits for wall-clock time `t`; with `window=False` it does not.
 
-8. **Truth separate from depiction (ink):** figures keep objects in their true space and state every unfaithful drawing choice in one `Depiction` plus explicit placements.
+8. **Truth separate from depiction (ink):** figures keep objects in their true space and state every unfaithful drawing choice in one projection plus explicit placements.
 
 ## Extension Points
 
@@ -407,6 +424,6 @@ scene.show()        →  Blocking show, waits for close
 | New element type | `Scene._depict()`: return named `Shape`s for it |
 | New depiction geometry | `drawing/blades.py` (plain arrays, no renderer) |
 | New output format | `recording.py` |
-| New projection method | `projection.py` (keep user indices at the API, slots below it) |
+| New projection | A `View` subclass in `projective.py` whose `_project` builds the matrix from labels through the metric |
 | New ink mark | A recorder method on `Sketch`, a `LAYERS` entry, and a `_render_<kind>` method |
 | New ink theme | An `InkTheme` in `ink/theme.py`, added to `INK_THEMES` |

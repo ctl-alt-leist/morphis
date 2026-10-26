@@ -39,7 +39,8 @@ def rotor(B: Vector, angle: float | NDArray) -> MultiVector:
     Implemented via exp_vector(), which provides closed-form evaluation
     for any metric signature (Euclidean, Lorentzian, or degenerate).
 
-    The rotor is a MultiVector with grades {0, 2}. Apply via sandwich product:
+    The rotor is a MultiVector with grades {0, 2}, and also grade 4 when B is
+    a non-simple bivector of four or five dimensions. Apply via sandwich product:
         rotated = M * b * ~M
 
     Args:

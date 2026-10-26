@@ -16,6 +16,7 @@ from morphis.elements import Frame, Vector, basis_vectors, euclidean_metric
 from morphis.transforms import rotor
 from morphis.visuals import Scene, VisualModel
 from morphis.visuals.drawing.blades import bivector_normal, oriented_ball, oriented_disk
+from morphis.visuals.projective import Orthographic, Perspective, Stereographic
 
 
 ORIGIN = array([0.0, 0.0, 0.0])
@@ -159,7 +160,7 @@ class TestSceneDepiction:
         scene.add(B)
         hidden = norm(scene._depict(B, {})["rim/0"].geometry["points"])
 
-        scene.set_projection((2, 3, 4))
+        scene.set_projection(Orthographic(axes=(2, 3, 4)))
         shown = norm(scene._depict(B, {})["rim/0"].geometry["points"])
 
         assert hidden == pytest.approx(0.0)
@@ -257,3 +258,56 @@ class TestRecording:
 
         assert path.exists()
         assert scene._recording is None
+
+
+# =============================================================================
+# Projection
+# =============================================================================
+
+
+class TestDepictionUnderProjection:
+    def test_tesseract_cell_counts(self):
+        from morphis.visuals.drawing.vectors import create_frame_mesh
+
+        corners = array([[(n >> j) & 1 for j in range(4)] for n in range(16)], dtype=float)[:, :3]
+        _, faces, _ = create_frame_mesh(corners, filled=True)
+        _, bare, _ = create_frame_mesh(corners, filled=False)
+
+        assert faces.n_cells == 24
+        assert bare is None
+
+    def test_frame_corners_mapped_point_by_point(self):
+        g = euclidean_metric(4)
+        e1, e2, _, e4 = basis_vectors(g)
+        view = Perspective(distance=3.0)
+        scene = offscreen_scene(projection=view)
+        frame = Frame(e1 + e4, e2 + 0.5 * e4)
+        vertices = scene._depict(frame, {"filled": True})["faces"].geometry["vertices"]
+
+        projection = view.resolve(g)
+        far = projection((e1 + e2 + 1.5 * e4).data)
+        sum_of_images = projection((e1 + e4).data) + projection((e2 + 0.5 * e4).data)
+
+        assert min(norm(vertices - far, axis=1)) == pytest.approx(0.0, abs=1e-12)
+        assert min(norm(vertices - sum_of_images, axis=1)) > 0.1
+
+    def test_arrow_tip_is_image_of_tip(self):
+        g = euclidean_metric(4)
+        e1, _, _, e4 = basis_vectors(g)
+        view = Perspective(distance=2.0)
+        scene = offscreen_scene(projection=view)
+        v = e1 + e4
+        arrows = scene._depict(v, {"origin": [0.0, 0.0, 1.0, 0.5]})["arrows"].geometry
+        projection = view.resolve(g)
+
+        assert_allclose(arrows["origins"][0], projection(array([0.0, 0.0, 1.0, 0.5])))
+        assert_allclose(arrows["origins"][0] + arrows["directions"][0], projection(array([1.0, 0.0, 1.0, 1.5])))
+
+    def test_disk_of_hidden_plane_vanishes_orthographically(self):
+        g = euclidean_metric(4)
+        _, _, e3, e4 = basis_vectors(g)
+        scene = offscreen_scene(projection=Stereographic(axes=(1, 2, 3)))
+        rim = scene._depict(e3 ^ e4, {})["rim/0"].geometry["points"]
+
+        # At the origin the stereographic differential sends the pole direction to zero
+        assert norm(rim, axis=-1).max() == pytest.approx(0.0, abs=1e-12)

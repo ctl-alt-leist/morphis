@@ -39,7 +39,7 @@ General form:
 Linear dependence:
 
 ```math
-\mathbf{u} = \alpha \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
+\mathbf{u} = α \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
 ```
 
 ### Associativity
@@ -109,13 +109,13 @@ Complement operations map between dual grades using the Levi-Civita symbol.
 For grade-$k$ blade in $d$ dimensions:
 
 ```math
-\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} \varepsilon_{m_1 \ldots m_d}
+\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
 ```
 
 ### Left Complement
 
 ```math
-\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = \varepsilon_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
+\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = ε_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
 ```
 
 ### Grade Mapping
@@ -135,7 +135,7 @@ For grade-$k$ blade in $d$ dimensions:
 The Hodge dual incorporates metric structure:
 
 ```math
-(\star \mathbf{B})^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} \varepsilon^{m_1 \ldots m_d}
+(\star \mathbf{B})^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} ε^{m_1 \ldots m_d}
 ```
 
 ### Grade Mapping
@@ -157,7 +157,7 @@ where $\mathbb{1}$ is the pseudoscalar.
 3D vector dual:
 
 ```math
-\star \mathbf{v} = v^m \varepsilon^{mnp} \mathbf{e}_{np}
+\star \mathbf{v} = v^m ε^{mnp} \mathbf{e}_{np}
 ```
 
 3D bivector dual:
@@ -200,7 +200,7 @@ This always returns real values for real metrics, giving the physical magnitude 
 |\mathbf{B}|_H = \sqrt{|\mathbf{B}|^2_H}
 ```
 
-For phasors $\mathbf{v} = \mathbf{A} e^{i\phi}$, this gives the RMS amplitude $|\mathbf{A}|$.
+For phasors $\mathbf{v} = \mathbf{A} e^{iφ}$, this gives the RMS amplitude $|\mathbf{A}|$.
 
 ### Properties
 
@@ -275,7 +275,7 @@ For vectors:
 ### Orthogonality
 
 ```math
-\mathbf{e}_m \cdot \mathbf{e}_n = g_{mn} = \delta_{mn}
+\mathbf{e}_m \cdot \mathbf{e}_n = g_{mn} = δ_{mn}
 ```
 
 ## Projections
@@ -473,7 +473,7 @@ In a space with modes the structure bivector and its map are:
 
 ```math
 \begin{aligned}
-\mathbf{J} &= \mathbf{e}_m \wedge \mathbf{e}_{\dot m} \\ \\
+\mathbf{J} &= \mathbf{e}_m \wedge \mathbf{e}_{\dot m} \\
 J(\mathbf{v}) &= \mathbf{v} \lrcorner \mathbf{J}
 \end{aligned}
 ```
@@ -496,10 +496,10 @@ J(\mathbf{v}) &= \mathbf{v} \lrcorner \mathbf{J}
 For a unit 2-blade, $\cos θ = \mathbf{b} \cdot \mathbf{J}$:
 
 - $θ(\mathbf{e}_{1 \dot 1}) = 0$, $θ(\mathbf{e}_{\dot 1 1}) = π$, $θ(\mathbf{e}_{12}) = π / 2$
-- $θ(\mathbf{e}_1 \wedge (\cos α \, \mathbf{e}_{\dot 1} + \sin α \, \mathbf{e}_2)) = α$
+- $θ(\mathbf{e}_1 \wedge (\cos α \mathbf{e}_{\dot 1} + \sin α \mathbf{e}_2)) = α$
 - a tangent frame and its blade give the same angle
 
 ### Amplitudes
 
-- $z^m = v^m + i \, v^{\dot m}$, with no normalization factor
+- $z^m = v^m + i v^{\dot m}$, with no normalization factor
 - multiplication by $i$ is $J$: $(J \mathbf{v})$ has amplitudes $i z$

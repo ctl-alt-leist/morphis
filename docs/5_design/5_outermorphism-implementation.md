@@ -29,10 +29,10 @@ The extension to grade-2 (bivectors) follows from the wedge-preservation propert
 ```math
 \begin{align}
 (\bigwedge^2 A)(\mathbf{b})^{mn}
-    &= (A\mathbf{u} \wedge A\mathbf{v})^{mn} \\ \\
-    &= (A\mathbf{u})^m (A\mathbf{v})^n - (A\mathbf{u})^n (A\mathbf{v})^m \\ \\
-    &= A^m{}_p u^p A^n{}_q v^q - A^n{}_p u^p A^m{}_q v^q \\ \\
-    &= A^m{}_p A^n{}_q (u^p v^q - u^q v^p) \\ \\
+    &= (A\mathbf{u} \wedge A\mathbf{v})^{mn} \\
+    &= (A\mathbf{u})^m (A\mathbf{v})^n - (A\mathbf{u})^n (A\mathbf{v})^m \\
+    &= A^m{}_p u^p A^n{}_q v^q - A^n{}_p u^p A^m{}_q v^q \\
+    &= A^m{}_p A^n{}_q (u^p v^q - u^q v^p) \\
     &= A^m{}_p A^n{}_q b^{pq}
 \end{align}
 ```

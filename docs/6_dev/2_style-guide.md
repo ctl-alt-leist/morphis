@@ -264,7 +264,7 @@ Multi-line, aligned on the relation:
 ```math
 \begin{aligned}
     \mathbf{a} \wedge \mathbf{b}
-        &= \frac{1}{2} a^m b^n \varepsilon^{mn} \mathbf{e}_{mn} \\
+        &= \frac{1}{2} a^m b^n ε^{mn} \mathbf{e}_{mn} \\
         &= \frac{1}{2}(a^1 b^2 - a^2 b^1) \mathbf{e}_{12}
 \end{aligned}
 ```
@@ -283,7 +283,7 @@ Inline math stays in `$...$`, with braces written `\lbrace` and `\rbrace` rather
 | Bivector | $\mathbf{B}$ |
 | Pseudoscalar | $\mathbb{1}$ |
 | Scalar | $\mathbf{1}$ |
-| Levi-Civita | $\varepsilon^{mn...}$ |
+| Levi-Civita | $ε^{mn...}$ |
 | Metric | $g_{ab}$ |
 
 ### Spacing Commands

@@ -19,7 +19,7 @@ from morphis.operations import complex_structure, is_lagrangian, kahler_angle
 def clifford_torus(radii=(1.0, 1.0)):
     r1, r2 = radii
     return Patch(
-        lambda θ, φ: [r1 * cos(θ), r1 * sin(θ), r2 * cos(φ), r2 * sin(φ)],
+        lambda u, v: [r1 * cos(u), r1 * sin(u), r2 * cos(v), r2 * sin(v)],
         Circle() * Circle(),
         metric(space=4),
     )
@@ -27,7 +27,7 @@ def clifford_torus(radii=(1.0, 1.0)):
 
 def sphere(radius):
     return Patch(
-        lambda θ, φ: [radius * sin(θ) * cos(φ), radius * sin(θ) * sin(φ), radius * cos(θ)],
+        lambda u, v: [radius * sin(u) * cos(v), radius * sin(u) * sin(v), radius * cos(u)],
         Interval(0.3, 2.8) * Circle(),
         metric(space=3),
     )
@@ -63,10 +63,10 @@ class TestSampling:
     def test_frame_matches_exact_derivative(self):
         torus = clifford_torus((0.6, 0.8))
         sigma = torus.grid(7)
-        θ, φ = sigma[..., 0], sigma[..., 1]
+        u, v = sigma[..., 0], sigma[..., 1]
         frame = torus.tangent_frame(sigma).data
-        assert allclose(frame[..., 0, :2], 0.6 * array([-sin(θ), cos(θ)]).transpose(1, 2, 0), atol=1e-10)
-        assert allclose(frame[..., 1, 2:], 0.8 * array([-sin(φ), cos(φ)]).transpose(1, 2, 0), atol=1e-10)
+        assert allclose(frame[..., 0, :2], 0.6 * array([-sin(u), cos(u)]).transpose(1, 2, 0), atol=1e-10)
+        assert allclose(frame[..., 1, 2:], 0.8 * array([-sin(v), cos(v)]).transpose(1, 2, 0), atol=1e-10)
 
     def test_map_may_return_vector(self):
         g = metric(space=3)
@@ -198,7 +198,7 @@ class TestCurvature:
 
 def de_sitter(convention):
     return Patch(
-        lambda t, φ: [sinh(t), cosh(t) * cos(φ), cosh(t) * sin(φ)],
+        lambda t, v: [sinh(t), cosh(t) * cos(v), cosh(t) * sin(v)],
         Interval(-1, 1) * Circle(),
         metric(time=1, space=2, convention=convention),
     )
@@ -218,7 +218,7 @@ class TestCausalCharacter:
 
     def test_light_cone_is_null(self):
         g = metric(time=1, space=2)
-        cone = Patch(lambda r, φ: [r, r * cos(φ), r * sin(φ)], Interval(1, 2) * Circle(), g)
+        cone = Patch(lambda r, v: [r, r * cos(v), r * sin(v)], Interval(1, 2) * Circle(), g)
         assert set(cone.causal_character(cone.grid(4)).ravel()) == {"null"}
 
     def test_euclidean_is_spacelike(self):
@@ -234,13 +234,13 @@ class TestCausalCharacter:
 class TestComplex:
     def test_amplitude_map_realizes(self):
         g = metric(modes=2)
-        torus = Patch(lambda θ, φ: [exp(1j * θ), exp(1j * φ)], Circle() * Circle(), g)
+        torus = Patch(lambda u, v: [exp(1j * u), exp(1j * v)], Circle() * Circle(), g)
         sigma = torus.grid(5)
         assert allclose(torus(sigma).amplitudes, exp(1j * sigma))
 
     def test_clifford_torus_is_lagrangian(self):
         g = metric(modes=2)
-        torus = Patch(lambda θ, φ: [exp(1j * θ) / sqrt(2), exp(1j * φ) / sqrt(2)], Circle() * Circle(), g)
+        torus = Patch(lambda u, v: [exp(1j * u) / sqrt(2), exp(1j * v) / sqrt(2)], Circle() * Circle(), g)
         sigma = torus.grid(5)
         assert allclose(kahler_angle(torus.tangent_frame(sigma)), pi / 2)
         assert is_lagrangian(torus.tangent_blade(sigma)).all()

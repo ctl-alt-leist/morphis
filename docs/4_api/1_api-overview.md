@@ -262,7 +262,7 @@ v.at[::2]     # every other in first dim → lot=(5, 5)
 
 ### Geometric Accessor (`.on`)
 
-Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric's block layout: x is always 1, time and a leading projective direction are 0, and modes are labeled `1, Dot(1), 2, Dot(2), ...`. See [Index Convention](../4_design/6_index-convention.md).
+Index or slice over geo dimensions only, preserving lot. Indices are user-facing geometric indices, translated through the metric's block layout: x is always 1, time and a leading projective direction are 0, and modes are labeled `1, Dot(1), 2, Dot(2), ...`. See [Index Convention](../5_design/6_index-convention.md).
 
 ```python
 # b has grade=2 in a Euclidean metric, so geo=(d, d)
@@ -412,8 +412,8 @@ norm(b)               # scalar magnitude
 unit(b)               # unit element
 
 # Exponential/log
-R = exp_vector(B)     # bivector → rotor
-B = log_versor(R)     # rotor → bivector
+R = exp_vector(B)     # bivector → rotor; in 4 and 5 dimensions B need not be simple
+B = log_versor(R)     # rotor → bivector, for a simple rotor
 
 # Interpolation
 R_mid = slerp(R0, R1, 0.5)  # halfway rotation
@@ -449,13 +449,13 @@ from numpy import cos, exp, sin
 from morphis.elements import metric
 from morphis.manifold import Circle, Interval, Patch
 
-torus = Patch(lambda θ, φ: [cos(θ), sin(θ), cos(φ), sin(φ)], Circle() * Circle(), metric(space=4))
-σ = torus.grid((64, 64))                  # shape (64, 64, 2)
-torus(σ)                                  # points, a Vector with lot (64, 64)
-torus.tangent_frame(σ)                    # ∂_a X, a Frame of span 2
-torus.induced_metric(σ)                   # h_ab, shape (64, 64, 2, 2)
-torus.second_fundamental_form(σ)          # k_ab, a Vector with lot (64, 64, 2, 2)
-torus.gaussian_curvature(σ)               # 0: the Clifford torus is flat
+torus = Patch(lambda u, v: [cos(u), sin(u), cos(v), sin(v)], Circle() * Circle(), metric(space=4))
+grid = torus.grid((64, 64))               # the coordinates σ, shape (64, 64, 2)
+torus(grid)                               # points, a Vector with lot (64, 64)
+torus.tangent_frame(grid)                 # ∂_a X, a Frame of span 2
+torus.induced_metric(grid)                # h_ab, shape (64, 64, 2, 2)
+torus.second_fundamental_form(grid)       # k_ab, a Vector with lot (64, 64, 2, 2)
+torus.gaussian_curvature(grid)            # 0: the Clifford torus is flat
 torus.cells((64, 64))                     # its CellComplex, periodic in both
 
 # A map into a space with modes may return amplitudes; a complex coordinate is holomorphic
@@ -467,17 +467,17 @@ Many patches of one manifold weld into one mesh, and a projection draws it:
 
 ```python
 from morphis.manifold import Atlas
-from morphis.visuals.projective import Projection
+from morphis.visuals import Projection
 
 atlas = Atlas(patches)                    # e.g. the 25 sheets of z_1^5 + z_2^5 = 1
 mesh = atlas.mesh((33, 17))               # welded: mesh.cells.euler_characteristic() == -15
-Π = Projection.orthographic([e1, e2, cos(α) * f1 + sin(α) * f2])
-Π(mesh.vertices)                          # drawing coordinates, shape (n, 3)
-Π.pinching(x, frame)                      # 0 where the drawn surface pinches
-sketch.surface(Π(mesh.vertices), mesh.cells.cells, colors=..., dots=...)
+projection = Projection.orthographic([e1, e2, cos(angle) * f1 + sin(angle) * f2])
+projection(mesh.vertices)                 # drawing coordinates, shape (n, 3)
+projection.pinching(x, frame)             # 0 where the drawn surface pinches
+sketch.surface(projection(mesh.vertices), mesh.cells.cells, colors=..., dots=...)
 ```
 
-`Projection.stereographic(pole)` sends the sphere of the pole's radius to the hyperplane through its center, and `@` composes maps.
+`Projection.stereographic(pole)` sends the sphere of the pole's radius to the hyperplane through its center, and `@` composes maps. The views below name the common projections to 3D by their labels.
 
 ### Frame Operations
 
@@ -514,19 +514,21 @@ v_rotated = rotate(v, R)  # or: R * v * ~R
 
 ```python
 from morphis.elements import basis_vectors, euclidean_metric
-from morphis.visuals import RED, Scene
+from morphis.visuals import RED, Orthographic, Perspective, Scene, Stereographic
 
 g = euclidean_metric(4)
 e1, e2, e3, e4 = basis_vectors(g)
 
-# Projection axes are geometric indices, like basis_vector and .on[...]
-scene = Scene(projection=(1, 2, 3))  # show e_1, e_2, e_3 (the default)
+# A view names its kind and the directions drawn as x, y, z, by label
+scene = Scene(projection=Orthographic(axes=(1, 2, 3)))  # the default
 scene.add(e1 ^ e4, color=RED)
-scene.set_projection((2, 3, 4))      # show e_2, e_3, e_4; labels follow
+scene.set_projection(Orthographic(axes=(2, 3, 4)))      # show e_2, e_3, e_4; labels follow
+scene.set_projection(Perspective(distance=3.0))         # the eye at 3 e_4
+scene.set_projection(Stereographic(pole=4))             # from the pole of the unit sphere
 scene.show()
 ```
 
-Each element translates the projection axes through its own metric, so `(1, 2, 3)` is x, y, z in every signature and index 0 raises `IndexError` for a Euclidean element.
+Each element resolves the view against its own metric, so `(1, 2, 3)` is x, y, z in every signature and index 0 raises `IndexError` for a Euclidean element. A `Projection` to 3D may be given in place of a view. Points, arrow tips, frame corners, and mesh vertices are mapped point by point; a bare blade is carried by the outermorphism of the map's differential at its origin.
 
 The Scene draws what it is handed: do the math outside, mutate the element, and capture. A bare bivector is drawn as an oriented disk (area |B|) and a trivector as an oriented ball (volume |T|); hand over a `Frame(u, v)` with `filled=True` to draw a specific u, v and their parallelogram.
 
@@ -545,25 +547,27 @@ with scene.record("figures/turning-plane/turning-plane.gif"):  # or .mp4
         scene.capture(t)
 ```
 
-See [Visualization Architecture](../4_design/4_visuals_architecture.md).
+See [Visualization Architecture](../5_design/4_visuals_architecture.md).
 
 ### Ink Sketches
 
 ```python
 from morphis.elements import basis_vectors, euclidean_metric
-from morphis.visuals.ink import Camera, Depiction, OrganicSpace, Sketch
+from morphis.elements import basis_vectors, euclidean_metric
+from morphis.visuals import Projection
+from morphis.visuals.ink import Camera, OrganicSpace, Sketch
 
 g = euclidean_metric(4)
 e_a, f_a, e_b, f_b = basis_vectors(g)  # e_m and its partner e_ṁ (as f_m)
 
 # The figure's choice: both mode directions e_a and e_b drawn along x
-depiction = Depiction(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
+projection = Projection.linear(g, {1: (1, 0, 0), 2: (0, 0, 1), 3: (1, 0, 0), 4: (0, 1, 0)})
 
-sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), depiction=depiction)
+sketch = Sketch(camera=Camera(azimuth=-24, elevation=34), projection=projection)
 sketch.space(OrganicSpace(seed=3))          # same seed, same shape
 sketch.plane(e_a, f_a, at=(-4.0, -0.8, -0.9), span=((0, 2.6), (0, 2.6)))
-sketch.vector(e_a + f_b, label="$ψ$")       # Vectors are depicted; triples are placements
+sketch.vector(e_a + f_b, label="$ψ$")       # Vectors are projected; triples are placements
 sketch.save("figures/example.png")
 ```
 
-Pen-and-ink conceptual figures rendered with matplotlib. See [Visualization Architecture](../4_design/4_visuals_architecture.md) and `morphis.examples.conjugate_planes`.
+Pen-and-ink conceptual figures rendered with matplotlib. A sketch takes the same views and projections as the Scene; marks that set out displacements need an affine one. See [Visualization Architecture](../5_design/4_visuals_architecture.md) and the [examples](../2_examples/).

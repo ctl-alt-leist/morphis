@@ -20,10 +20,11 @@ The package provides mathematical tools. Applications live in examples.
 ## Documentation
 
 - `1_concepts/` — Mathematical foundations and GA concepts
-- `2_unit-tests/` — Test coverage documentation
-- `3_api/` — API reference
-- `4_design/` — Module structure, naming conventions, class hierarchy, visuals architecture, outermorphism implementation, index convention
-- `5_dev/` — Architecture and development guide
+- `2_examples/` — Worked examples: the mathematics behind each example script and the visualization style it uses
+- `3_unit-tests/` — Test coverage documentation
+- `4_api/` — API reference
+- `5_design/` — Module structure, naming conventions, class hierarchy, visuals architecture, outermorphism implementation, index convention
+- `6_dev/` — Architecture and development guide
 
 ## Resources
 

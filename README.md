@@ -1,9 +1,6 @@
 # Morphis
 
-A unified mathematical framework for geometric computation, providing elegant tools for working with geometric algebra,
-manifolds, and their applications across mathematics and physics. The name derives from Greek *morphe* (form) —
-embodying the transformation and adaptation of geometric structures across different contexts while preserving their
-essential nature.
+A unified mathematical framework for geometric computation, providing elegant tools for working with geometric algebra, manifolds, and their applications across mathematics and physics. The name derives from Greek *morphe* (form) — embodying the transformation and adaptation of geometric structures across different contexts while preserving their essential nature.
 
 <p align="center">
   <img src="figures/rotations-4d/rotations-4d.gif" alt="4D rotations animation" width="400">
@@ -26,8 +23,9 @@ essential nature.
 
 - [Project Overview](docs/0_project-overview.md) — Vision and scope
 - [Concepts](docs/1_concepts/) — Mathematical foundations (vectors, products, duality, transforms)
-- [API Reference](docs/3_api/api.md) — Public interface
-- [Architecture](docs/5_dev/1_architecture.md) — Design philosophy and decisions
+- [Examples](docs/2_examples/) — Worked examples, their mathematics and visualization styles
+- [API Reference](docs/4_api/1_api-overview.md) — Public interface
+- [Architecture](docs/6_dev/1_architecture.md) — Design philosophy and decisions
 
 ## Quick Start
 
@@ -138,8 +136,7 @@ uv run pytest src/morphis/elements -v    # Run specific module tests
 
 ## Release Workflow
 
-Releases are triggered by git tags. When a tag matching `v*` is pushed, GitHub Actions
-automatically builds and publishes to PyPI.
+Releases are triggered by git tags. When a tag matching `v*` is pushed, GitHub Actions automatically builds and publishes to PyPI.
 
 ### To Release a New Version
 

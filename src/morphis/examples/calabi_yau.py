@@ -249,7 +249,7 @@ def create_sketch(stage: str, theme: str = "ink", mesh: Mesh | None = None) -> S
 if __name__ == "__main__":
     chosen = sys.argv[1] if len(sys.argv) > 1 else "all"
     theme = sys.argv[2] if len(sys.argv) > 2 else "ink"
-    folder = sys.argv[3] if len(sys.argv) > 3 else "figures/higher-dimensional"
+    folder = sys.argv[3] if len(sys.argv) > 3 else "figures/calabi-yau"
     stages = STAGES if chosen == "all" else (chosen,)
 
     mesh = ATLAS.mesh(GRID, tolerance=1e-6)

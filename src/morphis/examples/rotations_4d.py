@@ -19,7 +19,7 @@ from morphis.elements import Frame, basis_vectors, euclidean_metric
 from morphis.operations import unit
 from morphis.transforms import rotor
 from morphis.utils.easing import ease_in_out_cubic
-from morphis.visuals import RED, Scene
+from morphis.visuals import RED, Orthographic, Scene
 
 
 # Configuration
@@ -62,7 +62,7 @@ def create_scene(output: str | None = None) -> Scene:
         frame_rate=FRAME_RATE,
         theme="obsidian",
         window=output is None,
-        projection=(1, 2, 3),
+        projection=Orthographic(axes=(1, 2, 3)),
     )
     scene.add(F, color=RED, filled=True)
     scene.fade_in(F, t=0.0, duration=DURATION_FADE_IN)
@@ -99,7 +99,7 @@ def create_scene(output: str | None = None) -> Scene:
                 t += dt
 
         # Switch to e234 projection
-        scene.set_projection((2, 3, 4))
+        scene.set_projection(Orthographic(axes=(2, 3, 4)))
 
         # Last two rotations in e234 projection
         for b in [b1, b2]:

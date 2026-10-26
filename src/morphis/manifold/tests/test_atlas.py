@@ -31,7 +31,7 @@ def fermat_atlas(n):
 
 class TestMesh:
     def test_from_patch(self):
-        torus = Patch(lambda θ, φ: [cos(θ), sin(θ), cos(φ), sin(φ)], Circle() * Circle(), metric(space=4))
+        torus = Patch(lambda u, v: [cos(u), sin(u), cos(v), sin(v)], Circle() * Circle(), metric(space=4))
         mesh = torus.mesh((8, 6))
         assert mesh.vertices.lot == (48,)
         assert mesh.cells.euler_characteristic() == 0
@@ -44,7 +44,7 @@ class TestMesh:
         assert list(both.piece(1)) == [4, 5, 6, 7]
 
     def test_vertex_count_must_match(self):
-        torus = Patch(lambda θ, φ: [cos(θ), sin(θ), cos(φ), sin(φ)], Circle() * Circle(), metric(space=4))
+        torus = Patch(lambda u, v: [cos(u), sin(u), cos(v), sin(v)], Circle() * Circle(), metric(space=4))
         mesh = torus.mesh(4)
         with pytest.raises(ValueError):
             Mesh(vertices=torus(torus.grid(3)).at[0], cells=mesh.cells)

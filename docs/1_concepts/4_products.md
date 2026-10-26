@@ -39,7 +39,7 @@ For grade-1 vectors:
 Linear dependence:
 
 ```math
-\mathbf{u} = \alpha \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
+\mathbf{u} = α \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
 ```
 
 **Associativity:**
