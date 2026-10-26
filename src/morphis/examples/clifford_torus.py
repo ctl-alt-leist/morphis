@@ -150,7 +150,7 @@ def create_sketch(theme: str = "ink") -> Sketch:
 
 
 if __name__ == "__main__":
-    output = sys.argv[1] if len(sys.argv) > 1 else "figures/higher-dimensional/clifford-torus.png"
+    output = sys.argv[1] if len(sys.argv) > 1 else "figures/clifford-torus/clifford-torus.png"
     theme = sys.argv[2] if len(sys.argv) > 2 else "ink"
 
     report()

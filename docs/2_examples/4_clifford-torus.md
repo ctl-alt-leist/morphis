@@ -6,14 +6,14 @@ A qubit state is a unit vector of $\mathbb{C}^2$, so the states form the 3-spher
 uv run python -m morphis.examples.clifford_torus
 ```
 
-It prints its checks and writes `figures/higher-dimensional/clifford-torus.png`.
+It prints its checks and writes `figures/clifford-torus/clifford-torus.png`.
 
 ## The Torus
 
 $\mathbb{C}^2$ is the space with two modes, $\mathbb{R}^4$ with directions $1, \dot 1, 2, \dot 2$. On the Bloch sphere a state has polar angle $χ$, with populations $|z^1|^2 = \cos^2(χ/2)$ and $|z^2|^2 = \sin^2(χ/2)$. The states of a fixed $χ$ are:
 
 ```math
-\mathbf{X}(θ, φ) = \left( \cos(χ/2) \, e^{iθ}, \, \sin(χ/2) \, e^{iφ} \right)
+\mathbf{X}(θ, φ) = \left( \cos(χ/2) e^{iθ}, \sin(χ/2) e^{iφ} \right)
 ```
 
 with $θ$ and $φ$ each running over a circle. The Bloch vector of a state depends on $χ$ and on the relative phase $φ - θ$, so this torus is the preimage of the circle of latitude $χ$ on the Bloch sphere. At $χ = π/2$ both moduli are $1/\sqrt{2}$, the latitude circle is the equator, and the torus is the Clifford torus.
@@ -34,15 +34,15 @@ TORUS = Patch(state, Circle() * Circle(), SPACE)
 
 ## Its Geometry
 
-The tangent vectors are $\partial_θ \mathbf{X} = (i z^1, 0)$ and $\partial_φ \mathbf{X} = (0, i z^2)$, orthogonal and of squared lengths $|z^1|^2$ and $|z^2|^2$. On the Clifford torus the induced metric is therefore constant:
+The tangent vectors are $∂_θ \mathbf{X} = (i z^1, 0)$ and $∂_φ \mathbf{X} = (0, i z^2)$, orthogonal and of squared lengths $|z^1|^2$ and $|z^2|^2$. On the Clifford torus the induced metric is therefore constant:
 
 ```math
-h_{ab} = \tfrac{1}{2} \, δ_{ab}
+h_{ab} = \tfrac{1}{2} δ_{ab}
 ```
 
 so the torus is flat, with Gaussian curvature $K = 0$, though it is bent in $\mathbb{R}^4$: each coordinate circle curves toward the axis of its own conjugate plane.
 
-The mean curvature measures that bending. The second derivatives are $\partial_θ^2 \mathbf{X} = -(z^1, 0)$ and $\partial_φ^2 \mathbf{X} = -(0, z^2)$, and with equal moduli their trace against $h$ points straight back toward the origin:
+The mean curvature measures that bending. The second derivatives are $∂_θ^2 \mathbf{X} = -(z^1, 0)$ and $∂_φ^2 \mathbf{X} = -(0, z^2)$, and with equal moduli their trace against $h$ points straight back toward the origin:
 
 ```math
 \mathbf{k} = -\mathbf{X}
@@ -50,7 +50,7 @@ The mean curvature measures that bending. The second derivatives are $\partial_�
 
 Any surface in the unit sphere has a mean-curvature component $-\mathbf{X}$ normal to the sphere, from the sphere's own curvature. A surface whose mean curvature is exactly that has no mean curvature within $S^3$, so the Clifford torus is a minimal surface of $S^3$. For $χ \ne π/2$ the two circles have different radii, the trace is no longer parallel to $\mathbf{X}$, and the torus is not minimal.
 
-The complex structure $J$ multiplies by $i$, so $J \partial_θ \mathbf{X} = -(z^1, 0)$ and $J \partial_φ \mathbf{X} = -(0, z^2)$. Both are orthogonal to the two tangent vectors, so $J$ carries each tangent plane into the normal plane, and the Kähler angle is:
+The complex structure $J$ multiplies by $i$, so $J ∂_θ \mathbf{X} = -(z^1, 0)$ and $J ∂_φ \mathbf{X} = -(0, z^2)$. Both are orthogonal to the two tangent vectors, so $J$ carries each tangent plane into the normal plane, and the Kähler angle is:
 
 ```math
 θ_K = π/2
@@ -123,6 +123,6 @@ sketch.line((0.0, 0.0, -AXIS_REACH), (0.0, 0.0, AXIS_REACH), weight="hair")
 
 The parallels crowd together on the inner side of the drawn torus. They are evenly spaced on the flat torus, and the conformal factor of the projection, which grows toward the pole, spreads the outer ones apart.
 
-![The Clifford torus drawn by stereographic projection as a torus of revolution in hairline circles around a dashed vertical axis, with one bold phase orbit running as a slanted circle from ψ to e to the iα times ψ](../../figures/higher-dimensional/clifford-torus.png)
+![The Clifford torus drawn by stereographic projection as a torus of revolution in hairline circles around a dashed vertical axis, with one bold phase orbit running as a slanted circle from ψ to e to the iα times ψ](../../figures/clifford-torus/clifford-torus.png)
 
 The [qutrit evolution](3_qutrit-evolution.md) draws a torus of relative phases with unequal populations by the same kind of projection, and there the orbit of the state is a line of irrational slope instead of a $(1, 1)$ circle.
