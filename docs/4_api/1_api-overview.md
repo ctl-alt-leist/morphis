@@ -524,6 +524,7 @@ scene = Scene(projection=Orthographic(axes=(1, 2, 3)))  # the default
 scene.add(e1 ^ e4, color=RED)
 scene.set_projection(Orthographic(axes=(2, 3, 4)))      # show e_2, e_3, e_4; labels follow
 scene.set_projection(Perspective(distance=3.0))         # the eye at 3 e_4
+scene.caption("projection: perspective")               # text in the upper right corner
 scene.set_projection(Stereographic(pole=4))             # from the pole of the unit sphere
 scene.show()
 ```

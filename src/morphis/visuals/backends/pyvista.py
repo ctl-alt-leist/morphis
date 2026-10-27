@@ -21,6 +21,10 @@ if TYPE_CHECKING:
     from pyvista import Plotter, PolyData
 
 
+# Caption inset from the window edges, as a fraction of the shorter side
+CAPTION_INSET = 0.05
+
+
 class TrackedObject:
     """Internal tracking for rendered objects."""
 
@@ -59,6 +63,7 @@ class PyVistaBackend:
         self._explicit_clipping_range: tuple[float, float] | None = None
         self._lights: dict[str, Any] = {}  # light_id -> pyvista.Light
         self._window_closed = False
+        self._caption_actor: Any = None
 
     # =========================================================================
     # Lifecycle
@@ -100,6 +105,7 @@ class PyVistaBackend:
             self._plotter = None
         self._objects.clear()
         self._basis_actors.clear()
+        self._caption_actor = None
 
     def _ensure_plotter(self):
         """Ensure plotter is initialized."""
@@ -589,6 +595,28 @@ class PyVistaBackend:
         tracked.actors = [actor]
         tracked.extra["text"] = new_text
         tracked.extra["position"] = new_pos
+
+    def set_caption(self, text: str | None, font_size: int = 14) -> None:
+        """Show a caption fixed in the upper right corner, inset from the window edges."""
+        self._ensure_plotter()
+
+        if self._caption_actor is not None:
+            self._plotter.remove_actor(self._caption_actor)
+            self._caption_actor = None
+
+        if text is not None:
+            width, height = self._size
+            inset = round(CAPTION_INSET * min(width, height))
+            actor = self._plotter.add_text(
+                text,
+                position=(width - inset, height - inset),
+                font_size=font_size,
+                color=self._theme.text_color,
+            )
+            properties = actor.GetTextProperty()
+            properties.SetJustificationToRight()
+            properties.SetVerticalJustificationToTop()
+            self._caption_actor = actor
 
     # =========================================================================
     # Object Management
