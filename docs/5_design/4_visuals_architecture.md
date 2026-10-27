@@ -126,6 +126,7 @@ with scene.record("figures/turn/turn.gif"):
 - `capture(t)`: redraw every element from its current state; with a window, keep pace with wall-clock time `t`; inside `record()`, append one frame
 - `record(path, frame_rate=None)`: context manager; every capture inside the block becomes a frame of `path` (.mp4 or .gif), finalized on exit, even if the block raises. The frame rate defaults to the scene's. Yields the `Recording`, whose `frame_count` and `written_count` tell what was captured and written
 - `set_projection(projection)`: draw through a new `View` or `Projection` (see Projection); every element already in the scene is redrawn through it
+- `caption(text)`: show `text` in the upper right corner of the window, fixed while the camera moves and drawn into recorded frames; a new caption replaces the old, and `None` removes it
 - `show()`: show the window and block until it is closed
 - `fade_in(element, t, duration)`, `fade_out(element, t, duration)`: schedule opacity effects
 - `camera(position, focal_point, up)`, `reset_camera()`, `set_clipping_range(near, far)`

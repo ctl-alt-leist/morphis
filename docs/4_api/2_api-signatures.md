@@ -1453,6 +1453,9 @@ class Scene:
     def set_projection(self, projection: 'View | Projection') -> 'None'
         """Draw elements of dimension above 3 through a new view, or a given projection."""
 
+    def caption(self, text: 'str | None') -> 'None'
+        """Show a caption in the upper right corner of the window."""
+
     def camera(self, position: 'tuple[float, float, float] | None' = None, focal_point: 'tuple[float, float, float] | None' = None, up: 'tuple[float, float, float] | None' = None) -> 'None'
         """Set camera position and orientation. Disables auto_camera."""
 
@@ -1953,6 +1956,9 @@ class Sketch:
 
     def point(self, p: 'Point', radius: 'float' = 3.2, color: 'str | RGB | None' = None) -> 'NDArray'
         """Draw a solid dot; returns its drawing coordinates."""
+
+    def shell(self, points: 'Vector | NDArray', cells: 'NDArray', weight: 'str' = 'regular', lip_weight: 'str' = 'bold', stipple: 'float' = 1.0, light: 'tuple[float, float, float]' = (-0.45, 0.6, 0.65), far_level: 'float' = 0.4, veil: 'float' = 0.3, curves: 'list[Vector | NDArray] | None' = None, curve_weight: 'str' = 'fine', dots: 'Vector | NDArray | None' = None, dot_radius: 'float' = 4.0, labels: 'list[str | None] | None' = None, label_offset: 'tuple[float, float]' = (9.0, 7.0), label_size: 'float' = 15.0) -> 'None'
+        """Draw a translucent surface in pen and stipple: its contour inked, its body shaded by stipple."""
 
     def surface(self, points: 'Vector | NDArray', cells: 'NDArray', colors: 'str | RGB | list | None' = None, edges: 'str | None' = 'hair', edge_level: 'float' = 0.75, light: 'tuple[float, float, float]' = (-0.45, 0.6, 0.65), dots: 'Vector | NDArray | None' = None, dot_radius: 'float' = 3.0, dot_color: 'str | RGB | None' = 'ink') -> 'None'
         """Draw a shaded surface, its cells painted far to near so nearer cells hide farther ones."""

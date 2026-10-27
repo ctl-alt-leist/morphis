@@ -224,6 +224,7 @@ class Scene:
         self._live_start_time: float | None = None
         self._first_capture = True
         self._recording: Recording | None = None
+        self._caption: str | None = None
 
     # =========================================================================
     # Properties
@@ -272,6 +273,8 @@ class Scene:
                 window=self._window,
             )
             self._backend_initialized = True
+            if self._caption is not None:
+                self._backend.set_caption(self._caption)
 
     def _next_color(self) -> Color:
         """Get next color from palette."""
@@ -516,6 +519,24 @@ class Scene:
             for tracked in self._elements.values():
                 self._redraw(tracked)
             self._backend.render()
+
+    # =========================================================================
+    # Caption
+    # =========================================================================
+
+    def caption(self, text: str | None) -> None:
+        """
+        Show a caption in the upper right corner of the window.
+
+        The caption stays fixed on screen while the camera moves, and appears
+        in recorded frames. A new caption replaces the old; None removes it.
+
+            scene.caption("projection: orthographic")
+        """
+        self._caption = text
+
+        if self._backend_initialized:
+            self._backend.set_caption(text)
 
     # =========================================================================
     # Camera

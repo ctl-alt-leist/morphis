@@ -20,8 +20,10 @@ The Scene draws the tesseract first orthographically onto e_1, e_2, e_3, where
 the cell is a cube whose far and near halves overlap, and then in perspective
 with the eye on the e_4 axis, where the far cell is drawn inside the near one
 and the turn carries cells through each other. The perspective turn picks up
-where the orthographic quarter turn left off. Under perspective each corner
-is mapped by the projective map itself, so the drawn cells stay exact.
+where the orthographic quarter turn left off, so the jump at the switch is the
+change of view alone, and a caption in the corner names the view in use. Under
+perspective each corner is mapped by the projective map itself, so the drawn
+cells stay exact.
 
 Run: uv run python -m morphis.examples.tesseract
 Record: uv run python -m morphis.examples.tesseract figures/tesseract/tesseract.gif
@@ -65,6 +67,7 @@ def create_scene(output: str | None = None) -> Scene:
     scene = Scene(frame_rate=FRAME_RATE, window=output is None, projection=Orthographic(axes=(1, 2, 3)))
     scene.add(edges, color=RED, filled=True, origin=corner)
     scene.fade_in(edges, t=0.0, duration=DURATION_FADE_IN)
+    scene.caption("projection: orthographic")
     scene.camera(position=CAMERA_POSITION, focal_point=(0.0, 0.0, 0.0))
 
     def turn(angle: float) -> None:
@@ -83,9 +86,13 @@ def create_scene(output: str | None = None) -> Scene:
             t += dt
 
         # A quarter turn drawn orthographically, then a full turn more in perspective
-        phases = ((Orthographic(axes=(1, 2, 3)), 0.0, pi / 2), (Perspective(distance=EYE_DISTANCE), pi / 2, 2 * pi))
-        for view, start, total in phases:
+        phases = (
+            ("orthographic", Orthographic(axes=(1, 2, 3)), 0.0, pi / 2),
+            ("perspective", Perspective(distance=EYE_DISTANCE), pi / 2, 2 * pi),
+        )
+        for name, view, start, total in phases:
             scene.set_projection(view)
+            scene.caption(f"projection: {name}")
             for n in range(n_turn + 1):
                 turn(start + total * ease_in_out_cubic(n / n_turn))
                 scene.capture(t)

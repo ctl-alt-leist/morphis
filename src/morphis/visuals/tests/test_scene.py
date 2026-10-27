@@ -220,3 +220,34 @@ class TestSceneRoundTrip:
 
             # Should still have 3 elements after multiple cycles
             assert len(scene._elements) == 3
+
+
+# =============================================================================
+# Caption Tests
+# =============================================================================
+
+
+class TestSceneCaption:
+    def test_caption_before_backend_is_shown_on_first_render(self):
+        scene = Scene(window=False)
+        scene.caption("projection: orthographic")
+        scene.add(make_vector([1, 0, 0]))
+
+        actor = scene._backend._caption_actor
+        assert actor is not None
+        assert actor.GetInput() == "projection: orthographic"
+        scene.close()
+
+    def test_caption_replaces_and_removes(self):
+        scene = Scene(window=False)
+        scene.add(make_vector([1, 0, 0]))
+        scene.caption("projection: orthographic")
+        scene.caption("projection: perspective")
+
+        assert scene._backend._caption_actor.GetInput() == "projection: perspective"
+        texts = [actor for actor in scene._backend._plotter.actors.values() if type(actor).__name__ == "Text"]
+        assert len(texts) == 1
+
+        scene.caption(None)
+        assert scene._backend._caption_actor is None
+        scene.close()

@@ -328,6 +328,16 @@ class RenderBackend(Protocol):
         """
         ...
 
+    def set_caption(self, text: str | None, font_size: int = 14) -> None:
+        """
+        Show a caption fixed in the upper right corner of the window.
+
+        Args:
+            text: Caption text, replacing any earlier caption (None removes it)
+            font_size: Font size
+        """
+        ...
+
     # =========================================================================
     # Object Management
     # =========================================================================
