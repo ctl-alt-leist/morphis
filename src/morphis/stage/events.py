@@ -37,6 +37,7 @@ class Added(Event):
     kind: Literal["actor", "group"]
     parent: int = 0
     position: int | None = Field(default=None, description="Place among the parent's children; last if none")
+    source: str | None = Field(default=None, description="The catalog entry it was made from; none if handed in")
 
 
 class Removed(Event):

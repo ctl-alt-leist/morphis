@@ -9,7 +9,8 @@ domain:
     Circle()                 an angle, wrapped onto the circle
     no domain                any number
 
-and a boolean is a toggle, a Literal a choice among its values.
+and a boolean is a toggle, a Literal a choice among its values, a string a
+line of text.
 
 A group of dials is a Dials model. It knows nothing of any panel or key: it
 validates every value against its domain where the value is set, describes
@@ -37,7 +38,7 @@ from pydantic.fields import FieldInfo
 from morphis.manifold.domain import Interval
 
 
-Kind = Literal["number", "angle", "choice", "toggle"]
+Kind = Literal["number", "angle", "choice", "toggle", "text"]
 
 
 def Dial(default: Any, domain: Interval | None = None, rate: bool = False, description: str | None = None) -> Any:
@@ -66,7 +67,7 @@ class DialSpec(BaseModel):
 
     Attributes:
         path: Where the dial is, from the group described (`shape.major`)
-        kind: Drawn as a number, an angle, a choice, or a toggle
+        kind: Drawn as a number, an angle, a choice, a toggle, or a line of text
         domain: The interval the value lies in, if any
         choices: The values of a choice
         rate: Whether the dial is a time derivative
@@ -204,6 +205,8 @@ def _spec(path: str, field: FieldInfo) -> DialSpec:
     annotation = field.annotation
     if annotation is bool:
         kind, choices = "toggle", ()
+    elif annotation is str:
+        kind, choices = "text", ()
     elif get_origin(annotation) is Literal:
         kind, choices = "choice", get_args(annotation)
     elif domain is not None and domain.periodic:

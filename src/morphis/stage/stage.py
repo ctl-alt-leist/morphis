@@ -39,6 +39,7 @@ from pydantic import BaseModel, ConfigDict
 from morphis.elements import Metric, Vector
 from morphis.manifold.domain import Interval
 from morphis.stage.carriers import carrier
+from morphis.stage.catalog import CATALOG
 from morphis.stage.dial import Dial, Dials
 from morphis.stage.events import (
     Added,
@@ -325,13 +326,23 @@ class Stage:
             origin: Where the object is drawn from, a point carried with it
             **options: How the Scene draws it (color, filled, opacity, ...)
         """
-        holder = self._container(parent)
-        id = self._take_id()
-        name = self._unique(name)
-        self._arriving[id] = Actor(id, name, holder.id, obj, self.metric, dials, step, origin, options)
-        self._record(Added(id=id, name=name, kind="actor", parent=holder.id, position=position))
+        result = self._add(name, obj, dials, step, parent, position, origin, options, None)
 
-        return self.entries[id]
+        return result
+
+    def create(self, line: str, parent: Reference = SPACE, position: int | None = None) -> Entry:
+        """
+        Add what a catalog entry makes, named after the entry, and return it.
+        """
+        made = CATALOG[line]
+        if made.kind == "group":
+            result = self.group(line.lower(), parent=parent)
+        else:
+            addition = made.make(self.metric)
+            obj, dials, step, options = addition
+            result = self._add(line.lower(), obj, dials, step, parent, position, None, options, line)
+
+        return result
 
     def group(self, name: str, members: list[Reference] = (), parent: Reference = SPACE) -> Group:
         """
@@ -508,6 +519,26 @@ class Stage:
     def _changed(self) -> None:
         for callback in self._subscribers:
             callback()
+
+    def _add(
+        self,
+        name: str,
+        obj: Any,
+        dials: Dials | None,
+        step: Callable | None,
+        parent: Reference,
+        position: int | None,
+        origin: Vector | None,
+        options: dict,
+        source: str | None,
+    ) -> Actor:
+        holder = self._container(parent)
+        id = self._take_id()
+        name = self._unique(name)
+        self._arriving[id] = Actor(id, name, holder.id, obj, self.metric, dials, step, origin, options)
+        self._record(Added(id=id, name=name, kind="actor", parent=holder.id, position=position, source=source))
+
+        return self.entries[id]
 
     def _take_id(self) -> int:
         id = self._next_id
