@@ -33,7 +33,7 @@ src/morphis/visuals/
 ├── model.py          # VisualModel: mesh whose vertices are GA Vectors
 ├── text.py           # Text, TextStyle: 3D text annotations (data only)
 ├── theme.py          # Colors, palettes, themes, window sizes
-├── projective.py     # Projection (projective maps), View: Orthographic, Perspective, Stereographic
+├── projective.py     # Projection (projective maps), View: Orthographic, Perspective, Stereographic, Projective
 ├── projection.py     # Basis labels; ProjectionConfig and project_blade for the Canvas path
 ├── contexts.py       # PGA interpretation (points, lines, planes)
 ├── operations.py     # Meet, join, and dual visualizations
@@ -124,9 +124,9 @@ with scene.record("figures/turn/turn.gif"):
 - `add(element, color=None, opacity=1.0, **options)`: add an element; returns an element ID. Options: `origin` (single element), `origins` (one per lot entry), `filled` (Frame), `smooth_shading` and `show_edges` (meshes)
 - `remove(element_id)`
 - `capture(t)`: redraw every element from its current state; with a window, keep pace with wall-clock time `t`; inside `record()`, append one frame
-- `record(path, frame_rate=None)`: context manager; every capture inside the block becomes a frame of `path` (.mp4 or .gif), finalized on exit, even if the block raises. The frame rate defaults to the scene's. Yields the `Recording`, whose `frame_count` and `written_count` tell what was captured and written
+- `record(path, frame_rate=None, trail=0.0)`: context manager; every capture inside the block becomes a frame of `path` (.mp4 or .gif), finalized on exit, even if the block raises. The frame rate defaults to the scene's, and `trail` is the afterimage kept in each recorded frame (see Recording). Yields the `Recording`, whose `frame_count` and `written_count` tell what was captured and written, and whose `trail` may be changed between captures
 - `set_projection(projection)`: draw through a new `View` or `Projection` (see Projection); every element already in the scene is redrawn through it
-- `caption(text)`: show `text` in the upper right corner of the window, fixed while the camera moves and drawn into recorded frames; a new caption replaces the old, and `None` removes it
+- `caption(text)`: show `text` in the upper right corner of the window, fixed while the camera moves and drawn into recorded frames; a new caption replaces the old, and `None` removes it; it is set in DejaVu Sans, which ships with matplotlib, so Greek and math symbols draw
 - `show()`: show the window and block until it is closed
 - `fade_in(element, t, duration)`, `fade_out(element, t, duration)`: schedule opacity effects
 - `camera(position, focal_point, up)`, `reset_camera()`, `set_clipping_range(near, far)`
@@ -158,6 +158,9 @@ scene.set_projection(Stereographic(axes=(1, 2, 3), pole=4))      # from the pole
 | `Orthographic(axes)` | the components along the axes; every other direction dropped | |
 | `Perspective(axes, distance)` | $\mathbf{x} \mapsto D \mathbf{x}_{\text{axes}} / (D - Σ x_{\text{dropped}})$ | `distance` $D$ of the eye |
 | `Stereographic(axes, pole, radius)` | from the pole of the sphere of that radius onto the hyperplane through the origin, then orthographic onto the axes | `pole` label (last direction by default), `radius` |
+| `Projective(axes, eye, shear, turn)` | $\mathbf{x} \mapsto (\mathbf{x}'_{\text{axes}} + u \mathbf{s}) / (1 - κ u)$, with $\mathbf{x}' = \tilde R \mathbf{x} R$ and $u = Σ x'_{\text{dropped}}$ | `eye` $κ$, `shear` $\mathbf{s}$, `turn` (angles keyed by planes of labels, the bivector $T$ of $R = \exp(-T/2)$) |
+
+`Projective` is the family that holds the first two: `Orthographic(axes)` is `Projective(axes)`, and `Perspective(axes, distance=D)` is `Projective(axes, eye=1/D)`. On the sphere of radius $ρ$, `eye=1/ρ` is stereographic from the pole on the dropped direction. Its parameters are coordinates on the family: `eye` is the inverse distance $κ$ of the center of projection, ideal at 0; `shear` draws the dropped direction as a picture vector, an oblique parallel projection; `turn` turns the screen by a rotor, which draws the space as if turned back by the same rotor. `a.toward(b, fraction)` moves every parameter linearly, so an eased fraction carries the picture smoothly between two views, and a plane missing from one turn counts there as angle 0. The weight $1 - κ u$ must stay positive on what is drawn.
 
 The perspective weight row is $1 - Σ x_{\text{dropped}} / D$, so its center of projection is the flat where the axes components vanish and $Σ x_{\text{dropped}} = D$: from ℝ⁴ the eye sits at $D \mathbf{e}_4$, and the far cell of a tesseract is drawn inside the near one. Every view draws a space of dimension 3 or less in its own coordinates, zero-padded. The axes must be three distinct labels of the element's space, so an axis outside it raises `IndexError` (0 is forbidden in a Euclidean space and is time or the ideal direction in a Lorentzian or PGA space), and a stereographic pole may not also be an axis. The default `axes=(1, 2, 3)` is x, y, z in every signature, because x is always 1. Views are frozen pydantic models, compared by value and saved with a scene.
 
@@ -190,6 +193,8 @@ Ink marks that also take displacements (a vector's arrow, a plane's spanning vec
 `Recording(path, frame_rate)` is the one writer behind `Scene.record` and `ink.animate`. Frames go in as RGB image arrays; the suffix picks the format, `.mp4` (H.264 via imageio-ffmpeg) or `.gif` (looping). It is a context manager that finalizes the file on exit.
 
 GIF frame delays are whole centiseconds, and browsers slow any delay under 20 ms, so a GIF plays at most 50 frames per second. The writer uses the nearest delay of at least 20 ms and, when frames arrive faster, keeps the frames that fall on the GIF's own ticks, so the clip keeps its real duration. Video writes every frame at the given rate.
+
+A recording may keep an afterimage. With `trail` $a$, each frame is $(1 - a)$ times the new image plus $a$ times the frame before it, so what moves leaves a fading trace and what holds still is unchanged. The trail runs at the arrival rate, before a GIF drops frames, and `recording.trail` may change between frames, to blur only part of a clip. The window shows no trail.
 
 The example animations default to `.gif`, which plays inline wherever the docs are read; `.mp4` remains a suffix away. A GIF of stippled ink grows quickly with resolution, so the ink examples render their animation frames at a lower `dpi` than their stills.
 

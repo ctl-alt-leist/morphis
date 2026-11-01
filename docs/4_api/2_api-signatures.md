@@ -1483,7 +1483,7 @@ class Scene:
     def capture(self, t: 'float') -> 'None'
         """Redraw every element from its current state at time t."""
 
-    def record(self, path: 'str | Path', frame_rate: 'float | None' = None) -> 'Iterator[Recording]'
+    def record(self, path: 'str | Path', frame_rate: 'float | None' = None, trail: 'float' = 0.0) -> 'Iterator[Recording]'
         """Record every capture inside the block to a video or GIF."""
 
     def show(self) -> 'None'
@@ -1508,7 +1508,7 @@ class Scene:
 class Recording:
     """A video or GIF being written, one frame at a time."""
 
-    def __init__(self, path: 'str | Path', frame_rate: 'float')
+    def __init__(self, path: 'str | Path', frame_rate: 'float', trail: 'float' = 0.0)
         """Initialize self.  See help(type(self)) for accurate signature."""
 
     def append(self, image: 'NDArray') -> 'None'
@@ -1759,6 +1759,21 @@ class Perspective(View):
 
     def __init__(self, /, **data: 'Any') -> 'None'
         """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def resolve(self, metric: 'Metric') -> 'Projection'
+        """The projection of this view from the given space to 3D."""
+```
+
+
+```python
+class Projective(View):
+    """The projective family of views: an eye along the dropped directions, a shear, and a turned screen."""
+
+    def __init__(self, /, **data: 'Any') -> 'None'
+        """Create a new model by parsing and validating input data from keyword arguments."""
+
+    def toward(self, other: 'Projective', fraction: 'float') -> 'Projective'
+        """The view a fraction of the way from this view to another, every parameter moved linearly."""
 
     def resolve(self, metric: 'Metric') -> 'Projection'
         """The projection of this view from the given space to 3D."""

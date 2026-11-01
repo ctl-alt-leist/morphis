@@ -514,7 +514,7 @@ v_rotated = rotate(v, R)  # or: R * v * ~R
 
 ```python
 from morphis.elements import basis_vectors, euclidean_metric
-from morphis.visuals import RED, Orthographic, Perspective, Scene, Stereographic
+from morphis.visuals import RED, Orthographic, Perspective, Projective, Scene, Stereographic
 
 g = euclidean_metric(4)
 e1, e2, e3, e4 = basis_vectors(g)
@@ -526,6 +526,7 @@ scene.set_projection(Orthographic(axes=(2, 3, 4)))      # show e_2, e_3, e_4; la
 scene.set_projection(Perspective(distance=3.0))         # the eye at 3 e_4
 scene.caption("projection: perspective")               # text in the upper right corner
 scene.set_projection(Stereographic(pole=4))             # from the pole of the unit sphere
+scene.set_projection(Projective(eye=0.2, shear=(0.3, 0.0, 0.2)))  # the family: eye, shear, turned screen
 scene.show()
 ```
 

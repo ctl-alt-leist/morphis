@@ -88,6 +88,24 @@ Perspective(axes=(1, 2, 3), distance=3.0)            # an eye at 3 e_4
 Stereographic(axes=(1, Dot(1), 2), pole=Dot(2))      # from the pole e_2̇ of the unit sphere
 ```
 
+`Projective(axes, eye, shear, turn)` is the family that holds the orthographic and perspective views and moves continuously between them. The screen is first turned by the rotor $R = \exp(-T/2)$ of a turn bivector $T$, and with $\mathbf{x}' = \tilde R \mathbf{x} R$ and $u$ the sum of its dropped components, a point is drawn at:
+
+```math
+\mathbf{x} \mapsto \frac{\mathbf{x}'_{\text{axes}} + u \mathbf{s}}{1 - κ u}
+```
+
+The eye $κ$ is the inverse distance of the center of projection: at $κ = 0$ the center is ideal and the view is orthographic, $κ = 1/D$ is `Perspective(distance=D)`, and on the sphere of radius $ρ$, $κ = 1/ρ$ is stereographic. The shear $\mathbf{s}$ draws the dropped direction as a picture vector, an oblique parallel projection, and a quarter turn in the plane of an axis and a dropped direction trades the two. Every parameter is a coordinate on the family, and `a.toward(b, fraction)` moves them all linearly, so an eased fraction blends one view into another.
+
+```python
+from numpy import pi
+from morphis.visuals.projective import Projective
+
+Projective(eye=1 / 3)                                # Perspective(distance=3.0)
+Projective(shear=(0.45, 0.3, 0.35))                  # e_4 drawn as a picture vector
+Projective(turn={(3, 4): pi / 2})                    # the screen turned to draw e_4 and drop e_3
+Projective().toward(Projective(eye=1 / 3), 0.5)      # halfway, the eye at distance 6
+```
+
 A Scene changes its view with `scene.set_projection(view)`, and every element already in it is redrawn through the new one.
 
 ## Projections
@@ -168,5 +186,5 @@ GIF frame delays are whole centiseconds and browsers slow any delay under 20 ms,
 | [Conjugate planes](2_conjugate-planes.md) | a qubit's two modes, $\mathbb{R}^4$ | `Sketch` | `Projection.linear`, unfaithful by design |
 | [Qutrit evolution](3_qutrit-evolution.md) | a spin-1, $\mathbb{C}^3 = \mathbb{R}^6$ | `Sketch` | orthographic to $\mathbb{R}^4$, then stereographic from a 3-sphere; and an equiangular linear map of all six directions |
 | [Clifford torus](4_clifford-torus.md) | a qubit, $S^3 \subset \mathbb{R}^4$ | `Sketch` | `Stereographic` |
-| [Tesseract](5_tesseract.md) | $\mathbb{R}^4$ | `Scene` | `Orthographic` and `Perspective` |
+| [Tesseract](5_tesseract.md) | $\mathbb{R}^4$ | `Scene` | `Orthographic` and the `Projective` family |
 | [Calabi–Yau slice](6_calabi-yau-slice.md) | a complex curve in $\mathbb{C}^2 = \mathbb{R}^4$ | `Sketch` | `Projection.orthographic` onto a tilted screen |

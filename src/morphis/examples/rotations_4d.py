@@ -6,7 +6,7 @@ Visualizes a 4D frame rotating with projection to 3D:
 - Rotation in arbitrary bivector planes
 
 Run: uv run python -m morphis.examples.rotations_4d
-Record: uv run python -m morphis.examples.rotations_4d figures/rotations-4d/rotations-4d.gif
+Record: uv run python -m morphis.examples.rotations_4d figures/tesseract/rotations-4d.gif
 """
 
 import sys

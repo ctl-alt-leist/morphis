@@ -145,7 +145,7 @@ A projective map from $\mathbb{RP}^d$ to $\mathbb{RP}^3$ is a $4 \times (d + 1)$
 - `projection(points)` maps points of any lot, dividing by the weight once, at the end.
 - `projection.pushforward(x, frame)` is the differential $dΠ$ on tangent vectors, and `projection.pinching(x, frame)` is $s_{\min} / s_{\max}$ of it, zero at a pinch point, where the drawn surface folds to a cusp.
 - `projection.blade(b, at)` carries a k-vector at a point by the outermorphism $∧^k dΠ$.
-- The views `Orthographic`, `Perspective`, and `Stereographic` name a projection to 3D by its kind and the labels of the three directions drawn, and resolve against each element's metric (see the [visuals architecture](4_visuals_architecture.md)).
+- The views `Orthographic`, `Perspective`, `Stereographic`, and the `Projective` family name a projection to 3D by its kind and the labels of the three directions drawn, and resolve against each element's metric (see the [visuals architecture](4_visuals_architecture.md)).
 
 Still to come: `Projection.perspective(center, screen)` from general flats, `projection.turned(R)`, `projection.hidden(v)`, and a numerical pinch-point search.
 
