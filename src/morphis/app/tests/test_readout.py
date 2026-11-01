@@ -102,7 +102,9 @@ class TestAbout:
         controls = Controls(Stage(metric(space=4)))
         controls.take(Command.ADD, "Vector")
         controls.take(Command.ADD, "Rotation")
-        assert Readout(controls).about() == ["rotation  0.50 e₁₂", "acts on vector", "off"]
+        assert Readout(controls).about() == ["rotation  at rest", "acts on vector", "off"]
+        controls.stage.set("rotation", "motion.rate.1,2", 0.5)
+        assert Readout(controls).about()[0] == "rotation  0.50 e₁₂"
 
     def test_sections_mark_the_highlight(self):
         controls = controls_with_a_torus()

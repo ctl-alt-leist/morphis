@@ -349,23 +349,22 @@ def _planes_of(kind: str) -> Callable[[Metric], list]:
     return lambda space: [plane for plane in planes(space) if plane.kind == kind]
 
 
+# Operations start at rest, as every addition does: nothing moves until a dial is turned.
+
+
 @operation("Rotation", applies=lambda space: bool(_planes_of("rotation")(space)))
 def _rotation(space: Metric) -> dict:
-    return {f"motion.rate.{_planes_of('rotation')(space)[0].key}": 0.5}
+    return {}
 
 
 @operation("Translation")
 def _translation(space: Metric) -> dict:
-    translations = _planes_of("translation")(space)
-    first = next(label for label, kind in zip(space.labels, space.kinds, strict=True) if kind != "projective")
-    result = {f"motion.rate.{translations[0].key}": 0.5} if translations else {f"motion.velocity.{first}": 0.5}
-
-    return result
+    return {}
 
 
 @operation("Boost", applies=lambda space: bool(_planes_of("boost")(space)))
 def _boost(space: Metric) -> dict:
-    return {f"motion.rate.{_planes_of('boost')(space)[0].key}": 0.5}
+    return {}
 
 
 CATALOG["Group"] = Entry("Group", "Groups", "group", None)

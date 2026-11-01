@@ -88,14 +88,13 @@ class TestOperations:
         with pytest.raises(ValueError):
             Stage(metric(space=3)).create("Boost")
 
-    def test_presets(self):
+    def test_start_at_rest(self):
         stage = Stage(metric(space=3))
         turn = stage.create("Rotation", "turn")
         assert turn.kind == "Rotation"
-        assert turn.get("motion.rate.1,2") == 0.5
+        assert not any(turn.dials["motion"].rate.values())
         assert not turn.on
-        assert Stage(metric(space=3)).create("Translation").get("motion.velocity.1") == 0.5
-        assert Stage(metric(space=3, projective=1)).create("Translation").get("motion.rate.0,1") == 0.5
+        assert not any(Stage(metric(space=3)).create("Translation").dials["motion"].velocity.values())
 
 
 class TestSurfaces:
