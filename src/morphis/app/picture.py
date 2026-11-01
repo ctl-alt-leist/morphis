@@ -24,7 +24,7 @@ from contextlib import AbstractContextManager
 from time import perf_counter
 from typing import Any
 
-from morphis.app.controls import ASKS, PICKERS, Choice, Controls
+from morphis.app.controls import ASKS, Choice, Controls
 from morphis.app.readout import action_row, dial_rows, outline_rows, status_line
 from morphis.app.vocabulary import MOD, Command
 from morphis.elements import metric
@@ -121,10 +121,11 @@ class Picture:
             self.controls.key(name)
 
     def _ask(self, command: Command) -> None:
-        if command in PICKERS:
-            self.prompt = Prompt(command, PICKERS[command], self.controls.choices(command))
+        if self.controls.picks(command):
+            self.prompt = Prompt(command, self.controls.title(command), self.controls.choices(command))
         elif command in ASKS:
-            self.prompt = Prompt(command, ASKS[command])
+            self.prompt = Prompt(command, self.controls.title(command))
+            self.prompt.text = self.controls.draft(command)
 
     def _pick(self, name: str) -> None:
         prompt = self.prompt

@@ -33,7 +33,7 @@ from pydantic import ValidationError
 from morphis.app.vocabulary import CONFIRMED, PLACEHOLDERS, Command, Screen, direction
 from morphis.elements.metric import Label
 from morphis.stage import Stage
-from morphis.stage.catalog import sections
+from morphis.stage.catalog import CATALOG, sections
 from morphis.stage.dial import DialSpec
 from morphis.stage.stage import Actor, Entry, Operation, Placed
 
@@ -54,7 +54,8 @@ INTERVAL_STEPS = 50  # an interval, in this many presses end to end
 # The commands that ask for a line of text, and what the line is, as a front end prompts for it.
 ASKS = {Command.FIND: "find", Command.TAKE: "value", Command.SAVE: "save to", Command.RECORD: "record to"}
 
-# The commands that open a picker instead, with its title.
+# The commands that open a picker instead, with its title. Taking a value opens one too when the
+# dial is a choice, titled by the dial (`Controls.picks`, `Controls.title`).
 PICKERS = {Command.ADD: "add", Command.GO: "go to"}
 
 # Commands live on every screen; the rest belong to the Stage screen.
@@ -227,17 +228,54 @@ class Controls:
     # Pickers and Typed Lines
     # =========================================================================
 
+    def picks(self, command: Command) -> bool:
+        """
+        Returns whether a command asks with a picker rather than a line of
+        text: one of the PICKERS, or a value taken for a choice dial.
+        """
+        target = self._target()
+        result = command in PICKERS or (command is Command.TAKE and target is not None and target[1].kind == "choice")
+
+        return result
+
+    def title(self, command: Command) -> str:
+        """
+        Returns what a command asks for, as a front end titles its picker or
+        prompts its line: the dial's own name when a value is taken for a choice.
+        """
+        if command is Command.TAKE and self.picks(command):
+            result = self._target()[1].path.rpartition(".")[2]
+        else:
+            result = PICKERS.get(command) or ASKS.get(command, "")
+
+        return result
+
+    def draft(self, command: Command) -> str:
+        """
+        Returns the line a command's prompt opens with: a text dial's line, to
+        be edited rather than typed again, or nothing, since a number is
+        quicker typed afresh.
+        """
+        target = self._target() if command is Command.TAKE else None
+        result = target[0].get(target[1].path) if target is not None and target[1].kind == "text" else ""
+
+        return result
+
     def choices(self, command: Command) -> list[Choice]:
         """
         Returns the lines of a command's picker: the catalog entries that
-        apply in the space, or the screens, each under its own key.
+        apply in the space, the screens, or the values of a choice dial, each
+        under its own key.
         """
+        letters = iter("abcdefghijklmnopqrstuvwxyz")
         if command is Command.ADD:
             lines = [line for listed in sections(self.stage.metric).values() for line in listed]
-            letters = iter("abcdefghijklmnopqrstuvwxyz")
             result = [(next(letters), line, line) for line in lines]
         elif command is Command.GO:
             result = [(screen.key, screen, screen.label) for screen in Screen]
+        elif command is Command.TAKE and self.picks(command):
+            values = self._target()[1].choices
+            result = [(str(value) if len(str(value)) == 1 else next(letters), value, str(value)) for value in values]
         else:
             result = []
 
@@ -247,10 +285,16 @@ class Controls:
         """
         Take a line of a command's picker.
         """
-        if command is Command.ADD:
-            self._add(choice)
-        elif command is Command.GO:
-            self.go(choice)
+        try:
+            if command is Command.ADD:
+                self._add(choice)
+            elif command is Command.GO:
+                self.go(choice)
+            elif command is Command.TAKE and self._target() is not None:
+                entry, spec = self._target()
+                self._set(entry, spec.path, choice)
+        except (ValueError, KeyError, ValidationError) as error:
+            self.stage.notice(_worded(error), "warning")
 
     def answer(self, command: Command, text: str) -> None:
         """
@@ -441,6 +485,10 @@ class Controls:
             siblings = self.stage.entries[selected.parent].children
             made = self.stage.create(line, parent=selected.parent, position=siblings.index(selected.id) + 1)
         self._select(made.id)
+        asks = CATALOG[line].asks
+        if asks is not None:
+            self.focus, self.highlight = "dials", asks
+            self._ask(Command.TAKE)
 
     # =========================================================================
     # The Playground Itself

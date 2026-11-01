@@ -36,12 +36,12 @@ def script(journal: str) -> list[Step]:
     """
     result: list[Step] = [
         ("a", 0.0, lambda c: c.screen is Screen.STAGE),  # the catalog opens
-        ("f", 0.0, lambda c: selected(c) == "torus"),  # a torus, selected
+        ("d", 0.0, lambda c: selected(c) == "torus"),  # a torus, selected
         ("13" + RIGHT * 3, 0.0, lambda c: abs(c.stage.selected.get("motion.rate.1,3") - 0.3) < 1e-9),
         ("42" + RIGHT * 2, 0.0, lambda c: abs(c.stage.selected.get("motion.rate.2,4") + 0.2) < 1e-9),  # reversed
         ("i", 0.0, lambda c: c.stage.selected.motion.intrinsic),
         (SPACE, 0.5, lambda c: c.stage.playing and abs(c.stage.time - 0.5) < 1e-9),
-        (ESCAPE + "ah", 0.0, lambda c: selected(c) == "rotation"),  # beside the torus
+        (ESCAPE + "af", 0.0, lambda c: selected(c) == "rotation"),  # beside the torus
         ("o", 1.0, lambda c: c.stage.selected.on),
         (UP * 3, 0.0, lambda c: selected(c) == "torus"),
         (TAB + TAB + DOWN + ENTER + "0.25" + ENTER, 0.0, lambda c: c.stage.space.get("clock.speed") == 0.25),

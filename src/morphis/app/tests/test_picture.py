@@ -43,7 +43,7 @@ class TestPrompt:
     def test_picker_by_its_key(self, picture):
         picture.press("a", "a")
         assert "add:" in picture.corner()
-        picture.press("f", "f")
+        picture.press("d", "d")
         assert picture.prompt is None
         assert picture.stage.selected.name == "torus"
 
@@ -51,17 +51,25 @@ class TestPrompt:
         picture.press("a", "a")
         picture.press("Down")
         picture.press("Return")
-        assert picture.stage.selected.name == "bivector"
+        assert picture.stage.selected.name == "frame"
+
+    def test_a_vector_asks_its_grade(self, picture):
+        picture.press("a", "a")
+        picture.press("Return")
+        assert "grade:" in picture.corner()
+        picture.press("Down")
+        picture.press("Return")
+        assert picture.prompt is None
+        assert picture.stage.selected.object.grade == 2
 
     def test_typed_line(self, picture):
         picture.press("a", "a")
-        picture.press("d", "d")
-        picture.press("Tab")
-        for _ in range(16):
-            picture.press("Down")
+        picture.press("a", "a")
+        picture.press("2", "2")
+        picture.press("Down")
         picture.press("Return")
         assert picture.controls.highlight == "shape.text"
-        for _ in range(2):
+        for _ in range(3):
             picture.press("BackSpace")
         type_keys(picture, "e1 ^ e3")
         assert "value: e1 ^ e3▏" in picture.corner()
@@ -78,7 +86,7 @@ class TestPrompt:
 class TestCorner:
     def test_shows_the_outline_dials_and_row(self, picture):
         picture.press("a", "a")
-        picture.press("c", "c")
+        picture.press("b", "b")
         type_keys(picture, "13")
         picture.press("Right")
         corner = picture.corner()

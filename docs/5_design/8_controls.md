@@ -256,12 +256,12 @@ def _torus(space: Metric) -> Addition:
 
 | Section | Entries |
 |---------|---------|
-| Elements | a vector, a bivector, a frame, an expression |
+| Elements | a vector of any grade, a frame |
 | Surfaces | a sphere, a torus, a plane, each with its resolution |
 | Operations | a rotation, a translation, and a boost where the space has one |
 | Groups | an empty group |
 
-**An expression** asks for a line of text and evaluates it in the space, where the basis vectors are named by their labels: `e1 ^ e3`, `0.5 * (e1 + e2)`, `exp(e12 * pi / 4)`. A physicist's fastest way to put a particular element on the stage is to write it, and the line is kept on the actor, so the expression is its dial and can be edited.
+**A vector** is any k-vector, and it is written. Adding one opens a picker of its grade at once, since no grade is a sensible default; it starts as the first blade of that grade (`e1`, `e12`, `e123`), and its line of text is evaluated in the space, where the basis vectors are named by their labels and the blade of any string of distinct single-digit labels by its own name, in any order: `e1 ^ e3`, `e31`, `cos(pi / 6) * e12 + sin(pi / 6) * e34`, `exp(e12 * pi / 4)`. A physicist's fastest way to put a particular element on the stage is to write it. The grade and the line are the actor's shape dials: Enter on the line opens it for editing, a line of another grade is refused where it is typed, and a new grade starts the line again. Grades one to three are offered, the ones a picture of three dimensions draws. A catalog entry names such a dial with `asks`, and every front end opens its picker as soon as the entry is added.
 
 `x` removes the selection, on a second press.
 
@@ -364,7 +364,7 @@ src/morphis/stage/
   providers.py     dial providers registered by class: motion and look
   carriers.py      how a pose is applied to each class of object
   space.py         the space's dials: clock, view, camera
-  catalog.py       what can be added: elements, expressions, surfaces, operations, groups
+  catalog.py       what can be added: vectors written as expressions, frames, surfaces, operations, groups
   operation.py     operations: their dials, the map they apply, how it acts
   events.py        the journal's events
   journal.py       the journal on disk

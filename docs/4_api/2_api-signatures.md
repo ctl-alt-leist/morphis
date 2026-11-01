@@ -2268,15 +2268,22 @@ class Addition(NamedTuple):
     step: Callable | None = None
     options: dict = {}
 
-def entry(name: str, section: str, applies=...) -> Callable
+def entry(name: str, section: str, applies=..., asks: str | None = None) -> Callable
     """Register a catalog entry: a function from the space to an addition."""
 
 def operation(name: str, applies=...) -> Callable
     """Register an operation: a function from the space to its dials' starting values."""
 
 def sections(space: Metric | None = None) -> dict[str, list[str]]
-def evaluate(text: str, metric: Metric) -> Vector
+def evaluate(text: str, metric: Metric, grade: int | None = None) -> Vector
     """Returns the element a line of text gives in a space."""
+
+def first_blade(metric: Metric, grade: int) -> str
+    """Returns the line of the first blade of a grade."""
+
+class Expression(Dials):
+    grade: Literal[1, 2, 3] = 1
+    text: str = "e1"
 ```
 
 ---

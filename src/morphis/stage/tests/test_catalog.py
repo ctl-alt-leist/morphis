@@ -14,7 +14,7 @@ from morphis.stage.catalog import evaluate, sections
 class TestCatalog:
     def test_sections(self):
         listed = sections()
-        assert listed["Elements"] == ["Vector", "Bivector", "Frame", "Expression"]
+        assert listed["Elements"] == ["Vector", "Frame"]
         assert listed["Groups"] == ["Group"]
 
     def test_create_names_and_records_its_source(self):
@@ -46,6 +46,7 @@ class TestExpressions:
         assert allclose(evaluate("e1 ^ e3", g).data, (e1 ^ e3).data)
         assert allclose(evaluate("e13", g).data, (e1 ^ e3).data)
         assert allclose(evaluate("e31", g).data, -(e1 ^ e3).data)
+        assert allclose(evaluate("e134", g).data, (e1 ^ e3 ^ basis_vector(4, g)).data)
         assert allclose(evaluate("cos(pi / 3) * e1", g).data, 0.5 * e1.data)
 
     def test_kahler_partner(self):
@@ -60,13 +61,21 @@ class TestExpressions:
             evaluate("2.0", g)
         with pytest.raises(ValueError, match="cannot read"):
             evaluate("__import__('os')", g)
+        with pytest.raises(ValueError, match="cannot read"):
+            evaluate("e11", g)
+        with pytest.raises(ValueError, match="not 2"):
+            evaluate("e1", g, grade=2)
 
     def test_edited_on_the_stage(self):
         stage = Stage(metric(space=4))
-        written = stage.create("Expression")
-        assert written.kind == "Vector"
+        written = stage.create("Vector")
+        assert written.get("shape.text") == "e1"
+        stage.set(written, "shape.grade", 2)
+        assert written.get("shape.text") == "e12"
         stage.set(written, "shape.text", "e12 + e34")
         assert written.object.grade == 2
+        with pytest.raises(ValidationError):
+            stage.set(written, "shape.text", "e1")
         count = len(stage.journal)
         with pytest.raises(ValidationError):
             stage.set(written, "shape.text", "e1 ^")
@@ -74,7 +83,7 @@ class TestExpressions:
 
     def test_expression_turns(self):
         stage = Stage(metric(space=3))
-        written = stage.create("Expression")
+        written = stage.create("Vector")
         stage.set(written, "motion.rate.1,2", pi / 2)
         stage.play()
         stage.advance(1.0)

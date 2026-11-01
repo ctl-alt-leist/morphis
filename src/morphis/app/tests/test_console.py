@@ -44,7 +44,7 @@ def drive(*steps: str) -> Console:
 
 
 def test_add_and_turn():
-    console = drive("a", "f", "1", "3", RIGHT + RIGHT)
+    console = drive("a", "d", "1", "3", RIGHT + RIGHT)
     assert console.stage.selected.name == "torus"
     assert console.stage.selected.get("motion.rate.1,3") == pytest.approx(0.2)
     assert console.controls.focus == "dials"

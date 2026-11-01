@@ -199,3 +199,19 @@ class TestPausedClock:
         controls.take(Command.ADD, "Vector")
         keys(controls, "space", "1", "2", "right")
         assert "paused" not in controls.stage.notices[-1].text
+
+
+class TestVector:
+    def test_asks_its_grade_then_edits_its_line(self, controls, asked):
+        controls.take(Command.ADD, "Vector")
+        assert asked[-1] is Command.TAKE
+        assert controls.picks(Command.TAKE) and controls.title(Command.TAKE) == "grade"
+        assert [value for _, value, _ in controls.choices(Command.TAKE)] == [1, 2, 3]
+        controls.take(Command.TAKE, 3)
+        assert controls.stage.selected.object.grade == 3
+        keys(controls, "down")
+        assert controls.highlight == "shape.text"
+        assert not controls.picks(Command.TAKE)
+        assert controls.draft(Command.TAKE) == "e123"
+        controls.answer(Command.TAKE, "2 * e124")
+        assert controls.stage.selected.object.grade == 3

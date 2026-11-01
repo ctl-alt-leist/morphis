@@ -25,6 +25,7 @@ from time import perf_counter
 
 from prompt_toolkit import Application
 from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.document import Document
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
@@ -32,7 +33,7 @@ from prompt_toolkit.layout import ConditionalContainer, Dimension, HSplit, Layou
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.widgets import Frame
 
-from morphis.app.controls import ASKS, PICKERS, Choice, Controls, Focus
+from morphis.app.controls import ASKS, Choice, Controls, Focus
 from morphis.app.picture import key_name
 from morphis.app.readout import Readings, Readout, Section
 from morphis.app.vocabulary import MOD, PLACEHOLDERS, SHIFTED_DIGITS, Command, Screen
@@ -155,11 +156,11 @@ class Console:
         ])
         placeholder = Frame(Window(), title=lambda: self.controls.screen.label)
         messages = Frame(Window(FormattedTextControl(self._messages), height=SHOWN_NOTICES), title="messages")
-        picker = Frame(Window(FormattedTextControl(self._picker)), title=lambda: PICKERS.get(self.picking, ""))
+        picker = Frame(Window(FormattedTextControl(self._picker)), title=lambda: self._asked(self.picking))
         input_line = Window(
             BufferControl(buffer=self.line),
             height=1,
-            get_line_prefix=lambda line, wrap: [("bold", f" {ASKS.get(self.typing, '')}: ")],
+            get_line_prefix=lambda line, wrap: [("bold", f" {self._asked(self.typing)}: ")],
         )
         actions = Window(FormattedTextControl(self._action_row), height=1)
 
@@ -272,10 +273,14 @@ class Console:
     # =========================================================================
 
     def _ask(self, command: Command) -> None:
-        if command in PICKERS:
+        if self.controls.picks(command):
             self.picking, self.choices, self.pick = command, self.controls.choices(command), 0
         elif command in ASKS:
             self.typing = command
+            self.line.set_document(Document(self.controls.draft(command)))
+
+    def _asked(self, command: Command | None) -> str:
+        return "" if command is None else self.controls.title(command)
 
     def _take(self, n: int) -> None:
         command, choice = self.picking, self.choices[n][1]

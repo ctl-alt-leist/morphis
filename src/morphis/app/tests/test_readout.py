@@ -94,9 +94,10 @@ class TestAbout:
 
     def test_about_an_element_and_its_pose(self):
         controls = Controls(Stage(metric(space=4)))
-        controls.take(Command.ADD, "Bivector")
+        controls.take(Command.ADD, "Vector")
+        controls.take(Command.TAKE, 2)
         controls.stage.set(controls.stage.selected, "motion.rate.1,3", 0.4)
-        assert Readout(controls).about() == ["bivector  e₁₂", "turning  0.40 e₁₃"]
+        assert Readout(controls).about() == ["bivector  e₁₂", "written  e12", "turning  0.40 e₁₃"]
 
     def test_about_an_operation(self):
         controls = Controls(Stage(metric(space=4)))

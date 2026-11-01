@@ -42,8 +42,9 @@ def session(stage):
     baked. The expression turns intrinsically, so its own motion and the
     operation compose exactly, however finely time is stepped.
     """
-    written = stage.create("Expression")
+    written = stage.create("Vector")
     stage.toggle_frame(written)
+    stage.set(written, "shape.grade", 2)
     stage.set(written, "shape.text", "e12 + 0.5 * e34")
     stage.set(written, "motion.rate.1,3", 0.7)
     stage.set(written, "motion.rate.2,4", 0.3)

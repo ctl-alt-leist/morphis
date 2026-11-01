@@ -6,34 +6,35 @@ hand an object in: a picker of entries, in sections, each a function from the
 space to a new object with its default dials. A new kind of object is offered
 by registering an entry, with no change to the stage or any front end.
 
-    @entry("Vector", section="Elements")
-    def _vector(space: Metric) -> Addition:
-        return Addition(basis_vector(1, space))
+    @entry("Frame", section="Elements")
+    def _frame(space: Metric) -> Addition:
+        return Addition(Frame(*basis_vectors(space)))
 
-    stage.create("Vector")        # added as "vector", selected-ready
+    stage.create("Frame")        # added as "frame", selected-ready
 
-An expression is written rather than chosen: a line of text evaluated in the
-space, its basis vectors named by their labels (e1, e2, and e1dot for the
-partner of e1 in a Kähler space) and the blades of single-digit labels by
-theirs (e12, e123), with pi, sqrt, sin, cos, and exp at hand:
+A vector is any k-vector, written rather than chosen: its grade is picked
+when it is added, and it is a line of text evaluated in the space, its basis
+vectors named by their labels (e1, e2, and e1dot for the partner of e1 in a
+Kähler space) and the blades of single-digit labels by theirs, of any grade
+and in any order (e12, e31, e123), with pi, sqrt, sin, cos, and exp at hand:
 
     e1 ^ e3
     0.5 * (e1 + e2)
     cos(pi / 6) * e12 + sin(pi / 6) * e34
 
-The line is kept as the actor's shape dial, so editing it rebuilds the
-element, and a line that does not give a vector, bivector, or trivector of
-the space is refused where it is typed.
+The grade and the line are the actor's shape dials, so editing either
+rebuilds the element. A line that does not give a k-vector of the grade is
+refused where it is typed; a new grade starts the line again at the first
+blade of that grade.
 """
 
 from collections.abc import Callable
-from itertools import permutations
 from typing import Any, Literal, NamedTuple
 
 from numpy import cos, pi, sin, sqrt
-from pydantic import Field, ValidationInfo, field_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from morphis.elements import Frame, Metric, Vector, basis_vector, basis_vectors
+from morphis.elements import Frame, Metric, Vector, basis_vectors
 from morphis.manifold import Circle, Interval, Mesh, Patch
 from morphis.operations.exponential import exp_vector
 from morphis.stage.dial import Dial, Dials
@@ -60,6 +61,8 @@ class Entry(NamedTuple):
         make: Builds the addition for a space, or for an operation the values
             its dials start at, by path; none for a group
         applies: Whether it can be added in a space
+        asks: The path of a choice dial a front end asks for as soon as the
+            entry is added, since it has no sensible default, or none
     """
 
     name: str
@@ -67,20 +70,21 @@ class Entry(NamedTuple):
     kind: Literal["actor", "group", "operation"]
     make: Callable[[Metric], Any] | None
     applies: Callable[[Metric], bool] = lambda space: True
+    asks: str | None = None
 
 
 CATALOG: dict[str, Entry] = {}
 
 
 def entry(
-    name: str, section: str, applies: Callable[[Metric], bool] = lambda space: True
+    name: str, section: str, applies: Callable[[Metric], bool] = lambda space: True, asks: str | None = None
 ) -> Callable[[Callable[[Metric], Addition]], Callable[[Metric], Addition]]:
     """
     Register a catalog entry: a function from the space to an addition.
     """
 
     def register(make: Callable[[Metric], Addition]) -> Callable[[Metric], Addition]:
-        CATALOG[name] = Entry(name, section, "actor", make, applies)
+        CATALOG[name] = Entry(name, section, "actor", make, applies, asks)
 
         return make
 
@@ -121,66 +125,114 @@ def sections(space: Metric | None = None) -> dict[str, list[str]]:
 # =============================================================================
 
 
+# The grades a k-vector can be drawn at in a picture of three dimensions
+DRAWN_GRADES = (1, 2, 3)
+
+
 class Expression(Dials):
     """
-    The line of text an element is written as.
+    A k-vector, as its grade and the line of text it is written as.
 
     Attributes:
         metric: The space the line is read in
-        text: The line, checked by evaluating it where it is set
+        grade: The grade of the k-vector, at most the dimension of the space
+        text: The line, checked where it is set to give a k-vector of the grade
     """
 
     metric: Metric = Field(exclude=True, repr=False)
+    grade: Literal[DRAWN_GRADES] = 1
     text: str = Dial("e1")
+
+    @field_validator("grade")
+    @classmethod
+    def _within_space(cls, grade: int, info: ValidationInfo) -> int:
+        dim = info.data["metric"].dim
+        if grade > dim:
+            raise ValueError(f"grade at most {dim} in this space")
+
+        return grade
 
     @field_validator("text")
     @classmethod
     def _readable(cls, text: str, info: ValidationInfo) -> str:
-        evaluate(text, info.data["metric"])
+        evaluate(text, info.data["metric"], info.data.get("grade"))
 
         return text
+
+    @model_validator(mode="after")
+    def _of_the_grade(self) -> "Expression":
+        # A new grade starts the line again, written to the dict so the line is not checked twice
+        if evaluate(self.text, self.metric).grade != self.grade:
+            self.__dict__["text"] = first_blade(self.metric, self.grade)
+
+        return self
 
     def about(self) -> list[str]:
         """What the expression is: its own line."""
         return [f"written  {self.text}"]
 
 
-def evaluate(text: str, metric: Metric) -> Vector:
+def first_blade(metric: Metric, grade: int) -> str:
+    """
+    Returns the line of the first blade of a grade: the first spatial
+    directions, or the first of the space when it has too few, by the blade's
+    own name (e12) when their labels are digits, and wedged otherwise.
+    """
+    spatial = [label for label, kind in zip(metric.labels, metric.kinds, strict=True) if kind in ("space", "modes")]
+    labels = spatial[:grade] if len(spatial) >= grade else list(metric.labels[:grade])
+    if all(isinstance(label, int) and label <= 9 for label in labels):
+        result = "e" + "".join(str(label) for label in labels)
+    else:
+        result = " ^ ".join(_name(label) for label in labels)
+
+    return result
+
+
+def evaluate(text: str, metric: Metric, grade: int | None = None) -> Vector:
     """
     Returns the element a line of text gives in a space.
 
     Raises:
-        ValueError: If the line cannot be read, or does not give a vector,
-            bivector, or trivector of the space
+        ValueError: If the line cannot be read, or does not give a k-vector of
+            the space that can be drawn, of the grade if one is given
     """
     try:
-        result = eval(text, {"__builtins__": {}}, namespace(metric))  # noqa: S307 (the user's own line, in their own session)
+        result = eval(text, {"__builtins__": {}}, Names(metric))  # noqa: S307 (the user's own line, in their own session)
     except Exception as error:
         raise ValueError(f"cannot read {text!r}: {error}") from error
 
-    if not (isinstance(result, Vector) and result.grade in (1, 2, 3) and result.metric == metric):
+    if not (isinstance(result, Vector) and result.grade in DRAWN_GRADES and result.metric == metric):
         raise ValueError(f"{text!r} does not give a vector, bivector, or trivector of the space")
 
-    return result
-
-
-def namespace(metric: Metric) -> dict[str, Any]:
-    """
-    Returns the names a line is read with: the basis vectors and the blades of
-    single-digit labels, and a few functions.
-    """
-    vectors = dict(zip(metric.labels, basis_vectors(metric), strict=True))
-    names = {_name(label): vector for label, vector in vectors.items()}
-    digits = [label for label in vectors if isinstance(label, int) and 0 <= label <= 9]
-    for grade in (2, 3):
-        for labels in permutations(digits, grade):
-            blade = vectors[labels[0]]
-            for label in labels[1:]:
-                blade = blade ^ vectors[label]
-            names["e" + "".join(str(label) for label in labels)] = blade
-    result = {**names, "pi": pi, "sqrt": sqrt, "sin": sin, "cos": cos, "exp": _exp}
+    if grade is not None and result.grade != grade:
+        raise ValueError(f"{text!r} is of grade {result.grade}, not {grade}")
 
     return result
+
+
+class Names(dict):
+    """
+    The names a line is read with: the basis vectors and a few functions, and
+    the blade of any string of distinct single-digit labels, made when it is
+    first read rather than listed, since there are factorially many.
+    """
+
+    def __init__(self, metric: Metric) -> None:
+        vectors = dict(zip(metric.labels, basis_vectors(metric), strict=True))
+        names = {_name(label): vector for label, vector in vectors.items()}
+        super().__init__({**names, "pi": pi, "sqrt": sqrt, "sin": sin, "cos": cos, "exp": _exp})
+        self.digits = {str(label): vector for label, vector in vectors.items() if isinstance(label, int) and label <= 9}
+
+    def __missing__(self, name: str) -> Vector:
+        written = name.removeprefix("e")
+        is_blade = name.startswith("e") and len(written) > 1 and len(set(written)) == len(written)
+        if not (is_blade and set(written) <= set(self.digits)):
+            raise KeyError(name)
+        result = self.digits[written[0]]
+        for digit in written[1:]:
+            result = result ^ self.digits[digit]
+
+        return result
 
 
 def _name(label: Any) -> str:
@@ -195,7 +247,7 @@ def _exp(x: Any) -> Any:
 
 def expression(dials: Expression) -> Vector:
     """The element an expression's line gives."""
-    return evaluate(dials.text, dials.metric)
+    return evaluate(dials.text, dials.metric, dials.grade)
 
 
 # =============================================================================
@@ -203,28 +255,14 @@ def expression(dials: Expression) -> Vector:
 # =============================================================================
 
 
-@entry("Vector", section="Elements")
+@entry("Vector", section="Elements", asks="shape.grade")
 def _vector(space: Metric) -> Addition:
-    first = next((label for label, kind in zip(space.labels, space.kinds, strict=True) if kind == "space"), 1)
-
-    return Addition(basis_vector(first, space))
-
-
-@entry("Bivector", section="Elements")
-def _bivector(space: Metric) -> Addition:
-    first, second = [space.labels[n] for n in _spatial(space)][:2]
-
-    return Addition(basis_vector(first, space) ^ basis_vector(second, space))
+    return Addition(expression, Expression(metric=space, text=first_blade(space, 1)))
 
 
 @entry("Frame", section="Elements")
 def _frame(space: Metric) -> Addition:
     return Addition(Frame(*basis_vectors(space)), options={"filled": True})
-
-
-@entry("Expression", section="Elements")
-def _expression(space: Metric) -> Addition:
-    return Addition(expression, Expression(metric=space))
 
 
 # =============================================================================
