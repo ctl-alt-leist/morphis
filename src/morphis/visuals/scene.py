@@ -40,7 +40,7 @@ from __future__ import annotations
 import pickle
 import sys
 import time as time_module
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -226,6 +226,8 @@ class Scene:
         self._first_capture = True
         self._recording: Recording | None = None
         self._caption: str | None = None
+        self._status: str | None = None
+        self._key_handler: Callable[[str, str, bool, bool], None] | None = None
 
     # =========================================================================
     # Properties
@@ -276,6 +278,9 @@ class Scene:
             self._backend_initialized = True
             if self._caption is not None:
                 self._backend.set_caption(self._caption)
+
+            if self._status is not None:
+                self._backend.set_status(self._status)
 
     def _next_color(self) -> Color:
         """Get next color from palette."""
@@ -555,6 +560,36 @@ class Scene:
         if self._backend_initialized:
             self._backend.set_caption(text)
 
+    def status(self, text: str | None) -> None:
+        """
+        Show a status in the upper left corner of the window: one or more
+        lines, fixed on screen while the camera moves. A new status replaces
+        the old; None removes it.
+        """
+        self._status = text
+
+        if self._backend_initialized:
+            self._backend.set_status(text)
+
+    # =========================================================================
+    # Keys
+    # =========================================================================
+
+    def on_key(self, handler: Callable[[str, str, bool, bool], None]) -> None:
+        """
+        Take every key pressed in the window, in place of the renderer's own
+        bindings, from the time the window opens.
+
+        Args:
+            handler: Called with the key's name as the renderer gives it
+                ("a", "Up", "Return", "space", ...), the character it types
+                ("" for none), and whether Control and Shift are held
+        """
+        self._key_handler = handler
+
+        if self._backend_initialized and not self._first_capture:
+            self._backend.on_key(handler)
+
     # =========================================================================
     # Camera
     # =========================================================================
@@ -746,6 +781,8 @@ class Scene:
         if self._window:
             self._backend.show(interactive=False)
             _bring_window_to_front()
+            if self._key_handler is not None:
+                self._backend.on_key(self._key_handler)
         if self._auto_camera:
             self._backend.reset_camera()
         self._first_capture = False

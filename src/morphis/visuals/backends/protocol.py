@@ -8,6 +8,7 @@ plotly, etc.) to be swapped without changing the Scene API.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from numpy.typing import NDArray
@@ -335,6 +336,27 @@ class RenderBackend(Protocol):
         Args:
             text: Caption text, replacing any earlier caption (None removes it)
             font_size: Font size
+        """
+        ...
+
+    def set_status(self, text: str | None, font_size: int = 13) -> None:
+        """
+        Show a status fixed in the upper left corner of the window.
+
+        Args:
+            text: Status text, one or more lines, replacing any earlier status (None removes it)
+            font_size: Font size
+        """
+        ...
+
+    def on_key(self, handler: Callable[[str, str, bool, bool], None]) -> None:
+        """
+        Take every key pressed in the window, in place of the renderer's own bindings.
+
+        Args:
+            handler: Called with the key's name as the renderer gives it, the
+                character it types ("" for none), and whether Control and
+                Shift are held
         """
         ...
 

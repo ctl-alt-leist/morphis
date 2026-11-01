@@ -6,6 +6,7 @@ Implements the RenderBackend protocol using PyVista/VTK for 3D rendering.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -69,6 +70,7 @@ class PyVistaBackend:
         self._lights: dict[str, Any] = {}  # light_id -> pyvista.Light
         self._window_closed = False
         self._caption_actor: Any = None
+        self._status_actor: Any = None
 
     # =========================================================================
     # Lifecycle
@@ -111,6 +113,7 @@ class PyVistaBackend:
         self._objects.clear()
         self._basis_actors.clear()
         self._caption_actor = None
+        self._status_actor = None
 
     def _ensure_plotter(self):
         """Ensure plotter is initialized."""
@@ -624,6 +627,56 @@ class PyVistaBackend:
             properties.SetJustificationToRight()
             properties.SetVerticalJustificationToTop()
             self._caption_actor = actor
+
+    def set_status(self, text: str | None, font_size: int = 13) -> None:
+        """Show a status fixed in the upper left corner, inset from the window edges."""
+        self._ensure_plotter()
+
+        if self._status_actor is not None:
+            self._plotter.remove_actor(self._status_actor)
+            self._status_actor = None
+
+        if text is not None:
+            width, height = self._size
+            inset = round(CAPTION_INSET * min(width, height))
+            actor = self._plotter.add_text(
+                text,
+                position=(inset, height - inset),
+                font_size=font_size,
+                color=self._theme.text_color,
+            )
+            properties = actor.GetTextProperty()
+            properties.SetFontFamily(VTK_FONT_FILE)
+            properties.SetFontFile(str(CAPTION_FONT))
+            properties.SetJustificationToLeft()
+            properties.SetVerticalJustificationToTop()
+            self._status_actor = actor
+
+    def on_key(self, handler: Callable[[str, str, bool, bool], None]) -> None:
+        """
+        Take every key pressed in the window. PyVista's own key bindings are
+        cleared, and VTK's interactor style is given an observer for typed
+        characters, which it then calls instead of its own bindings (w, s, e,
+        q, f, 3, and the rest), so a key means only what the handler says.
+        """
+        self._ensure_plotter()
+        iren = self._plotter.iren
+        if iren is not None:
+            interactor = iren.interactor
+            iren.clear_key_event_callbacks()
+            interactor.GetInteractorStyle().AddObserver("CharEvent", lambda caller, event: None)
+
+            def pressed(caller: Any, event: str) -> None:
+                code = interactor.GetKeyCode()
+                character = code if isinstance(code, str) and code.isprintable() else ""
+                handler(
+                    interactor.GetKeySym() or "",
+                    character,
+                    bool(interactor.GetControlKey()),
+                    bool(interactor.GetShiftKey()),
+                )
+
+            interactor.AddObserver("KeyPressEvent", pressed)
 
     # =========================================================================
     # Object Management
