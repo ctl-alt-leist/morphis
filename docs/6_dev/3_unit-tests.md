@@ -12,19 +12,19 @@ The metric tensor $g_{ab}$ defines the inner product structure of the vector spa
 
 The PGA metric for $d$-dimensional Euclidean space embedded in $(d + 1)$-dimensional projective space satisfies:
 
-```math
+$$
 g = \text{diag}(0, 1, 1, \ldots, 1)
-```
+$$
 
 with signature $(0, 1, 1, \ldots, 1)$ where the first component corresponds to the ideal point $e_0$ and satisfies:
 
-```math
+$$
 g_{00} = 0
-```
+$$
 
-```math
+$$
 g_{mm} = 1 \quad \text{for } m \geq 1
-```
+$$
 
 The dimension relationship follows as $\dim(g) = d + 1$ for $d$-dimensional Euclidean space.
 
@@ -32,9 +32,9 @@ The dimension relationship follows as $\dim(g) = d + 1$ for $d$-dimensional Eucl
 
 The standard Euclidean metric in $d$ dimensions is the identity matrix:
 
-```math
+$$
 g = \mathbb{I}_d = \text{diag}(1, 1, \ldots, 1)
-```
+$$
 
 with signature $(1, 1, \ldots, 1)$ and $\dim(g) = d$.
 
@@ -42,21 +42,21 @@ with signature $(1, 1, \ldots, 1)$ and $\dim(g) = d$.
 
 Direct component access verifies the algebraic structure:
 
-```math
+$$
 g_{12} = 0 \quad \text{(off-diagonal vanishes)}
-```
+$$
 
-```math
+$$
 g[1:3, 1:3] = \mathbb{I}_2 \quad \text{(Euclidean subblock)}
-```
+$$
 
 ### Vector Construction and Shape Validation
 
 A grade-$k$ Vector in $d$-dimensional space has components $B^{m_1 \ldots m_k}$ satisfying antisymmetry:
 
-```math
+$$
 B^{\ldots m \ldots n \ldots} = -B^{\ldots n \ldots m \ldots}
-```
+$$
 
 The storage shape follows as $(*\text{lot}, d, d, \ldots, d)$ with $k$ trailing geometric dimensions.
 
@@ -64,25 +64,25 @@ The storage shape follows as $(*\text{lot}, d, d, \ldots, d)$ with $k$ trailing 
 
 For grade-1 vectors:
 
-```math
+$$
 \mathbf{v} = v^m \mathbf{e}_m
-```
+$$
 
 stored as shape $(d,)$ with $\dim(\mathbf{v}) = d$.
 
 For bivectors (grade 2):
 
-```math
+$$
 \mathbf{B} = B^{mn} \mathbf{e}_{mn}
-```
+$$
 
 stored as shape $(d, d)$ with antisymmetric components.
 
 For trivectors (grade 3):
 
-```math
+$$
 \mathbf{T} = T^{mnp} \mathbf{e}_{mnp}
-```
+$$
 
 stored as shape $(d, d, d)$ with full antisymmetry over all indices.
 
@@ -90,13 +90,13 @@ stored as shape $(d, d, d)$ with full antisymmetry over all indices.
 
 Batch processing via lot dimensions allows shape $(*\text{lot}, *\text{geo})$ where:
 
-```math
+$$
 \text{cdim} = \text{number of leading batch dimensions}
-```
+$$
 
-```math
+$$
 \text{ndim} = \text{cdim} + \text{grade}
-```
+$$
 
 For batch shape $(N,)$ with vectors in $\mathbb{R}^d$, storage is $(N, d)$ with $\text{cdim} = 1$.
 
@@ -104,21 +104,21 @@ For batch shape $(N,)$ with vectors in $\mathbb{R}^d$, storage is $(N, d)$ with 
 
 The implementation enforces:
 
-```math
+$$
 \text{grade} \geq 0
-```
+$$
 
-```math
+$$
 \text{cdim} \geq 0
-```
+$$
 
-```math
+$$
 \text{ndim} = \text{cdim} + \text{grade}
-```
+$$
 
-```math
+$$
 \text{shape}[-k] = d \quad \text{for all } k \in [1, \text{grade}]
-```
+$$
 
 Violations raise `ValueError` with descriptive messages identifying the constraint failure.
 
@@ -130,19 +130,19 @@ Vectors of equal grade form a vector space under addition and scalar multiplicat
 
 For Vectors $\mathbf{A}$, $\mathbf{B}$ of grade $k$:
 
-```math
+$$
 (\mathbf{A} + \mathbf{B})^{m_1 \ldots m_k} = A^{m_1 \ldots m_k} + B^{m_1 \ldots m_k}
-```
+$$
 
 This operation preserves grade and dimension:
 
-```math
+$$
 \text{grade}(\mathbf{A} + \mathbf{B}) = \text{grade}(\mathbf{A}) = \text{grade}(\mathbf{B})
-```
+$$
 
-```math
+$$
 \dim(\mathbf{A} + \mathbf{B}) = \dim(\mathbf{A}) = \dim(\mathbf{B})
-```
+$$
 
 Collection dimensions broadcast according to NumPy rules.
 
@@ -150,17 +150,17 @@ Collection dimensions broadcast according to NumPy rules.
 
 The difference of two Vectors follows:
 
-```math
+$$
 (\mathbf{A} - \mathbf{B})^{m_1 \ldots m_k} = A^{m_1 \ldots m_k} - B^{m_1 \ldots m_k}
-```
+$$
 
 **Scalar Multiplication**
 
 For scalar $α$ and Vector $\mathbf{B}$:
 
-```math
+$$
 (α \mathbf{B})^{m_1 \ldots m_k} = α B^{m_1 \ldots m_k}
-```
+$$
 
 This satisfies commutativity: $α \mathbf{B} = \mathbf{B} α$.
 
@@ -168,17 +168,17 @@ This satisfies commutativity: $α \mathbf{B} = \mathbf{B} α$.
 
 Division by nonzero scalar $α$:
 
-```math
+$$
 \left(\frac{\mathbf{B}}{α}\right)^{m_1 \ldots m_k} = \frac{B^{m_1 \ldots m_k}}{α}
-```
+$$
 
 **Negation**
 
 The additive inverse:
 
-```math
+$$
 (-\mathbf{B})^{m_1 \ldots m_k} = -B^{m_1 \ldots m_k}
-```
+$$
 
 satisfies $\mathbf{B} + (-\mathbf{B}) = 0$.
 
@@ -186,23 +186,23 @@ satisfies $\mathbf{B} + (-\mathbf{B}) = 0$.
 
 Grade mismatch raises `ValueError`:
 
-```math
+$$
 \text{grade}(\mathbf{A}) \neq \text{grade}(\mathbf{B}) \implies \mathbf{A} + \mathbf{B} \text{ undefined}
-```
+$$
 
 Dimension mismatch similarly fails:
 
-```math
+$$
 \dim(\mathbf{A}) \neq \dim(\mathbf{B}) \implies \mathbf{A} + \mathbf{B} \text{ undefined}
-```
+$$
 
 ### MultiVector Operations
 
 A multivector combines Vectors of different grades:
 
-```math
+$$
 \mathbf{M} = \sum_{k=0}^{d} \mathbf{M}_{\langle k \rangle}
-```
+$$
 
 where $\mathbf{M}_{\langle k \rangle}$ denotes the grade-$k$ component.
 
@@ -210,9 +210,9 @@ where $\mathbf{M}_{\langle k \rangle}$ denotes the grade-$k$ component.
 
 For multivector $\mathbf{M}$, the grade projection:
 
-```math
+$$
 \langle \mathbf{M} \rangle_k = \mathbf{M}_{\langle k \rangle}
-```
+$$
 
 extracts the grade-$k$ component, returning `None` if that grade is absent.
 
@@ -220,9 +220,9 @@ extracts the grade-$k$ component, returning `None` if that grade is absent.
 
 For multivectors $\mathbf{M}$, $\mathbf{N}$:
 
-```math
+$$
 (\mathbf{M} + \mathbf{N})_{\langle k \rangle} = \mathbf{M}_{\langle k \rangle} + \mathbf{N}_{\langle k \rangle}
-```
+$$
 
 where each grade adds independently.
 
@@ -230,31 +230,31 @@ where each grade adds independently.
 
 Given Vectors $\mathbf{B}_1, \ldots, \mathbf{B}_n$:
 
-```math
+$$
 \mathbf{M} = \sum_{k} \mathbf{B}_k
-```
+$$
 
 Duplicate grades sum:
 
-```math
+$$
 \mathbf{M}_{\langle k \rangle} = \sum_{i: \text{grade}(\mathbf{B}_i) = k} \mathbf{B}_i
-```
+$$
 
 **Validation**
 
 All component Vectors must satisfy:
 
-```math
+$$
 \dim(\mathbf{B}_k) = d \quad \text{for all } k
-```
+$$
 
-```math
+$$
 \text{cdim}(\mathbf{B}_k) = c \quad \text{for all } k
-```
+$$
 
-```math
+$$
 \text{grade}(\mathbf{B}_k) = k \quad \text{(key matches grade)}
-```
+$$
 
 ## Operations Tests
 
@@ -266,9 +266,9 @@ The wedge (exterior) product constructs higher-grade Vectors from lower-grade in
 
 For grade-$j$ Vector $\mathbf{A}$ and grade-$k$ Vector $\mathbf{B}$:
 
-```math
+$$
 (\mathbf{A} \wedge \mathbf{B})^{m_1 \ldots m_{j + k}} = \frac{1}{j! k!} A^{m_1 \ldots m_j} B^{m_{j + 1} \ldots m_{j + k}} \times \text{antisymmetrize}
-```
+$$
 
 The result has grade $(j + k)$.
 
@@ -276,57 +276,57 @@ The result has grade $(j + k)$.
 
 For grade-1 vectors $\mathbf{u}$, $\mathbf{v}$:
 
-```math
+$$
 \mathbf{u} \wedge \mathbf{v} = -\mathbf{v} \wedge \mathbf{u}
-```
+$$
 
 More generally, for grades $j$ and $k$:
 
-```math
+$$
 \mathbf{A} \wedge \mathbf{B} = (-1)^{jk} \mathbf{B} \wedge \mathbf{A}
-```
+$$
 
 **Nilpotency**
 
 Any vector wedged with itself vanishes:
 
-```math
+$$
 \mathbf{v} \wedge \mathbf{v} = 0
-```
+$$
 
 This extends to linear dependence:
 
-```math
+$$
 \mathbf{u} = α \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
-```
+$$
 
 **Associativity**
 
 The wedge product associates:
 
-```math
+$$
 (\mathbf{a} \wedge \mathbf{b}) \wedge \mathbf{c} = \mathbf{a} \wedge (\mathbf{b} \wedge \mathbf{c})
-```
+$$
 
 This allows construction of grade-$k$ Vectors via sequential wedging:
 
-```math
+$$
 \mathbf{T} = \mathbf{e}_1 \wedge \mathbf{e}_2 \wedge \mathbf{e}_3
-```
+$$
 
 **Grade Calculation**
 
 The grade of a wedge product follows:
 
-```math
+$$
 \text{grade}(\mathbf{A} \wedge \mathbf{B}) = \text{grade}(\mathbf{A}) + \text{grade}(\mathbf{B})
-```
+$$
 
 For three vectors:
 
-```math
+$$
 \text{grade}(\mathbf{a} \wedge \mathbf{b} \wedge \mathbf{c}) = 3
-```
+$$
 
 **Batch Operations**
 
@@ -343,15 +343,15 @@ The interior product (left contraction) contracts indices using the metric.
 
 For grade-$j$ Vector $\mathbf{A}$ and grade-$k$ Vector $\mathbf{B}$ with $j \leq k$:
 
-```math
+$$
 (\mathbf{A} \lrcorner \mathbf{B})^{n_1 \ldots n_{k - j}} = A^{m_1 \ldots m_j} B_{m_1 \ldots m_j}^{n_1 \ldots n_{k - j}}
-```
+$$
 
 where indices are lowered via the metric:
 
-```math
+$$
 B_{m_1 \ldots m_j}^{n_1 \ldots n_{k - j}} = g_{m_1 p_1} \cdots g_{m_j p_j} B^{p_1 \ldots p_j n_1 \ldots n_{k - j}}
-```
+$$
 
 The result has grade $(k - j)$.
 
@@ -359,33 +359,33 @@ The result has grade $(k - j)$.
 
 Each contraction reduces grade by the grade of the first argument:
 
-```math
+$$
 \text{grade}(\mathbf{A} \lrcorner \mathbf{B}) = \text{grade}(\mathbf{B}) - \text{grade}(\mathbf{A})
-```
+$$
 
 **Zero Cases**
 
 When $j > k$:
 
-```math
+$$
 \mathbf{A} \lrcorner \mathbf{B} = 0
-```
+$$
 
 **Scalar Cases**
 
 For scalar $s$ (grade 0):
 
-```math
+$$
 s \lrcorner \mathbf{B} = s \mathbf{B}
-```
+$$
 
 **Orthogonality**
 
 For orthogonal basis vectors $\mathbf{e}_m \perp \mathbf{e}_n$ with $m \neq n$:
 
-```math
+$$
 \mathbf{e}_m \lrcorner (\mathbf{e}_n \wedge \mathbf{e}_p) = 0
-```
+$$
 
 when $m \notin \lbrace n, p \rbrace$.
 
@@ -393,9 +393,9 @@ when $m \notin \lbrace n, p \rbrace$.
 
 For vector $\mathbf{e}_1$ and bivector $\mathbf{e}_1 \wedge \mathbf{e}_2$:
 
-```math
+$$
 \mathbf{e}_1 \lrcorner (\mathbf{e}_1 \wedge \mathbf{e}_2) = \pm \mathbf{e}_2
-```
+$$
 
 with sign determined by orientation.
 
@@ -407,23 +407,23 @@ Complement operations map between dual grades using the Levi-Civita symbol.
 
 For grade-$k$ Vector in $d$ dimensions:
 
-```math
+$$
 \overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
-```
+$$
 
 This maps grade $k$ to grade $(d - k)$:
 
-```math
+$$
 \text{grade}(\overline{\mathbf{B}}) = d - \text{grade}(\mathbf{B})
-```
+$$
 
 **Left Complement**
 
 The left complement:
 
-```math
+$$
 \underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = ε_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
-```
+$$
 
 also maps grade $k$ to grade $(d - k)$.
 
@@ -431,47 +431,47 @@ also maps grade $k$ to grade $(d - k)$.
 
 In 3D, vectors map to bivectors:
 
-```math
+$$
 \text{grade}(\overline{\mathbf{v}}) = 3 - 1 = 2
-```
+$$
 
 In 4D, bivectors map to bivectors:
 
-```math
+$$
 \text{grade}(\overline{\mathbf{B}}) = 4 - 2 = 2
-```
+$$
 
 **Double Complement**
 
 Applying complement twice recovers the original (up to sign):
 
-```math
+$$
 \overline{\overline{\mathbf{B}}} = \pm \mathbf{B}
-```
+$$
 
 ### Hodge Dual
 
 The Hodge dual incorporates the metric structure:
 
-```math
+$$
 (\star \mathbf{B})^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} ε^{m_1 \ldots m_d}
-```
+$$
 
 **Grade Mapping**
 
 The Hodge dual maps grade $k$ to grade $(d - k)$:
 
-```math
+$$
 \text{grade}(\star \mathbf{B}) = d - \text{grade}(\mathbf{B})
-```
+$$
 
 **Scalar Dual**
 
 For scalar $s$ in $d$ dimensions:
 
-```math
+$$
 \star s = s \mathbb{1}
-```
+$$
 
 where $\mathbb{1}$ is the pseudoscalar (grade $d$).
 
@@ -479,9 +479,9 @@ where $\mathbb{1}$ is the pseudoscalar (grade $d$).
 
 In 3D Euclidean space, the dual of a vector is a bivector:
 
-```math
+$$
 \star \mathbf{v} = v^m ε^{mnp} \mathbf{e}_{np}
-```
+$$
 
 This creates the familiar cross-product-like correspondence.
 
@@ -489,9 +489,9 @@ This creates the familiar cross-product-like correspondence.
 
 The dual of a bivector in 3D gives a vector:
 
-```math
+$$
 \star (\mathbf{e}_1 \wedge \mathbf{e}_2) = \pm \mathbf{e}_3
-```
+$$
 
 establishing the vector-bivector duality in three dimensions.
 
@@ -503,9 +503,9 @@ The norm of a Vector incorporates the metric structure and factorial normalizati
 
 For grade-$k$ Vector $\mathbf{B}$:
 
-```math
+$$
 |\mathbf{B}|^2 = \frac{1}{k!} B^{m_1 \ldots m_k} B^{n_1 \ldots n_k} g_{m_1 n_1} \cdots g_{m_k n_k}
-```
+$$
 
 The factorial prevents overcounting from antisymmetric components.
 
@@ -513,29 +513,29 @@ The factorial prevents overcounting from antisymmetric components.
 
 The norm is the square root of absolute value:
 
-```math
+$$
 |\mathbf{B}| = \sqrt{||\mathbf{B}|^2|}
-```
+$$
 
 **Unit Vectors**
 
 For Euclidean basis vector $\mathbf{e}_m$:
 
-```math
+$$
 |\mathbf{e}_m|^2 = g_{mm} = 1
-```
+$$
 
-```math
+$$
 |\mathbf{e}_m| = 1
-```
+$$
 
 **Pythagorean Identity**
 
 For vector $\mathbf{v} = v^m \mathbf{e}_m$ in Euclidean space:
 
-```math
+$$
 |\mathbf{v}|^2 = g_{mn} v^m v^n = \sum_{m} (v^m)^2
-```
+$$
 
 giving the standard Pythagorean formula.
 
@@ -543,9 +543,9 @@ giving the standard Pythagorean formula.
 
 For $\mathbf{B} = \mathbf{e}_1 \wedge \mathbf{e}_2$ in Euclidean space:
 
-```math
+$$
 |\mathbf{B}|^2 > 0
-```
+$$
 
 reflecting positive-definite area.
 
@@ -553,9 +553,9 @@ reflecting positive-definite area.
 
 The unit vector:
 
-```math
+$$
 \hat{\mathbf{B}} = \frac{\mathbf{B}}{|\mathbf{B}|}
-```
+$$
 
 satisfies $|\hat{\mathbf{B}}| = 1$.
 
@@ -563,25 +563,25 @@ satisfies $|\hat{\mathbf{B}}| = 1$.
 
 For zero Vector:
 
-```math
+$$
 |\mathbf{0}| = 0
-```
+$$
 
-```math
+$$
 \text{unit}(\mathbf{0}) = \mathbf{0}
-```
+$$
 
 **PGA Metric Degeneracy**
 
 In PGA with metric $g = \text{diag}(0, 1, 1, \ldots)$:
 
-```math
+$$
 |\mathbf{e}_0|^2 = g_{00} = 0
-```
+$$
 
-```math
+$$
 |\mathbf{e}_0| = 0
-```
+$$
 
 The ideal basis vector has zero norm, reflecting the projective structure.
 
@@ -593,9 +593,9 @@ Join and meet are dual operations connecting union and intersection of subspaces
 
 The join of two Vectors is their wedge product:
 
-```math
+$$
 \mathbf{A} \vee \mathbf{B} = \mathbf{A} \wedge \mathbf{B}
-```
+$$
 
 This constructs the smallest subspace containing both.
 
@@ -603,23 +603,23 @@ This constructs the smallest subspace containing both.
 
 The meet uses complement duality:
 
-```math
+$$
 \mathbf{A} \wedge \mathbf{B} = \overline{\left(\overline{\mathbf{A}} \wedge \overline{\mathbf{B}}\right)}
-```
+$$
 
 **Grade Behavior**
 
 For grade-$j$ and grade-$k$ Vectors:
 
-```math
+$$
 \text{grade}(\mathbf{A} \vee \mathbf{B}) = j + k
-```
+$$
 
 The meet grade depends on intersection dimension:
 
-```math
+$$
 \text{grade}(\mathbf{A} \wedge \mathbf{B}) = j + k - d
-```
+$$
 
 when the Vectors span transverse subspaces.
 
@@ -627,17 +627,17 @@ when the Vectors span transverse subspaces.
 
 In 4D, two planes (trivectors) meet in a line:
 
-```math
+$$
 \text{grade}(\text{plane}_1 \wedge \text{plane}_2) = 3 + 3 - 4 = 2
-```
+$$
 
 **Plane-Line Intersection**
 
 A plane and line meet in a point:
 
-```math
+$$
 \text{grade}(\text{plane} \wedge \text{line}) = 3 + 2 - 4 = 1
-```
+$$
 
 ### Dot Product
 
@@ -647,39 +647,39 @@ The dot product for vectors uses the metric directly.
 
 For vectors $\mathbf{u}$, $\mathbf{v}$:
 
-```math
+$$
 \mathbf{u} \cdot \mathbf{v} = g_{ab} u^a v^b
-```
+$$
 
 **Orthogonality**
 
 For orthogonal basis vectors:
 
-```math
+$$
 \mathbf{e}_m \cdot \mathbf{e}_n = g_{mn} = δ_{mn}
-```
+$$
 
 giving:
 
-```math
+$$
 \mathbf{e}_m \cdot \mathbf{e}_n = 0 \quad \text{when } m \neq n
-```
+$$
 
 **Self-Product**
 
 For unit vector $\mathbf{e}_m$:
 
-```math
+$$
 \mathbf{e}_m \cdot \mathbf{e}_m = g_{mm} = 1
-```
+$$
 
 **General Vectors**
 
 For $\mathbf{u} = (1, 2, 3, 4)$ and $\mathbf{v} = (2, 1, 1, 1)$ in Euclidean space:
 
-```math
+$$
 \mathbf{u} \cdot \mathbf{v} = 1 \times 2 + 2 \times 1 + 3 \times 1 + 4 \times 1 = 11
-```
+$$
 
 ### Projections
 
@@ -689,37 +689,37 @@ Projection and rejection decompose a Vector relative to another.
 
 The projection of $\mathbf{A}$ onto $\mathbf{B}$:
 
-```math
+$$
 \text{proj}_{\mathbf{B}}(\mathbf{A}) = \frac{(\mathbf{A} \lrcorner \mathbf{B}) \lrcorner \mathbf{B}}{|\mathbf{B}|^2}
-```
+$$
 
 **Rejection Formula**
 
 The rejection (orthogonal component):
 
-```math
+$$
 \text{rej}_{\mathbf{B}}(\mathbf{A}) = \mathbf{A} - \text{proj}_{\mathbf{B}}(\mathbf{A})
-```
+$$
 
 **Orthogonal Decomposition**
 
 Projection and rejection satisfy:
 
-```math
+$$
 \mathbf{A} = \text{proj}_{\mathbf{B}}(\mathbf{A}) + \text{rej}_{\mathbf{B}}(\mathbf{A})
-```
+$$
 
 **Vector Projection**
 
 For $\mathbf{v} = (1, 1, 0, 0)$ onto $\mathbf{e}_1 = (1, 0, 0, 0)$:
 
-```math
+$$
 \text{proj}_{\mathbf{e}_1}(\mathbf{v}) = (1, 0, 0, 0)
-```
+$$
 
-```math
+$$
 \text{rej}_{\mathbf{e}_1}(\mathbf{v}) = (0, 1, 0, 0)
-```
+$$
 
 ## Exponential and Logarithm Tests
 
@@ -727,78 +727,79 @@ For $\mathbf{v} = (1, 1, 0, 0)$ onto $\mathbf{e}_1 = (1, 0, 0, 0)$:
 
 For bivector $\mathbf{B}$ where $\mathbf{B}^2 = λ$ is scalar:
 
-```math
+$$
 e^{\mathbf{B}} = \begin{cases}
 \cos\sqrt{-λ} + \frac{\mathbf{B}}{\sqrt{-λ}} \sin\sqrt{-λ} & \text{if } λ < 0 \\
 \cosh\sqrt{λ} + \frac{\mathbf{B}}{\sqrt{λ}} \sinh\sqrt{λ} & \text{if } λ > 0 \\
 1 + \mathbf{B} & \text{if } λ = 0
 \end{cases}
-```
+$$
 
 **Unit Bivector**
 
 For unit bivector $\hat{\mathbf{B}}$ with $\hat{\mathbf{B}}^2 = -1$:
 
-```math
+$$
 e^{θ \hat{\mathbf{B}}} = \cos θ + \hat{\mathbf{B}}\sin θ
-```
+$$
 
 **Rotor Construction**
 
 A rotor for rotation by angle $θ$ in the plane of unit bivector $\hat{\mathbf{B}}$:
 
-```math
+$$
 R = e^{-\hat{\mathbf{B}}θ/2} = \cos(θ/2) - \hat{\mathbf{B}}\sin(θ/2)
-```
+$$
 
 **Rotor Normalization**
 
 Rotors satisfy $R\tilde{R} = 1$:
 
-```math
+$$
 |R|^2 = \cos^2(θ/2) + \sin^2(θ/2) = 1
-```
+$$
 
 ### Versor Logarithm
 
 For rotor $R = a + \mathbf{B}$ where $a$ is scalar and $\mathbf{B}$ is bivector:
 
-```math
+$$
 \log R = \arctan2(|\mathbf{B}|, a) \cdot \frac{\mathbf{B}}{|\mathbf{B}|}
-```
+$$
 
 **Inverse Property**
 
-```math
+$$
 e^{\log R} = R
-```
+$$
 
-```math
+$$
 \log(e^{\mathbf{B}}) = \mathbf{B} \quad \text{(for small } |\mathbf{B}| \text{)}
-```
+$$
 
 ### Slerp
 
 Spherical linear interpolation between rotors $R_0$ and $R_1$:
 
-```math
+$$
 R(t) = R_0 e^{t \log(R_0^{-1} R_1)}
-```
+$$
 
 **Boundary Conditions**
 
-```math
+$$
 R(0) = R_0
-```
-```math
+$$
+
+$$
 R(1) = R_1
-```
+$$
 
 **Midpoint**
 
-```math
+$$
 R(0.5) = R_0 e^{0.5 \log(R_0^{-1} R_1)}
-```
+$$
 
 ## Utilities Tests
 
@@ -810,42 +811,42 @@ The sign of a permutation indicates parity.
 
 For permutation $σ$:
 
-```math
+$$
 \text{sgn}(σ) = \begin{cases}
 +1 & \text{if } σ \text{ is even} \\
 -1 & \text{if } σ \text{ is odd}
 \end{cases}
-```
+$$
 
 **Identity**
 
 The identity permutation is even:
 
-```math
+$$
 \text{sgn}((0, 1, 2)) = +1
-```
+$$
 
 **Single Transposition**
 
 Swapping two elements is odd:
 
-```math
+$$
 \text{sgn}((1, 0, 2)) = -1
-```
+$$
 
 **Cyclic Permutations in 3D**
 
 Forward cycle $(1, 2, 0)$ is even:
 
-```math
+$$
 \text{sgn}((1, 2, 0)) = +1
-```
+$$
 
 Backward cycle $(2, 1, 0)$ is odd:
 
-```math
+$$
 \text{sgn}((2, 1, 0)) = -1
-```
+$$
 
 ### Antisymmetrization
 
@@ -855,9 +856,9 @@ Antisymmetrization projects tensors onto the antisymmetric subspace.
 
 For rank-$k$ tensor $T$:
 
-```math
+$$
 T^{[m_1 \ldots m_k]} = \sum_{σ \in S_k} \text{sgn}(σ) T^{m_{σ(1)} \ldots m_{σ(k)}}
-```
+$$
 
 (without $1/k!$ normalization).
 
@@ -865,9 +866,9 @@ T^{[m_1 \ldots m_k]} = \sum_{σ \in S_k} \text{sgn}(σ) T^{m_{σ(1)} \ldots m_{�
 
 The result satisfies:
 
-```math
+$$
 T^{[m_1 \ldots m_k]}_{[n_1 \ldots n_k]} = -T^{[n_1 \ldots m_k]}_{[m_1 \ldots n_k]}
-```
+$$
 
 for any index swap.
 
@@ -875,9 +876,9 @@ for any index swap.
 
 Antisymmetric components with repeated indices vanish:
 
-```math
+$$
 T^{[m m n]} = 0
-```
+$$
 
 ### Levi-Civita Tensor
 
@@ -887,21 +888,21 @@ The Levi-Civita symbol is the fully antisymmetric tensor.
 
 For $d$ dimensions:
 
-```math
+$$
 ε^{m_1 \ldots m_d} = \begin{cases}
 +1 & \text{if } (m_1, \ldots, m_d) \text{ is even permutation of } (0, 1, \ldots, d-1) \\
 -1 & \text{if odd permutation} \\
 0 & \text{if any indices repeat}
 \end{cases}
-```
+$$
 
 **Contraction Identity**
 
 Self-contraction gives the factorial:
 
-```math
+$$
 ε^{abc} ε_{abc} = d! = 6 \quad \text{for } d = 3
-```
+$$
 
 ### Generalized Kronecker Delta
 
@@ -909,23 +910,23 @@ The generalized delta antisymmetrizes under contraction.
 
 **Definition**
 
-```math
+$$
 δ^{m_1 \ldots m_k}_{n_1 \ldots n_k} = \frac{1}{k!} \sum_{σ \in S_k} \text{sgn}(σ) δ^{m_1}_{n_{σ(1)}} \cdots δ^{m_k}_{n_{σ(k)}}
-```
+$$
 
 **Contraction**
 
 Self-contraction counts combinations:
 
-```math
+$$
 δ^{ab}_{ab} = \binom{d}{k}
-```
+$$
 
 For $k = 2$, $d = 3$:
 
-```math
+$$
 δ^{ab}_{ab} = \binom{3}{2} = 3
-```
+$$
 
 ## Projective Operations Tests
 
@@ -937,9 +938,9 @@ Projective geometric algebra embeds Euclidean geometry via homogeneous coordinat
 
 A Euclidean point $\mathbf{x} \in \mathbb{R}^d$ embeds as:
 
-```math
+$$
 \mathbf{p} = e_0 + x^m e_m
-```
+$$
 
 with weight 1 in the ideal component.
 
@@ -947,9 +948,9 @@ with weight 1 in the ideal component.
 
 A Euclidean direction $\mathbf{v} \in \mathbb{R}^d$ embeds as:
 
-```math
+$$
 \mathbf{d} = v^m e_m
-```
+$$
 
 with zero weight, representing a point at infinity.
 
@@ -957,9 +958,9 @@ with zero weight, representing a point at infinity.
 
 The weight extracts the ideal component:
 
-```math
+$$
 w(\mathbf{p}) = p^0
-```
+$$
 
 Points satisfy $w(\mathbf{p}) = 1$, directions satisfy $w(\mathbf{d}) = 0$.
 
@@ -967,17 +968,17 @@ Points satisfy $w(\mathbf{p}) = 1$, directions satisfy $w(\mathbf{d}) = 0$.
 
 The bulk extracts Euclidean components:
 
-```math
+$$
 \text{bulk}(\mathbf{p}) = (p^1, p^2, \ldots, p^d)
-```
+$$
 
 **Euclidean Projection**
 
 For points with $w \neq 0$:
 
-```math
+$$
 \text{euclidean}(\mathbf{p}) = \frac{\text{bulk}(\mathbf{p})}{w(\mathbf{p})}
-```
+$$
 
 ### Geometric Constructors
 
@@ -985,17 +986,17 @@ PGA constructs higher-grade objects via wedge products.
 
 **Line through Two Points**
 
-```math
+$$
 \ell = \mathbf{p} \wedge \mathbf{q}
-```
+$$
 
 This bivector represents the line through points $\mathbf{p}$ and $\mathbf{q}$.
 
 **Plane through Three Points**
 
-```math
+$$
 π = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
-```
+$$
 
 This trivector represents the plane containing $\mathbf{p}$, $\mathbf{q}$, $\mathbf{r}$.
 
@@ -1007,21 +1008,21 @@ Distances use norms of wedge products normalized by object norms.
 
 For points $\mathbf{p}$, $\mathbf{q}$:
 
-```math
+$$
 d(\mathbf{p}, \mathbf{q}) = \sqrt{g_{mn} (x_q^m - x_p^m)(x_q^n - x_p^n)}
-```
+$$
 
 **Point-to-Line Distance**
 
-```math
+$$
 d(\mathbf{p}, \ell) = \frac{|\mathbf{p} \wedge \ell|}{|\ell|}
-```
+$$
 
 **Point-to-Plane Distance**
 
-```math
+$$
 d(\mathbf{p}, π) = \frac{|\mathbf{p} \wedge π|}{|π|}
-```
+$$
 
 ### Incidence Predicates
 
@@ -1031,33 +1032,33 @@ Incidence tests verify geometric relationships via vanishing wedge products.
 
 Three points $\mathbf{p}$, $\mathbf{q}$, $\mathbf{r}$ are collinear if:
 
-```math
+$$
 \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r} = 0
-```
+$$
 
 **Point on Line**
 
 Point $\mathbf{p}$ lies on line $\ell$ if:
 
-```math
+$$
 \mathbf{p} \wedge \ell = 0
-```
+$$
 
 **Point on Plane**
 
 Point $\mathbf{p}$ lies on plane $π$ if:
 
-```math
+$$
 \mathbf{p} \wedge π = 0
-```
+$$
 
 **Tolerance**
 
 All incidence tests use tolerance $ε = 10^{-10}$:
 
-```math
+$$
 ||\mathbf{A} \wedge \mathbf{B}|| < ε
-```
+$$
 
 ## Integration Tests
 
@@ -1065,17 +1066,17 @@ All incidence tests use tolerance $ε = 10^{-10}$:
 
 Complement duality relates meet and join:
 
-```math
+$$
 \overline{\mathbf{A}} \wedge \overline{\mathbf{B}} = \overline{(\mathbf{A} \vee \mathbf{B})}
-```
+$$
 
 ### Geometric Construction Consistency
 
 Points constructed as embeddings satisfy incidence with derived objects:
 
-```math
+$$
 \mathbf{p} \in \ell \implies \mathbf{p} \wedge \ell = 0
-```
+$$
 
 where $\ell = \mathbf{p} \wedge \mathbf{q}$.
 
@@ -1085,25 +1086,25 @@ where $\ell = \mathbf{p} \wedge \mathbf{q}$.
 
 Zero Vectors satisfy:
 
-```math
+$$
 |\mathbf{0}| = 0
-```
+$$
 
-```math
+$$
 \text{unit}(\mathbf{0}) = \mathbf{0}
-```
+$$
 
 ### Complex Dtype Support
 
 All operations support complex coefficients:
 
-```math
+$$
 \mathbf{v} = (1 + i, 0, 0, 0)
-```
+$$
 
-```math
+$$
 \mathbf{v} \wedge \mathbf{w} \text{ preserves complex structure}
-```
+$$
 
 ### Broadcasting
 

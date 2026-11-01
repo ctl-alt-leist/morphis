@@ -13,17 +13,17 @@ The first writes the still to `figures/conjugate-planes/conjugate-planes.png` an
 
 A state with amplitudes $z^m = η^m + i ξ^m$ is the real vector:
 
-```math
+$$
 \mathbf{ψ} = η^m \mathbf{e}_m + ξ^m \mathbf{e}_{\dot m}
-```
+$$
 
 summed over the modes, with the example's normalization $ψ^μ ψ^μ = 2$. Multiplication by $i$ is the complex structure $J$, the quarter turn $J \mathbf e_m = \mathbf e_{\dot m}$ inside each conjugate plane, so a complex phase is a rotation of the plane it acts on. The conjugate planes of different modes are mutually orthogonal and together span $\mathcal{V}$.
 
 The *shadow* of the state in the plane of mode $m$ is its orthogonal projection onto $\mathbf e_{m \dot m}$:
 
-```math
+$$
 \mathbf{ψ}_m = η^m \mathbf{e}_m + ξ^m \mathbf{e}_{\dot m}
-```
+$$
 
 with no sum over $m$. Its length is the modulus $|z^m|$ and its angle from $\mathbf e_m$ is the phase of $z^m$, so the shadows hold the populations and phases of the state, and the state is their sum, $\mathbf{ψ} = \mathbf ψ_a + \mathbf ψ_b$.
 
@@ -51,12 +51,12 @@ def shadows(state: Vector) -> tuple[Vector, Vector]:
 
 The two modes are energy eigenstates with frequencies $ω_m = E_m / \hbar$, so each amplitude keeps its modulus and turns its phase at its own rate. In $\mathcal{V}$ that is a rotation by $ω_m t$ inside each conjugate plane, carried out by the sandwich with the rotor:
 
-```math
+$$
 \begin{aligned}
-R(t) &= \exp\left( -\tfrac{1}{2} ω_a t \mathbf{e}_{a \dot a} \right) \exp\left( -\tfrac{1}{2} ω_b t \mathbf{e}_{b \dot b} \right) \\
+R(t) &= \exp\left( -\tfrac{1}{2} ω_a t \mathbf e_{a \dot a} \right) \exp\left( -\tfrac{1}{2} ω_b t \mathbf e_{b \dot b} \right) \\
 \mathbf{ψ}(t) &= R \mathbf{ψ}(0) \tilde{R}
 \end{aligned}
-```
+$$
 
 The two blades share no direction, so they commute, and the product of the two exponentials is the exponential of the sum $-\tfrac{1}{2} t (ω_a \mathbf e_{a \dot a} + ω_b \mathbf e_{b \dot b})$. That generator is not a simple bivector: it is a double rotation of $\mathbb{R}^4$, of the same kind as the isoclinic turn of the [tesseract](5_tesseract.md), with unequal rates here. Each factor turns its plane from $\mathbf e_m$ toward $\mathbf e_{\dot m}$, the right-handed sense of $\mathbf e_{m \dot m}$, and keeps the shadow's length. This is the evolution $z^m \mapsto e^{i ω_m t} z^m$. The Schrödinger evolution $e^{-i E_m t / \hbar}$ turns each plane the opposite way, and the example chooses the right-handed sense for the drawing.
 
@@ -79,9 +79,9 @@ orbit = (R * INITIAL_STATE * ~R).data[1]               # a Vector with lot (721,
 
 The figure has to show a state of $\mathbb{R}^4$ beside two orthogonal planes of $\mathbb{R}^4$ that meet only at the origin. Every linear map from $\mathbb{R}^4$ to three dimensions has a kernel, and an orthographic view onto three of the four axes would crush one of the planes to a line. The figure instead uses `Projection.linear`, which sends each basis direction to a chosen drawing direction:
 
-```math
+$$
 \mathbf{e}_a \mapsto \hat{x}, \quad \mathbf{e}_{\dot a} \mapsto \hat{z}, \quad \mathbf{e}_b \mapsto \hat{x}, \quad \mathbf{e}_{\dot b} \mapsto \hat{y}
-```
+$$
 
 Both mode directions share the page direction $\hat{x}$. Plane $a$ stands upright in the $xz$-plane, and plane $b$ lies flat in the $xy$-plane:
 

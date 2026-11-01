@@ -17,12 +17,12 @@ Without an argument each opens a window and plays live. With an output path, `.g
 
 The `rotations_4d` example turns the frame $(\mathbf e_1, \mathbf e_2, \mathbf e_3, \mathbf e_4)$ by two simple rotations in sequence, each a full turn:
 
-```math
+$$
 \begin{aligned}
 \hat{b}_1 &= \frac{(\mathbf{e}_1 + \mathbf{e}_2) \wedge \mathbf{e}_3}{|(\mathbf{e}_1 + \mathbf{e}_2) \wedge \mathbf{e}_3|} \\
 \hat{b}_2 &= \frac{(\mathbf{e}_1 + \mathbf{e}_2 + \mathbf{e}_3) \wedge \mathbf{e}_4}{|(\mathbf{e}_1 + \mathbf{e}_2 + \mathbf{e}_3) \wedge \mathbf{e}_4|}
 \end{aligned}
-```
+$$
 
 Each is a blade, a single plane, so its rotor is $\cos + \hat{b} \sin$ with no grade-4 part, and it leaves the plane's orthogonal complement fixed. The frame is advanced frame by frame with the rotor of each eased angle increment, and each full turn returns it to where it started.
 
@@ -54,23 +54,23 @@ The example runs at 60 frames per second. A GIF plays at most 50, so the recordi
 
 The tesseract example turns $\mathbb{R}^4$ in two planes at once, with the bivector:
 
-```math
+$$
 b = \mathbf{e}_{14} + \mathbf{e}_{23}
-```
+$$
 
 The planes $\mathbf e_{14}$ and $\mathbf e_{23}$ share no direction, so their blades commute and $b$ generates a rotation in both at the same rate. A simple bivector has $b \wedge b = 0$, and this one does not:
 
-```math
+$$
 w = \tfrac{1}{2} b \wedge b = \mathbf{e}_{1234}
-```
+$$
 
 Its square has a scalar and a grade-4 part, $b^2 = -2 + 2 \mathbf e_{1234}$. A rotation of two orthogonal planes at equal rates is *isoclinic*: every vector of $\mathbb{R}^4$ turns by the same angle, and no direction is left fixed.
 
 The rotor of the turn is $R = \exp(-\tfrac{1}{2} b θ)$, which is what `rotor(B, angle)` computes. Splitting $b$ into its two planes, $b = b_1 + b_2$ with $b_1 = \mathbf e_{14}$ and $b_2 = \mathbf e_{23}$, the exponential is the product of two commuting rotors. Each plane turns by $θ$, and with $c = \cos(θ/2)$ and $s = \sin(θ/2)$:
 
-```math
+$$
 R = c^2 - c s \left( \mathbf{e}_{14} + \mathbf{e}_{23} \right) + s^2 \mathbf{e}_{1234}
-```
+$$
 
 The grade-4 part $s^2 \mathbf e_{1234}$ is the product of the two bivector parts of the factors. At $θ = π/2$ the scalar and the grade-4 coefficient are both $\tfrac{1}{2}$, and at $θ = 2π$ both planes have made a full turn and $R = 1$.
 
@@ -78,18 +78,18 @@ The grade-4 part $s^2 \mathbf e_{1234}$ is the product of the two bivector parts
 
 `rotor` calls `exp_vector`, which hands a bivector to `exp_bivector`, and that function never forms the split. In four or five dimensions every bivector is a sum $b_1 + b_2$ of two commuting simple bivectors in orthogonal planes, with $b_k^2 = λ_k$ scalars, and the two invariants of $b$ determine the $λ_k$:
 
-```math
+$$
 \begin{aligned}
 \langle b^2 \rangle_0 &= λ_1 + λ_2 \\
 w^2 &= λ_1 λ_2
 \end{aligned}
-```
+$$
 
 so the $λ_k$ are the roots of $λ^2 - \langle b^2 \rangle_0 λ + w^2 = 0$. With $c_k = \cos \sqrt{-λ_k}$ and $s_k = \sin \sqrt{-λ_k} / \sqrt{-λ_k}$, the product $\exp(b_1) \exp(b_2)$ written through $b$ and $w$ alone is:
 
-```math
+$$
 \exp(b) = c_1 c_2 + s_1 s_2 w + \tfrac{1}{2} (c_2 s_1 + c_1 s_2) b + \tfrac{1}{2} D \left( \langle b^2 \rangle_0 b - 2 b w \right)
-```
+$$
 
 where $D = (c_2 s_1 - c_1 s_2) / (λ_1 - λ_2)$ is a divided difference. This is the invariant decomposition of Roelfs and De Keninck. The functions $c_k$ and $s_k$ are entire in $λ_k$, equal to $\cosh$ and $\sinh$ for $λ_k > 0$ and to 1 at $λ_k = 0$, so one formula covers rotations, boosts, and null translations. A simple bivector has $w = 0$ and reduces to $\cos + b \sin$.
 
@@ -157,17 +157,17 @@ The orthographic view onto $\mathbf e_1, \mathbf e_2, \mathbf e_3$ drops $x^4$. 
 
 The perspective view puts an eye on the $\mathbf e_4$ axis at distance $D = 3$ and draws a point at:
 
-```math
+$$
 \mathbf{x} \mapsto \frac{D (x^1, x^2, x^3)}{D - x^4}
-```
+$$
 
 The dropped coordinate becomes scale. A corner of the cell lies at distance at most 1 from the origin, so $x^4$ stays between $-1$ and 1, the weight $D - x^4$ stays positive, and every corner is drawn at a finite point. At the start the cube at $x^4 = \tfrac{1}{2}$ is drawn larger by $3 / 2.5$ and the cube at $x^4 = -\tfrac{1}{2}$ smaller by $3 / 3.5$, so the far cube sits inside the near one. As the cell turns, cubes pass through each other, the inner one swelling outward while the outer one shrinks in.
 
 The two views are one family. Written with $κ = 1/D$, the perspective image is:
 
-```math
+$$
 \mathbf{x} \mapsto \frac{(x^1, x^2, x^3)}{1 - κ x^4}
-```
+$$
 
 The parameter $κ$ is the weight row of the projective map, the only entry that differs from the orthographic one. At $κ = 0$ the center of projection is the ideal point of $\mathbf e_4$ and the map is the orthographic view exactly, at the same scale. As $κ$ grows the center comes in from infinity along $\mathbf e_4$, and the image of each corner moves continuously, to first order by $κ x^4 (x^1, x^2, x^3)$. The near cube grows, the far cube shrinks inside it, and since the change is linear in $κ$ near zero, easing $κ$ itself gives an even slide.
 
@@ -179,9 +179,9 @@ The Scene maps every corner by the projective map itself and then draws the edge
 
 Every view so far is a point of one family. The `Projective` view turns its screen by the rotor $R = \exp(-T/2)$ of a bivector $T$, and with $\mathbf{x}' = \tilde R \mathbf{x} R$ and $u = x'^4$ the dropped component, it draws a point at:
 
-```math
+$$
 \mathbf{x} \mapsto \frac{(x'^1, x'^2, x'^3) + u \mathbf{s}}{1 - κ u}
-```
+$$
 
 The eye $κ$ is the inverse distance of the center of projection, the shear $\mathbf{s}$ draws the dropped direction as a picture vector, and the turn moves the screen through $\mathbb{R}^4$. Each parameter is a coordinate on the family, so moving them continuously moves the picture continuously. Turning the screen by $R$ draws the space as if it had been turned by $\tilde R$, so a camera moving through four dimensions is a rotor like any other.
 

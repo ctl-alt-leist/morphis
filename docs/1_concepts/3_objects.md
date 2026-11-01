@@ -31,15 +31,15 @@ s = Vector(1.5, grade=0, metric=g)
 
 A **Vector** (homogeneous multivector) is an element of pure grade $k$. In components:
 
-```math
+$$
 \mathbf{v}_k = v^{m_1 \ldots m_k} \mathbf{e}_{m_1 \ldots m_k}
-```
+$$
 
 where the basis $k$-vectors satisfy:
 
-```math
+$$
 \mathbf{e}_{m_1 \ldots m_k} = \mathbf{e}_{m_1} \wedge \cdots \wedge \mathbf{e}_{m_k}
-```
+$$
 
 Properties of Vectors:
 - **Fixed grade**: All components have the same grade
@@ -67,17 +67,17 @@ d = b + c  # Still grade-2
 
 A **blade** (or simple $k$-vector) is a Vector that can be written as the wedge product of $k$ grade-1 vectors:
 
-```math
+$$
 \mathbf{b} = \mathbf{v}_1 \wedge \mathbf{v}_2 \wedge \cdots \wedge \mathbf{v}_k
-```
+$$
 
 Blades represent **oriented $k$-dimensional subspaces**. The magnitude encodes the $k$-dimensional volume, and the orientation determines the "sense" of the subspace.
 
 Not every k-vector is a blade. For example, in 4D:
 
-```math
+$$
 \mathbf{e}_{12} + \mathbf{e}_{34}
-```
+$$
 
 is a bivector (grade-2 Vector) but cannot be factored as $\mathbf{a} \wedge \mathbf{b}$ for any grade-1 vectors $\mathbf{a}, \mathbf{b}$.
 
@@ -116,9 +116,9 @@ Note: Factorization is not unique. Any $k$ linearly independent vectors spanning
 
 A **MultiVector** is a general element of the Clifford algebra—a sum of Vectors of different grades:
 
-```math
+$$
 \mathbf{M} = \sum_{k=0}^{d} \langle \mathbf{M} \rangle_k
-```
+$$
 
 where $\langle \mathbf{M} \rangle_k$ denotes the grade-$k$ projection.
 
@@ -147,15 +147,15 @@ M[3]        # None (not present)
 
 A **versor** is a product of invertible grade-1 vectors using the geometric product:
 
-```math
+$$
 \mathbf{V} = \mathbf{v}_1 \mathbf{v}_2 \cdots \mathbf{v}_k
-```
+$$
 
 Versors generate orthogonal transformations via the **sandwich product**:
 
-```math
+$$
 \mathbf{x}' = \mathbf{V} \mathbf{x} \mathbf{V}^{-1}
-```
+$$
 
 Key properties:
 - **Closed under multiplication**: Versor $\times$ Versor = Versor
@@ -166,15 +166,15 @@ Key properties:
 
 A **rotor** is an even versor (product of an even number of vectors) satisfying:
 
-```math
+$$
 R \in \text{Cl}^+(V, g), \quad R \tilde{R} = \mathbf{1}
-```
+$$
 
 Rotors generate **rotations** (proper orthogonal transformations) via the sandwich product:
 
-```math
+$$
 \mathbf{v}' = R \mathbf{v} \tilde{R}
-```
+$$
 
 The normalization $R \tilde{R} = 1$ ensures the transformation preserves norms.
 
@@ -205,9 +205,9 @@ v_rotated = R * v * ~R  # v becomes e2
 
 In **Projective Geometric Algebra** (PGA), a **motor** combines rotation and translation in a single element. Motors have grades $\lbrace 0, 2 \rbrace$ and satisfy $M \tilde{M} = 1$.
 
-```math
+$$
 M = R + \frac{ε}{2} \mathbf{t} R
-```
+$$
 
 where $R$ is a rotor, $\mathbf{t}$ is the translation vector, and $ε$ is the degenerate direction.
 

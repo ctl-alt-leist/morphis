@@ -248,29 +248,29 @@ a^m b^n
 
 ### Equations
 
-These docs render on GitHub, whose markdown pass runs before the math renderer and strips a backslash before punctuation. Two rules follow.
+These docs are read in Obsidian and on GitHub. Obsidian renders math only between dollar signs, while GitHub renders both dollar signs and `math` fences, so display math goes in a `$$` block: `$$` alone on the line before the TeX, `$$` alone on the line after it, and a blank line on either side. Without the blank line before it, GitHub folds the block into the preceding paragraph and prints the raw TeX.
 
-Display math goes in a `math` fence, not `$$`, so that row breaks (`\\`), braces (`\{`), and environments such as `cases` and `aligned` reach the renderer intact:
-
-````markdown
-```math
-\mathbf{B} = B^{mn} \mathbf{e}_{mn}
+```markdown
+$$
+\mathbf{B} = B^{mn} \mathbf e_{mn}
+$$
 ```
-````
 
-Multi-line, aligned on the relation:
+GitHub runs its markdown pass over the inside of a `$$` block before the math renderer sees it, and that pass reads a backslash before punctuation as an escape and drops it. A row break `\\` survives only when it ends its line, so in `aligned`, `cases`, and matrices every `\\` closes its line and the next row starts on a new one. Braces are written `\lbrace` and `\rbrace`, and a norm bar `\Vert`, because `\{`, `\}`, and `\|` lose their backslash. An underscore inside `\text{}` is written bare, as in `\text{output_lot}`. GitHub would strip the backslash from `\_` anyway, and MathJax prints the contents of `\text{}` literally, so the bare underscore is what both renderers show as intended.
 
-````markdown
-```math
+The same pass also looks for emphasis. When an underscore or asterisk in a block would pair with another as markdown emphasis, GitHub sends the block down a second path that escapes `&`, `<`, and `>` twice, so an alignment `&` reaches the renderer as `&amp;` and the block fails to render. The usual culprit is a closing brace before an underscore, as in `\mathbf{e}_m` followed later by `\mathbf{e}_{12}`. In a block that contains `&`, `<`, or `>`, a single-letter bold symbol is written without braces, `\mathbf e_m`, which is the same TeX and gives markdown nothing to pair, and a subscript goes before a braced superscript, as in `\mathbf e_{mn}^{<}`. Blocks without those three characters pass through the second path intact and need no change. A multi-line block, aligned on the relation, then reads:
+
+```markdown
+$$
 \begin{aligned}
     \mathbf{a} \wedge \mathbf{b}
-        &= \frac{1}{2} a^m b^n ε^{mn} \mathbf{e}_{mn} \\
-        &= \frac{1}{2}(a^1 b^2 - a^2 b^1) \mathbf{e}_{12}
+        &= \frac{1}{2} a^m b^n ε^{mn} \mathbf e_{mn} \\
+        &= \frac{1}{2}(a^1 b^2 - a^2 b^1) \mathbf e_{12}
 \end{aligned}
+$$
 ```
-````
 
-Piecewise definitions use `cases` inside a `math` fence, one branch per row.
+Piecewise definitions use `cases` in the same way, one branch per line, each ending in `\\` except the last.
 
 Inline math stays in `$...$`, with braces written `\lbrace` and `\rbrace` rather than `\{` and `\}`.
 

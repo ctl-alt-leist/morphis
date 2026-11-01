@@ -11,13 +11,13 @@ Worked submanifolds whose geometry is known in closed form, checked from the pat
 
 The patch $\mathbf{X}(θ, φ) = (\cos θ, \sin θ, \cos φ, \sin φ)$ in $\mathbb{R}^4$:
 
-```math
+$$
 \begin{aligned}
 h_{ab} &= δ_{ab} \\
 \mathbf{k}_{11} &= -\mathbf{r}_1 \\
 K &= 0
 \end{aligned}
-```
+$$
 
 where $\mathbf{r}_1$ is the radius vector of the first circle. In $\mathbb{C}^2$, as $(e^{iθ}, e^{iφ}) / \sqrt{2}$, every tangent plane is Lagrangian: $θ_K = π / 2$.
 

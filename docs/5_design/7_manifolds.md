@@ -64,12 +64,12 @@ Two complex objects are native, and they are kept distinct.
 
 **Complex dimensions**, $\mathbb{R}^{2n}$ with a structure bivector: the unit $i$ is the bivector $\mathbf{J}$, an element of the algebra. A space declared with modes pairs each representative direction $\mathbf{e}_m$ with its partner $\mathbf{e}_{\dot m}$, in the adjacent order $1, \dot 1, 2, \dot 2, \ldots$, and carries
 
-```math
+$$
 \begin{aligned}
-\mathbf{J} &= \mathbf{e}_m \wedge \mathbf{e}_{\dot m} \\
+\mathbf{J} &= \mathbf e_m \wedge \mathbf e_{\dot m} \\
 J(\mathbf{v}) &= \mathbf{v} \lrcorner \mathbf{J}
 \end{aligned}
-```
+$$
 
 Every real vector of such a space has a complex reading: `v.amplitudes` returns the $n$ mode amplitudes $v^m + i v^{\dot m}$, just as `.on[...]` returns real components, and `Vector.from_amplitudes(z, metric)` builds the real vector from them. The amplitude carries no normalization factor; under the ket convention, which places $1 / \sqrt{2}$ in the basis, the ket amplitudes are these divided by $\sqrt{2}$. Holomorphic maps are written in ordinary complex arithmetic and land as real vectors.
 

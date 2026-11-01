@@ -57,25 +57,25 @@ A `View` names the kind of projection and the three directions that become the d
 
 `Orthographic(axes)` keeps the components along the three axes and drops every other direction:
 
-```math
+$$
 \mathbf{x} \mapsto (x^{a}, x^{b}, x^{c})
-```
+$$
 
 for `axes=(a, b, c)`. It is a linear map, so parallel lines stay parallel, and it is faithful on anything that lies in the span of the axes. Two points that differ only along a dropped direction are drawn at the same place.
 
 `Perspective(axes, distance)` puts an eye at distance $D$ along the dropped directions and draws a point by central projection:
 
-```math
+$$
 \mathbf{x} \mapsto \frac{D \mathbf{x}_{\text{axes}}}{D - Σ x_{\text{dropped}}}
-```
+$$
 
 From $\mathbb{R}^4$ the eye sits at $D \mathbf e_4$, so a point with larger $x^4$ is nearer the eye and drawn farther from the center. The dropped coordinate becomes visible as scale, which separates the near and far cells of a tesseract.
 
 `Stereographic(axes, pole, radius)` projects the sphere of radius $ρ$ from its pole $ρ \mathbf{n}$ onto the hyperplane through the origin perpendicular to $\mathbf{n}$, and then orthographically onto the axes:
 
-```math
+$$
 \mathbf{y} = \frac{ρ \mathbf{x}_\perp}{ρ - \mathbf{n} \cdot \mathbf{x}}
-```
+$$
 
 On the sphere it is a conformal bijection from everything except the pole onto the whole hyperplane. A circle on the sphere is drawn as a circle, and a circle through the pole as a straight line. It is the natural view of the unit sphere $S^3$ of a qubit's state space, and the pole may not also be one of the axes.
 
@@ -90,9 +90,9 @@ Stereographic(axes=(1, Dot(1), 2), pole=Dot(2))      # from the pole e_2̇ of th
 
 `Projective(axes, eye, shear, turn)` is the family that holds the orthographic and perspective views and moves continuously between them. The screen is first turned by the rotor $R = \exp(-T/2)$ of a turn bivector $T$, and with $\mathbf{x}' = \tilde R \mathbf{x} R$ and $u$ the sum of its dropped components, a point is drawn at:
 
-```math
+$$
 \mathbf{x} \mapsto \frac{\mathbf{x}'_{\text{axes}} + u \mathbf{s}}{1 - κ u}
-```
+$$
 
 The eye $κ$ is the inverse distance of the center of projection: at $κ = 0$ the center is ideal and the view is orthographic, $κ = 1/D$ is `Perspective(distance=D)`, and on the sphere of radius $ρ$, $κ = 1/ρ$ is stereographic. The shear $\mathbf{s}$ draws the dropped direction as a picture vector, an oblique parallel projection, and a quarter turn in the plane of an axis and a dropped direction trades the two. Every parameter is a coordinate on the family, and `a.toward(b, fraction)` moves them all linearly, so an eased fraction blends one view into another.
 
@@ -112,12 +112,12 @@ A Scene changes its view with `scene.set_projection(view)`, and every element al
 
 A `Projection` is a projective map from a space of dimension $d$ to a picture of dimension $m$, an $(m + 1) \times (d + 1)$ matrix $M$ acting on homogeneous coordinates:
 
-```math
+$$
 \begin{aligned}
 (\mathbf{y}, w) &= M (\mathbf{x}, 1) \\
 Π(\mathbf{x}) &= \mathbf{y} / w
 \end{aligned}
-```
+$$
 
 The last row of $M$ gives the weight $w$. An orthographic map has a constant weight and an ideal center of projection; a perspective or stereographic map has a weight that varies with $\mathbf{x}$ and a finite center. Every view resolves to one of these, and a `Projection` may be passed wherever a view is, for a map that no view names. Three constructors build them:
 
@@ -150,15 +150,15 @@ Points, and everything built from points, are mapped point by point: arrow tails
 
 A bare blade has no points beyond the one it is attached at, so the Scene carries it into the picture by the differential of the projection there. For $Π(\mathbf{x}) = \mathbf{y} / w$, with linear block $A$ and weight row $\mathbf{c}$, the differential at $\mathbf{x}$ is:
 
-```math
+$$
 dΠ(\mathbf{v}) = \frac{A \mathbf{v} - Π(\mathbf{x}) (\mathbf{c} \cdot \mathbf{v})}{w}
-```
+$$
 
 A $k$-vector is pushed forward by the outermorphism $∧^k dΠ$. For a bivector:
 
-```math
+$$
 b'^{pq} = dΠ^p{}_m dΠ^q{}_n b^{mn}
-```
+$$
 
 so its plane becomes the image plane and its magnitude the drawn area. The Scene draws the result by its invariants, a disk for a bivector and a ball for a trivector, which carry exactly what the blade carries. Under an orthographic view onto basis directions, the pushforward is the sub-array of components at those directions. `Projection.pushforward` and `Projection.blade` are public, and `Projection.pinching` measures from $dΠ$ how nearly the map collapses a tangent plane, as the [Calabi–Yau slice](6_calabi-yau-slice.md) uses to find its pinch points.
 

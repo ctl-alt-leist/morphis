@@ -159,12 +159,12 @@ Motions are rates because the six rotation planes of $\mathbb{R}^4$ do not commu
 
 A step can be applied on either side of the pose, and each object's `Motion` has a toggle between the two:
 
-```math
+$$
 \begin{aligned}
 M &\leftarrow S M & \text{extrinsic} \\
 M &\leftarrow M S & \text{intrinsic}
 \end{aligned}
-```
+$$
 
 An **extrinsic** turn acts in the planes of the space: the $\mathbf e_{12}$ dial turns the object in the fixed $\mathbf e_{12}$ plane however the object is already oriented, as on a turntable. An **intrinsic** turn acts in the object's own planes: the $\mathbf e_{12}$ dial turns it in the plane that was $\mathbf e_{12}$ at rest and has since been carried along by the pose, as the pitch, roll, and yaw of an aircraft do. The two agree for a single dial from rest and differ as soon as the object has been turned. Extrinsic is the default. The velocity $\mathbf v$ follows the same toggle: intrinsically it is carried by the pose, $M \mathbf v \tilde M$.
 
