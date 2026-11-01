@@ -83,6 +83,7 @@ class Command(Enum):
     FIND = ("/", "find", "always")  # in the outline, by name or kind
     GO = ("g", "go to", "always")  # the screens, in a picker
     DONE = ("escape", "Done", "always")  # let go of the selection, or back to the stage
+    QUIT = ("q", "quit", "always")
     SAVE = ("mod-s", "save", "always")  # the journal
     OPEN = ("mod-o", "open", "always")  # a journal
     RECORD = ("mod-e", "record", "always")  # the picture, to a file

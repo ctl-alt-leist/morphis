@@ -695,6 +695,9 @@ dev = [
     { name = "python-lsp-server" },
     { name = "ruff" },
 ]
+tui = [
+    { name = "prompt-toolkit" },
+]
 visuals = [
     { name = "dracopy" },
     { name = "imageio" },
@@ -725,6 +728,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "pip-tools", marker = "extra == 'dev'" },
     { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "prompt-toolkit", marker = "extra == 'tui'", specifier = ">=3.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pygltflib", specifier = ">=1.16.5" },
     { name = "pygltflib", marker = "extra == 'visuals'", specifier = ">=1.16.5" },
@@ -738,7 +742,7 @@ requires-dist = [
     { name = "trimesh", specifier = ">=4.11.1" },
     { name = "trimesh", marker = "extra == 'visuals'", specifier = ">=4.11.1" },
 ]
-provides-extras = ["visuals", "dev"]
+provides-extras = ["visuals", "dev", "tui"]
 
 [package.metadata.requires-dev]
 dev = [

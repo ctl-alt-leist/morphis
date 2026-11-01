@@ -53,6 +53,9 @@ dev = [
   "python-lsp-server",
   "ruff",
 ]
+tui = [
+    "prompt-toolkit>=3.0",
+]
 
 [project.scripts]
 morphis = "morphis:main"
