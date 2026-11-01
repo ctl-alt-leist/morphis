@@ -96,3 +96,30 @@ class TestOperations:
         assert not turn.on
         assert Stage(metric(space=3)).create("Translation").get("motion.velocity.1") == 0.5
         assert Stage(metric(space=3, projective=1)).create("Translation").get("motion.rate.0,1") == 0.5
+
+
+class TestSurfaces:
+    def test_listed_outside_pga(self):
+        assert sections(metric(space=4))["Surfaces"] == ["Sphere", "Torus", "Plane"]
+        assert "Surfaces" not in sections(metric(space=3, projective=1))
+
+    def test_clifford_torus_from_four_dimensions(self):
+        torus = Stage(metric(space=4)).create("Torus")
+        squares = (torus.object.vertices.data**2).sum(axis=-1)
+        assert allclose(squares, 1.0**2 + 0.4**2)
+
+    def test_ring_torus_in_three(self):
+        torus = Stage(metric(space=3)).create("Torus")
+        assert torus.object.vertices.data[:, 2].max() == pytest.approx(0.4, abs=1e-2)
+
+    def test_sphere_in_spacetime_is_spatial(self):
+        sphere = Stage(metric(time=1, space=3)).create("Sphere")
+        assert allclose(sphere.object.vertices.data[:, 0], 0.0)
+        assert allclose((sphere.object.vertices.data[:, 1:] ** 2).sum(axis=-1), 1.0)
+
+    def test_resolution_rebuilds(self):
+        stage = Stage(metric(space=4))
+        torus = stage.create("Torus")
+        stage.set(torus, "shape.resolution", 12)
+        assert torus.object.n_vertices == 144
+        assert torus.get("look.opacity") == 0.6

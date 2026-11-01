@@ -34,6 +34,7 @@ from numpy import cos, pi, sin, sqrt
 from pydantic import Field, ValidationInfo, field_validator
 
 from morphis.elements import Frame, Metric, Vector, basis_vector, basis_vectors
+from morphis.manifold import Circle, Interval, Mesh, Patch
 from morphis.operations.exponential import exp_vector
 from morphis.stage.dial import Dial, Dials
 from morphis.stage.motion import planes
@@ -71,13 +72,15 @@ class Entry(NamedTuple):
 CATALOG: dict[str, Entry] = {}
 
 
-def entry(name: str, section: str) -> Callable[[Callable[[Metric], Addition]], Callable[[Metric], Addition]]:
+def entry(
+    name: str, section: str, applies: Callable[[Metric], bool] = lambda space: True
+) -> Callable[[Callable[[Metric], Addition]], Callable[[Metric], Addition]]:
     """
     Register a catalog entry: a function from the space to an addition.
     """
 
     def register(make: Callable[[Metric], Addition]) -> Callable[[Metric], Addition]:
-        CATALOG[name] = Entry(name, section, "actor", make)
+        CATALOG[name] = Entry(name, section, "actor", make, applies)
 
         return make
 
@@ -218,6 +221,106 @@ def _frame(space: Metric) -> Addition:
 @entry("Expression", section="Elements")
 def _expression(space: Metric) -> Addition:
     return Addition(expression, Expression(metric=space))
+
+
+# =============================================================================
+# Surfaces
+# =============================================================================
+
+
+def _spatial(space: Metric) -> list[int]:
+    """The storage positions of the directions a surface is drawn in: the spatial ones, in order."""
+    return [n for n, kind in enumerate(space.kinds) if kind in ("space", "modes")]
+
+
+def _surface(space: Metric, shape: tuple[int, int], domain: Any, components: Callable) -> Mesh:
+    """A surface as a mesh: components along the spatial directions, zero along the rest."""
+    places = _spatial(space)
+
+    def embedded(u, v):
+        point = [0.0 * u] * space.dim
+        for place, component in zip(places, components(u, v), strict=False):
+            point[place] = component
+
+        return point
+
+    return Patch(embedded, domain, space).mesh(shape)
+
+
+def _drawn_in(count: int) -> Callable[[Metric], bool]:
+    return lambda space: len(_spatial(space)) >= count and not space.is_projective
+
+
+class Sphere(Dials):
+    metric: Metric = Field(exclude=True, repr=False)
+    radius: float = Dial(1.0, Interval(0.1, 5.0))
+    resolution: int = Dial(24, Interval(4, 96))
+
+
+class Torus(Dials):
+    """
+    A torus: a ring of the major radius swept by a circle of the minor one in
+    three dimensions, and from four dimensions on the flat Clifford torus, the
+    product of two circles of those radii in orthogonal planes.
+    """
+
+    metric: Metric = Field(exclude=True, repr=False)
+    major: float = Dial(1.0, Interval(0.1, 5.0))
+    minor: float = Dial(0.4, Interval(0.05, 5.0))
+    resolution: int = Dial(32, Interval(4, 96))
+
+
+class Square(Dials):
+    metric: Metric = Field(exclude=True, repr=False)
+    side: float = Dial(2.0, Interval(0.1, 10.0))
+    resolution: int = Dial(8, Interval(1, 64))
+
+
+def sphere(dials: Sphere) -> Mesh:
+    r, n = dials.radius, dials.resolution
+
+    return _surface(
+        dials.metric,
+        (n, 2 * n),
+        Interval(0.0, pi) * Circle(),
+        lambda θ, φ: [r * sin(θ) * cos(φ), r * sin(θ) * sin(φ), r * cos(θ)],
+    )
+
+
+def torus(dials: Torus) -> Mesh:
+    a, b, n = dials.major, dials.minor, dials.resolution
+    if len(_spatial(dials.metric)) >= 4:
+        components = lambda θ, φ: [a * cos(θ), a * sin(θ), b * cos(φ), b * sin(φ)]  # noqa: E731
+    else:
+        components = lambda θ, φ: [(a + b * cos(φ)) * cos(θ), (a + b * cos(φ)) * sin(θ), b * sin(φ)]  # noqa: E731
+
+    return _surface(dials.metric, (n, n), Circle() * Circle(), components)
+
+
+def square(dials: Square) -> Mesh:
+    half, n = 0.5 * dials.side, dials.resolution
+
+    return _surface(dials.metric, (n + 1, n + 1), Interval(-half, half) * Interval(-half, half), lambda u, v: [u, v])
+
+
+@entry("Sphere", section="Surfaces", applies=_drawn_in(3))
+def _sphere(space: Metric) -> Addition:
+    return Addition(sphere, Sphere(metric=space), options={"opacity": 0.6})
+
+
+@entry("Torus", section="Surfaces", applies=_drawn_in(3))
+def _torus(space: Metric) -> Addition:
+    return Addition(torus, Torus(metric=space), options={"opacity": 0.6})
+
+
+@entry("Plane", section="Surfaces", applies=_drawn_in(2))
+def _plane(space: Metric) -> Addition:
+    return Addition(square, Square(metric=space), options={"opacity": 0.6})
+
+
+# =============================================================================
+# Operations
+# =============================================================================
 
 
 def _planes_of(kind: str) -> Callable[[Metric], list]:

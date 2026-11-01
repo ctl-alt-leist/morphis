@@ -47,7 +47,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from numpy import array, stack, zeros
+from numpy import array, concatenate, full, stack, zeros
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
 
@@ -144,6 +144,7 @@ class TrackedElement(BaseModel):
     parts: dict[str, Any]  # shape name -> Part
     color: Color
     opacity: float
+    visible: bool = True
     extra: dict  # Placement and style options given to add()
 
 
@@ -297,7 +298,7 @@ class Scene:
         Add an element to the scene.
 
         Args:
-            element: Vector (grade 1, 2, or 3), Frame, Surface, or VisualModel
+            element: Vector (grade 1, 2, or 3), Frame, Surface, a surface Mesh, or VisualModel
             color: RGB color tuple (uses palette if None)
             opacity: Opacity [0, 1]
             **kwargs: Placement and style options:
@@ -330,6 +331,17 @@ class Scene:
 
         return element_id
 
+    def style(self, element_id: str, opacity: float | None = None, visible: bool | None = None) -> None:
+        """
+        Change how an element is drawn from the next capture on: its opacity,
+        and whether it is shown at all.
+        """
+        tracked = self._elements[element_id]
+        if opacity is not None:
+            tracked.opacity = opacity
+        if visible is not None:
+            tracked.visible = visible
+
     def remove(self, element_id: str) -> None:
         """Remove an element from the scene."""
         if element_id not in self._elements:
@@ -352,11 +364,16 @@ class Scene:
         frame; only the geometry changes.
         """
         from morphis.elements.surface import Surface
+        from morphis.manifold.mesh import Mesh
         from morphis.visuals.model import VisualModel
 
         if isinstance(element, (Surface, VisualModel)):
             vertices = self._picture(element.vertices.metric)(element.vertices)
             shapes = {"mesh": Shape("mesh", {"vertices": vertices, "faces": element.faces})}
+
+        elif isinstance(element, Mesh):
+            vertices = self._picture(element.metric)(element.vertices)
+            shapes = {"mesh": Shape("mesh", {"vertices": vertices, "faces": _faces(element)})}
 
         elif isinstance(element, Frame):
             shapes = self._depict_frame(element, options)
@@ -738,7 +755,7 @@ class Scene:
         for element_id, tracked in self._elements.items():
             self._redraw(tracked)
 
-            base_opacity = self._compute_opacity(element_id, t) * tracked.opacity
+            base_opacity = self._compute_opacity(element_id, t) * tracked.opacity * tracked.visible
             for part in tracked.parts.values():
                 self._backend.set_opacity(part.backend_id, base_opacity * part.opacity)
 
@@ -856,6 +873,14 @@ class Scene:
             )
 
         return scene
+
+
+def _faces(mesh) -> NDArray:
+    """A surface mesh's cells as triangles, in the flat [3, a, b, c, ...] form a renderer takes."""
+    triangles = mesh.cells.triangles()
+    result = concatenate([full((len(triangles), 1), 3), triangles], axis=1).ravel()
+
+    return result
 
 
 def _bring_window_to_front():

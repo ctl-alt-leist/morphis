@@ -31,6 +31,7 @@ next capture without knowing the stage exists.
 """
 
 from collections.abc import Callable, Iterator
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal
 
@@ -38,11 +39,10 @@ from numpy import zeros
 from pydantic import BaseModel, ConfigDict
 
 from morphis.elements import Metric, Vector
-from morphis.manifold.domain import Interval
 from morphis.stage import journal
 from morphis.stage.carriers import carrier
 from morphis.stage.catalog import CATALOG
-from morphis.stage.dial import Dial, Dials
+from morphis.stage.dial import Dials
 from morphis.stage.events import (
     Added,
     Baked,
@@ -62,13 +62,10 @@ from morphis.stage.motion import Motion
 from morphis.stage.operation import act, operation_dials, operation_map
 from morphis.stage.pose import Pose
 from morphis.stage.providers import provided
+from morphis.stage.space import space_dials
 
 
 SPACE = 0  # the identity of the space, at the root of the tree
-
-
-class Clock(Dials):
-    speed: float = Dial(1.0, Interval(0.0, 10.0), description="Stage seconds per second of the wall clock")
 
 
 class Notice(BaseModel):
@@ -226,11 +223,13 @@ class Actor(Placed):
             groups = {**groups, "shape" if self.build is not None else "step": dials}
         super().__init__(id, name, parent, groups, metric)
         self.object = drawn
-        self.rest = drawn.copy() if hasattr(drawn, "copy") else drawn
+        self.rest = _copy(drawn)
         self.origin = None if origin is None else origin.copy()
         self.rest_origin = origin
         self.step = step
-        self.options = options or {}
+        self.options = dict(options or {})
+        if "opacity" in self.options and "look" in self.dials:
+            self.dials["look"].opacity = self.options.pop("opacity")
         self.scene_id: str | None = None
 
     @property
@@ -242,11 +241,23 @@ class Actor(Placed):
         Build the object again from its shape dials, as a new object at rest.
         """
         self.object = self.build(self.dials["shape"])
-        self.rest = self.object.copy()
+        self.rest = _copy(self.object)
 
 
 # An entry, its name, or its identity
 Reference = Entry | str | int
+
+
+def _copy(obj: Any) -> Any:
+    """A copy of an object to keep at rest, however its class copies."""
+    if hasattr(obj, "copy"):
+        result = obj.copy()
+    elif isinstance(obj, BaseModel):
+        result = obj.model_copy(deep=True)
+    else:
+        result = deepcopy(obj)
+
+    return result
 
 
 # =============================================================================
@@ -273,7 +284,7 @@ class Stage:
     def __init__(self, metric: Metric, scene: Any = None) -> None:
         self.metric = metric
         self.scene = scene
-        self.space = Space(SPACE, "space", None, {"clock": Clock()})
+        self.space = Space(SPACE, "space", None, space_dials(metric))
         self.entries: dict[int, Entry] = {SPACE: self.space}
         self.selection: int | None = None
         self.time = 0.0
@@ -283,6 +294,9 @@ class Stage:
         self._arriving: dict[int, Entry] = {}
         self._subscribers: list[Callable[[], None]] = []
         self._next_id = 1
+        if scene is not None:
+            self._picture("view")
+            self._picture("camera")
 
     # =========================================================================
     # Looking Up
@@ -753,16 +767,34 @@ class Stage:
 
     def _set(self, entry: Entry, path: str, value: Any) -> None:
         entry.set(path, value)
-        if isinstance(entry, Actor) and entry.build is not None and path.startswith("shape."):
+        group = path.partition(".")[0]
+        if isinstance(entry, Actor) and entry.build is not None and group == "shape":
             if entry.scene_id is not None:
                 self.scene.remove(entry.scene_id)
             entry.rebuild()
             self._draw(entry)
+        elif isinstance(entry, Actor) and group == "look" and entry.scene_id is not None:
+            self._style(entry)
+        elif isinstance(entry, Space) and group in ("view", "camera") and self.scene is not None:
+            self._picture(group)
+
+    def _picture(self, group: str) -> None:
+        """Hand the Scene the space's view or camera."""
+        if group == "view":
+            self.scene.set_projection(self.space.dials["view"].projective)
+        else:
+            self.scene.camera(**self.space.dials["camera"].placement)
+
+    def _style(self, entry: Actor) -> None:
+        look = entry.dials["look"]
+        self.scene.style(entry.scene_id, opacity=look.opacity, visible=look.visible)
 
     def _draw(self, entry: Entry) -> None:
         if self.scene is not None and isinstance(entry, Actor):
             options = {**entry.options, **({} if entry.origin is None else {"origin": entry.origin})}
             entry.scene_id = self.scene.add(entry.object, **options)
+            if "look" in entry.dials:
+                self._style(entry)
 
     def _operation(self, reference: Reference | None) -> Operation:
         entry = self.selected if reference is None else self.entry(reference)

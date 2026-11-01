@@ -11,6 +11,7 @@ offset too:
     Vector    a blade, or arrows: directions
     Frame     its vectors: directions
     Surface   its vertices: points
+    Mesh      its vertices: points
 
 Where an object is drawn from (an arrow's tail, a frame's corner) is a point,
 and is carried by the stage itself. An object with no carrier is drawn as it
@@ -24,6 +25,7 @@ from collections.abc import Callable
 from typing import Any
 
 from morphis.elements import Frame, Surface, Vector
+from morphis.manifold import Mesh
 from morphis.stage.pose import Pose
 
 
@@ -67,4 +69,9 @@ def _frame(rest: Frame, drawn: Frame, pose: Pose) -> None:
 
 @carries(Surface)
 def _surface(rest: Surface, drawn: Surface, pose: Pose) -> None:
+    drawn.vertices.data[...] = pose.points(rest.vertices).data
+
+
+@carries(Mesh)
+def _mesh(rest: Mesh, drawn: Mesh, pose: Pose) -> None:
     drawn.vertices.data[...] = pose.points(rest.vertices).data

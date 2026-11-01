@@ -26,6 +26,15 @@ class FakeScene:
     def capture(self, t):
         self.captured.append(t)
 
+    def set_projection(self, projection):
+        pass
+
+    def camera(self, **placement):
+        pass
+
+    def style(self, element_id, **look):
+        pass
+
 
 def session(stage):
     """

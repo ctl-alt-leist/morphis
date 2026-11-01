@@ -17,7 +17,9 @@ from collections.abc import Callable
 from typing import Any
 
 from morphis.elements import Frame, Surface, Vector
-from morphis.stage.dial import Dials
+from morphis.manifold import Mesh
+from morphis.manifold.domain import Interval
+from morphis.stage.dial import Dial, Dials
 from morphis.stage.motion import Motion
 
 
@@ -58,8 +60,24 @@ def provided(obj: Any) -> dict[str, Dials]:
 # =============================================================================
 
 
-@provide(Vector, "motion")
-@provide(Frame, "motion")
-@provide(Surface, "motion")
-def _motion(element: Vector | Frame | Surface) -> Motion:
+class Look(Dials):
+    """How a drawn object looks: how opaque it is, and whether it is shown."""
+
+    opacity: float = Dial(1.0, Interval(0.0, 1.0))
+    visible: bool = True
+
+
+DRAWN = (Vector, Frame, Surface, Mesh)
+
+
+def _motion(element: Vector | Frame | Surface | Mesh) -> Motion:
     return Motion(element.metric)
+
+
+def _look(element: Vector | Frame | Surface | Mesh) -> Look:
+    return Look()
+
+
+for drawn in DRAWN:
+    provide(drawn, "motion")(_motion)
+    provide(drawn, "look")(_look)

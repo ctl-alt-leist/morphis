@@ -191,7 +191,7 @@ class TestMotion:
 class TestShapesAndLaws:
     def test_shape_dials_rebuild(self, stage):
         a = stage.add("a", arrow, Arrow())
-        assert list(a.dials) == ["motion", "shape"]
+        assert list(a.dials) == ["motion", "look", "shape"]
         stage.set(a, "shape.length", 2.0)
         assert allclose(a.object.data, [2, 0, 0])
         assert allclose(a.rest.data, [2, 0, 0])
@@ -212,3 +212,58 @@ class TestShapesAndLaws:
         stage.advance(1.0)
         assert allclose(a.rest.data, [2, 0, 0])
         assert allclose(a.object.data, [0, 2, 0])
+
+
+class Recorder:
+    """A scene that keeps what the stage asked of it."""
+
+    def __init__(self):
+        self.projections, self.cameras, self.styles, self.added = [], [], [], []
+
+    def add(self, element, **options):
+        self.added.append(options)
+
+        return str(len(self.added))
+
+    def remove(self, element_id):
+        pass
+
+    def capture(self, t):
+        pass
+
+    def set_projection(self, projection):
+        self.projections.append(projection)
+
+    def camera(self, **placement):
+        self.cameras.append(placement)
+
+    def style(self, element_id, **look):
+        self.styles.append((element_id, look))
+
+
+class TestPicture:
+    def test_view_and_camera_reach_the_scene(self):
+        scene = Recorder()
+        stage = Stage(metric(space=4), scene)
+        assert len(scene.projections) == 1
+        assert scene.cameras[0]["focal_point"] == (0.0, 0.0, 0.0)
+        stage.set("space", "view.eye", 1 / 3)
+        stage.set("space", "view.turn.3,4", pi / 2)
+        assert scene.projections[-1].eye == pytest.approx(1 / 3)
+        assert scene.projections[-1].turn[(3, 4)] == pytest.approx(pi / 2)
+        stage.set("space", "camera.position.z", 6.0)
+        assert scene.cameras[-1]["position"][2] == 6.0
+
+    def test_eye_kept_in_range(self):
+        stage = Stage(metric(space=4))
+        with pytest.raises(ValidationError):
+            stage.set("space", "view.eye", 2.0)
+
+    def test_look(self):
+        scene = Recorder()
+        stage = Stage(metric(space=3), scene)
+        a = stage.add("a", basis_vector(1, stage.metric), opacity=0.5)
+        assert a.get("look.opacity") == 0.5
+        assert "opacity" not in scene.added[0]
+        stage.set(a, "look.visible", False)
+        assert scene.styles[-1] == ("1", {"opacity": 0.5, "visible": False})
