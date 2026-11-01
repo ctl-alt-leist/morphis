@@ -12,6 +12,9 @@ domain:
 and a boolean is a toggle, a Literal a choice among its values, a string a
 line of text.
 
+A field holding a dict of numbers is a table of dials, one per key, such as
+the rate in each plane of a space; its keys continue the path.
+
 A group of dials is a Dials model. It knows nothing of any panel or key: it
 validates every value against its domain where the value is set, describes
 its dials as plain data a front end draws from, and reads and writes them by
@@ -99,14 +102,11 @@ class Dials(BaseModel):
     @field_validator("*")
     @classmethod
     def _within_domain(cls, value: Any, info: ValidationInfo) -> Any:
-        domain = _domain(cls.model_fields[info.field_name])
-        if domain is not None and not domain.periodic and not domain.start <= value <= domain.stop:
-            raise ValueError(f"a number from {domain.start:g} to {domain.stop:g}")
-
-        if domain is not None and domain.periodic:
-            result = domain.start + (value - domain.start) % domain.length
+        field = cls.model_fields[info.field_name]
+        if isinstance(value, dict):
+            result = {key: _within(field, entry) for key, entry in value.items()}
         else:
-            result = value
+            result = _within(field, value)
 
         return result
 
@@ -119,10 +119,15 @@ class Dials(BaseModel):
         Returns the value of the dial at a path, its keys joined by dots.
         """
         head, _, rest = path.partition(".")
-        if rest:
-            result = self._group(head).get(rest)
+        value = self._read(head)
+        if isinstance(value, Dials) and rest:
+            result = value.get(rest)
+        elif isinstance(value, dict) and rest in value:
+            result = value[rest]
+        elif not rest and not isinstance(value, (Dials, dict)):
+            result = value
         else:
-            result = self._read(head)
+            raise KeyError(f"no dial named {path!r}")
 
         return result
 
@@ -132,10 +137,15 @@ class Dials(BaseModel):
         dial's domain is refused with a ValueError saying what is allowed.
         """
         head, _, rest = path.partition(".")
-        if rest:
-            self._group(head).set(rest, value)
+        current = self._read(head)
+        if isinstance(current, Dials) and rest:
+            current.set(rest, value)
+        elif isinstance(current, dict) and rest in current:
+            current[rest] = _within(type(self).model_fields[head], float(value))
+        elif not rest and not isinstance(current, (Dials, dict)):
+            setattr(self, head, value)
         else:
-            self._write(head, value)
+            raise KeyError(f"no dial named {path!r}")
 
     def values(self) -> dict[str, Any]:
         """
@@ -147,39 +157,28 @@ class Dials(BaseModel):
 
     def describe(self, prefix: str = "") -> list[DialSpec]:
         """
-        Returns what each dial is, in declaration order, nested groups in
-        place, every path prefixed by the given one.
+        Returns what each dial is, in declaration order: nested groups in
+        place, and a table's entries in its order, every path prefixed by the
+        given one.
         """
         result = []
         for name, field in type(self).model_fields.items():
             value = getattr(self, name)
             if isinstance(value, Dials):
                 result += value.describe(f"{prefix}{name}.")
+            elif isinstance(value, dict) and not field.exclude:
+                result += [_spec(f"{prefix}{name}.{key}", field) for key in value]
             elif not field.exclude:
                 result.append(_spec(f"{prefix}{name}", field))
 
         return result
 
-    def _group(self, key: str) -> "Dials":
-        group = getattr(self, key, None) if key in type(self).model_fields else None
-        if not isinstance(group, Dials):
-            raise KeyError(f"no group of dials named {key!r}")
-
-        return group
-
     def _read(self, key: str) -> Any:
-        self._check(key)
-
-        return getattr(self, key)
-
-    def _write(self, key: str, value: Any) -> None:
-        self._check(key)
-        setattr(self, key, value)
-
-    def _check(self, key: str) -> None:
         field = type(self).model_fields.get(key)
         if field is None or field.exclude:
             raise KeyError(f"no dial named {key!r}")
+
+        return getattr(self, key)
 
 
 # =============================================================================
@@ -196,6 +195,20 @@ def _dial(field: FieldInfo) -> dict:
 def _domain(field: FieldInfo) -> Interval | None:
     domain = _dial(field).get("domain")
     result = None if domain is None else Interval(domain["start"], domain["stop"], periodic=domain["periodic"])
+
+    return result
+
+
+def _within(field: FieldInfo, value: Any) -> Any:
+    """The value checked against the field's domain: refused outside an interval, wrapped onto a circle."""
+    domain = _domain(field)
+    if domain is not None and not domain.periodic and not domain.start <= value <= domain.stop:
+        raise ValueError(f"a number from {domain.start:g} to {domain.stop:g}")
+
+    if domain is not None and domain.periodic:
+        result = domain.start + (value - domain.start) % domain.length
+    else:
+        result = value
 
     return result
 

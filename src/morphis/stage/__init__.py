@@ -10,4 +10,4 @@ clock, and the journal every change is recorded in.
 from morphis.stage.dial import Dial as Dial, Dials as Dials, DialSpec as DialSpec
 from morphis.stage.motion import Motion as Motion, Plane as Plane, planes as planes
 from morphis.stage.pose import Pose as Pose
-from morphis.stage.stage import Actor as Actor, Group as Group, Notice as Notice, Stage as Stage
+from morphis.stage.stage import Actor as Actor, Group as Group, Notice as Notice, Operation as Operation, Stage as Stage

@@ -71,21 +71,21 @@ class Motion(Dials):
 
     Attributes:
         metric: The space moved in
-        rates: The rate in each plane, by the plane's key ("1,3")
+        rate: The rate in each plane, by the plane's key ("1,3")
         velocity: The velocity of the origin along each direction, by label,
             empty in a projective space
         intrinsic: Whether the rates are expressed in the object's own planes
     """
 
     metric: Metric = Field(exclude=True, repr=False)
-    rates: dict[str, float]
+    rate: dict[str, float]
     velocity: dict[str, float]
     intrinsic: bool = False
 
     def __init__(self, metric: Metric, **data: Any) -> None:
         rates = {plane.key: 0.0 for plane in planes(metric)}
         velocity = {} if metric.is_projective else {str(label): 0.0 for label in metric.labels}
-        super().__init__(metric=metric, **{"rates": rates, "velocity": velocity, **data})
+        super().__init__(metric=metric, **{"rate": rates, "velocity": velocity, **data})
 
     @property
     def planes(self) -> tuple[Plane, ...]:
@@ -94,19 +94,19 @@ class Motion(Dials):
     def __getitem__(self, labels: tuple[Label, Label]) -> float:
         key, sign = self._plane(labels)
 
-        return sign * self.rates[key]
+        return sign * self.rate[key]
 
     def __setitem__(self, labels: tuple[Label, Label], rate: float) -> None:
         key, sign = self._plane(labels)
-        self.rates[key] = sign * float(rate)
+        self.rate[key] = sign * float(rate)
 
     def _plane(self, labels: tuple[Label, Label]) -> tuple[str, float]:
         """The key of the plane named by two labels, and +1 or -1 for their order."""
         first, second = labels
         forward, backward = f"{first},{second}", f"{second},{first}"
-        if forward in self.rates:
+        if forward in self.rate:
             result = forward, 1.0
-        elif backward in self.rates:
+        elif backward in self.rate:
             result = backward, -1.0
         else:
             raise KeyError(f"no plane e_{first}{second} in this space")
@@ -134,29 +134,6 @@ class Motion(Dials):
 
         return result
 
-    def get(self, path: str) -> Any:
-        head, _, key = path.partition(".")
-        table = self._table(head)
-        if table is None:
-            result = super().get(path)
-        else:
-            result = table[key]
-
-        return result
-
-    def set(self, path: str, value: Any) -> None:
-        head, _, key = path.partition(".")
-        table = self._table(head)
-        if table is None:
-            super().set(path, value)
-        elif key not in table:
-            raise KeyError(f"no dial named {path!r}")
-        else:
-            table[key] = float(value)
-
-    def _table(self, head: str) -> dict[str, float] | None:
-        return {"rate": self.rates, "velocity": self.velocity}.get(head)
-
     # =========================================================================
     # Stepping
     # =========================================================================
@@ -169,7 +146,7 @@ class Motion(Dials):
         g = self.metric
         result = Vector(zeros((g.dim, g.dim)), grade=2, metric=g)
         for plane in self.planes:
-            result = result + self.rates[plane.key] * (basis_vector(plane.first, g) ^ basis_vector(plane.second, g))
+            result = result + self.rate[plane.key] * (basis_vector(plane.first, g) ^ basis_vector(plane.second, g))
 
         return result
 
@@ -212,8 +189,8 @@ class Motion(Dials):
         """
         Set every rate and velocity to zero.
         """
-        for key in self.rates:
-            self.rates[key] = 0.0
+        for key in self.rate:
+            self.rate[key] = 0.0
         for key in self.velocity:
             self.velocity[key] = 0.0
 

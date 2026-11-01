@@ -81,7 +81,7 @@ class TestRates:
         motion[1, 2] = 1.0
         motion.set("velocity.3", 1.0)
         motion.stop()
-        assert all(rate == 0.0 for rate in motion.rates.values())
+        assert all(rate == 0.0 for rate in motion.rate.values())
         assert all(speed == 0.0 for speed in motion.velocity.values())
 
 

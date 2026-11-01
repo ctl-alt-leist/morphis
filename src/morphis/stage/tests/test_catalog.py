@@ -79,3 +79,20 @@ class TestExpressions:
         stage.play()
         stage.advance(1.0)
         assert allclose(written.object.data, [0, 1, 0])
+
+
+class TestOperations:
+    def test_listed_where_they_apply(self):
+        assert "Boost" not in sections(metric(space=3))["Operations"]
+        assert "Boost" in sections(metric(time=1, space=3))["Operations"]
+        with pytest.raises(ValueError):
+            Stage(metric(space=3)).create("Boost")
+
+    def test_presets(self):
+        stage = Stage(metric(space=3))
+        turn = stage.create("Rotation", "turn")
+        assert turn.kind == "Rotation"
+        assert turn.get("motion.rate.1,2") == 0.5
+        assert not turn.on
+        assert Stage(metric(space=3)).create("Translation").get("motion.velocity.1") == 0.5
+        assert Stage(metric(space=3, projective=1)).create("Translation").get("motion.rate.0,1") == 0.5

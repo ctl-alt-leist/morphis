@@ -83,6 +83,14 @@ class Pose(BaseModel):
 
         return result
 
+    def rebased(self, pivot: Vector) -> "Pose":
+        """
+        Returns the pose whose map about the pivot is this map: the inverse of `about`.
+        """
+        result = Pose(versor=self.versor, offset=self.offset - pivot + self.directions(pivot))
+
+        return result
+
 
 def unit(versor: MultiVector) -> MultiVector:
     """

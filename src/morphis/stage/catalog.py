@@ -36,6 +36,7 @@ from pydantic import Field, ValidationInfo, field_validator
 from morphis.elements import Frame, Metric, Vector, basis_vector, basis_vectors
 from morphis.operations.exponential import exp_vector
 from morphis.stage.dial import Dial, Dials
+from morphis.stage.motion import planes
 
 
 class Addition(NamedTuple):
@@ -54,14 +55,17 @@ class Entry(NamedTuple):
     Attributes:
         name: The name it is offered under, and the name given to what it adds
         section: The heading it is listed under
-        kind: Whether it adds an actor or a group
-        make: Builds the addition for a space; none for a group
+        kind: Whether it adds an actor, a group, or an operation
+        make: Builds the addition for a space, or for an operation the values
+            its dials start at, by path; none for a group
+        applies: Whether it can be added in a space
     """
 
     name: str
     section: str
-    kind: Literal["actor", "group"]
-    make: Callable[[Metric], Addition] | None
+    kind: Literal["actor", "group", "operation"]
+    make: Callable[[Metric], Any] | None
+    applies: Callable[[Metric], bool] = lambda space: True
 
 
 CATALOG: dict[str, Entry] = {}
@@ -80,13 +84,31 @@ def entry(name: str, section: str) -> Callable[[Callable[[Metric], Addition]], C
     return register
 
 
-def sections() -> dict[str, list[str]]:
+def operation(
+    name: str, applies: Callable[[Metric], bool] = lambda space: True
+) -> Callable[[Callable[[Metric], dict]], Callable[[Metric], dict]]:
     """
-    Returns the catalog's entry names under their sections, in the order registered.
+    Register an operation in the catalog: a function from the space to the
+    values its dials start at, by path.
+    """
+
+    def register(make: Callable[[Metric], dict]) -> Callable[[Metric], dict]:
+        CATALOG[name] = Entry(name, "Operations", "operation", make, applies)
+
+        return make
+
+    return register
+
+
+def sections(space: Metric | None = None) -> dict[str, list[str]]:
+    """
+    Returns the catalog's entry names under their sections, in the order
+    registered: those that apply in a space, given one.
     """
     result: dict[str, list[str]] = {}
     for line in CATALOG.values():
-        result.setdefault(line.section, []).append(line.name)
+        if space is None or line.applies(space):
+            result.setdefault(line.section, []).append(line.name)
 
     return result
 
@@ -196,6 +218,29 @@ def _frame(space: Metric) -> Addition:
 @entry("Expression", section="Elements")
 def _expression(space: Metric) -> Addition:
     return Addition(expression, Expression(metric=space))
+
+
+def _planes_of(kind: str) -> Callable[[Metric], list]:
+    return lambda space: [plane for plane in planes(space) if plane.kind == kind]
+
+
+@operation("Rotation", applies=lambda space: bool(_planes_of("rotation")(space)))
+def _rotation(space: Metric) -> dict:
+    return {f"motion.rate.{_planes_of('rotation')(space)[0].key}": 0.5}
+
+
+@operation("Translation")
+def _translation(space: Metric) -> dict:
+    translations = _planes_of("translation")(space)
+    first = next(label for label, kind in zip(space.labels, space.kinds, strict=True) if kind != "projective")
+    result = {f"motion.rate.{translations[0].key}": 0.5} if translations else {f"motion.velocity.{first}": 0.5}
+
+    return result
+
+
+@operation("Boost", applies=lambda space: bool(_planes_of("boost")(space)))
+def _boost(space: Metric) -> dict:
+    return {f"motion.rate.{_planes_of('boost')(space)[0].key}": 0.5}
 
 
 CATALOG["Group"] = Entry("Group", "Groups", "group", None)

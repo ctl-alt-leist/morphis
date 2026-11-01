@@ -43,6 +43,7 @@ from morphis.stage.catalog import CATALOG
 from morphis.stage.dial import Dial, Dials
 from morphis.stage.events import (
     Added,
+    Baked,
     DialSet,
     Event,
     Moved,
@@ -55,6 +56,7 @@ from morphis.stage.events import (
     Stopped,
 )
 from morphis.stage.motion import Motion
+from morphis.stage.operation import act, operation_dials, operation_map
 from morphis.stage.pose import Pose
 from morphis.stage.providers import provided
 
@@ -102,6 +104,11 @@ class Entry:
     def kind(self) -> str:
         """What the entry is, for the outline."""
         return type(self).__name__
+
+    @property
+    def motion(self) -> Motion | None:
+        """The entry's motion, if it moves or moves others."""
+        return self.dials.get("motion")
 
     def get(self, path: str) -> Any:
         """
@@ -151,10 +158,6 @@ class Placed(Entry):
         self.pose = Pose.identity(metric)
         self.pivot = Vector(zeros(metric.dim), grade=1, metric=metric)
 
-    @property
-    def motion(self) -> Motion | None:
-        return self.dials.get("motion")
-
 
 class Group(Placed, Container):
     """Entries held together, moved together by the group's own pose."""
@@ -162,6 +165,28 @@ class Group(Placed, Container):
     def __init__(self, id: int, name: str, parent: int, metric: Metric) -> None:
         Placed.__init__(self, id, name, parent, {"motion": Motion(metric)}, metric)
         self.children = []
+
+
+class Operation(Entry):
+    """
+    An entry that moves the entries beside it in its group, and so everything
+    beneath them: a rotation, a translation, a boost.
+
+    Attributes:
+        label: What kind of operation it is, as the catalog names it
+    """
+
+    def __init__(self, id: int, name: str, parent: int, metric: Metric, label: str) -> None:
+        super().__init__(id, name, parent, operation_dials(metric))
+        self.label = label
+
+    @property
+    def kind(self) -> str:
+        return self.label
+
+    @property
+    def on(self) -> bool:
+        return self.dials["operation"].on
 
 
 class Actor(Placed):
@@ -330,17 +355,33 @@ class Stage:
 
         return result
 
-    def create(self, line: str, parent: Reference = SPACE, position: int | None = None) -> Entry:
+    def create(
+        self, line: str, name: str | None = None, parent: Reference = SPACE, position: int | None = None
+    ) -> Entry:
         """
-        Add what a catalog entry makes, named after the entry, and return it.
+        Add what a catalog entry makes, named after the entry unless named
+        otherwise, and return it.
         """
         made = CATALOG[line]
+        name = line.lower() if name is None else name
+        if not made.applies(self.metric):
+            raise ValueError(f"there is no {line.lower()} in this space")
+
         if made.kind == "group":
-            result = self.group(line.lower(), parent=parent)
+            result = self.group(name, parent=parent)
+        elif made.kind == "operation":
+            holder = self._container(parent)
+            id = self._take_id()
+            name = self._unique(name)
+            operation = Operation(id, name, holder.id, self.metric, line)
+            for path, value in made.make(self.metric).items():
+                operation.set(path, value)
+            self._arriving[id] = operation
+            self._record(Added(id=id, name=name, kind="operation", parent=holder.id, position=position, source=line))
+            result = operation
         else:
-            addition = made.make(self.metric)
-            obj, dials, step, options = addition
-            result = self._add(line.lower(), obj, dials, step, parent, position, None, options, line)
+            obj, dials, step, options = made.make(self.metric)
+            result = self._add(name, obj, dials, step, parent, position, None, options, line)
 
         return result
 
@@ -416,7 +457,35 @@ class Stage:
         """
         Return an entry to rest, the selection's by default.
         """
-        self._record(Reset(id=self._moving(reference).id))
+        entry = self._moving(reference)
+        if not isinstance(entry, Placed):
+            raise ValueError(f"{entry.name} has no pose to reset")
+        self._record(Reset(id=entry.id))
+
+    def toggle_on(self, reference: Reference | None = None) -> None:
+        """
+        Turn an operation on or off, the selection by default.
+        """
+        operation = self._operation(reference)
+        self.set(operation, "operation.on", not operation.on)
+
+    def bake(self, reference: Reference | None = None) -> None:
+        """
+        Apply an operation once to everything it reaches, the selection by
+        default, its rates read as amounts.
+        """
+        self._record(Baked(id=self._operation(reference).id))
+
+    def scope(self, reference: Reference) -> list[Placed]:
+        """
+        Returns the entries an operation acts on directly: those beside it in
+        its group that have a pose. Everything beneath them follows.
+        """
+        operation = self._operation(reference)
+        result = [self.entries[id] for id in self.entries[operation.parent].children]
+        result = [entry for entry in result if isinstance(entry, Placed)]
+
+        return result
 
     def toggle_frame(self, reference: Reference | None = None) -> None:
         """
@@ -457,6 +526,8 @@ class Stage:
             self.playing = False
         elif isinstance(event, Stopped):
             self.entries[event.id].motion.stop()
+        elif isinstance(event, Baked):
+            self._operate(self.entries[event.id], 1.0)
         elif isinstance(event, Reset):
             entry = self.entries[event.id]
             entry.pose = Pose.identity(self.metric)
@@ -483,6 +554,9 @@ class Stage:
             self.time += elapsed
             for entry in self.walk():
                 self._step(entry, elapsed)
+            for entry in list(self.walk()):
+                if isinstance(entry, Operation) and entry.on:
+                    self._operate(entry, elapsed)
         self.carry()
         self._changed()
 
@@ -563,9 +637,9 @@ class Stage:
 
         return entry
 
-    def _moving(self, reference: Reference | None) -> Placed:
+    def _moving(self, reference: Reference | None) -> Entry:
         entry = self.selected if reference is None else self.entry(reference)
-        if not isinstance(entry, Placed) or entry.motion is None:
+        if entry is None or entry.motion is None:
             raise ValueError("select an entry that moves")
 
         return entry
@@ -598,6 +672,18 @@ class Stage:
         if self.scene is not None and isinstance(entry, Actor):
             options = {**entry.options, **({} if entry.origin is None else {"origin": entry.origin})}
             entry.scene_id = self.scene.add(entry.object, **options)
+
+    def _operation(self, reference: Reference | None) -> Operation:
+        entry = self.selected if reference is None else self.entry(reference)
+        if not isinstance(entry, Operation):
+            raise ValueError("select an operation")
+
+        return entry
+
+    def _operate(self, operation: Operation, elapsed: float) -> None:
+        G = operation_map(operation.dials, elapsed)
+        for entry in self.scope(operation):
+            entry.pose = act(G, entry.pose, entry.pivot, operation.motion.intrinsic)
 
     def _step(self, entry: Entry, elapsed: float) -> None:
         if isinstance(entry, Placed) and entry.motion is not None:

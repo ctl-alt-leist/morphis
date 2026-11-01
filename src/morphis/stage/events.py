@@ -29,12 +29,12 @@ class Event(BaseModel):
 
 
 class Added(Event):
-    """An entry put on the stage: an actor, or a group to hold others."""
+    """An entry put on the stage: an actor, a group to hold others, or an operation acting on its group."""
 
     type: Literal["added"] = "added"
     id: int
     name: str
-    kind: Literal["actor", "group"]
+    kind: Literal["actor", "group", "operation"]
     parent: int = 0
     position: int | None = Field(default=None, description="Place among the parent's children; last if none")
     source: str | None = Field(default=None, description="The catalog entry it was made from; none if handed in")
@@ -93,6 +93,13 @@ class Stopped(Event):
     id: int
 
 
+class Baked(Event):
+    """An operation applied once to everything it reaches, its rates read as amounts."""
+
+    type: Literal["baked"] = "baked"
+    id: int
+
+
 class Reset(Event):
     """An entry's pose returned to rest."""
 
@@ -101,6 +108,6 @@ class Reset(Event):
 
 
 AnyEvent = Annotated[
-    Added | Removed | Selected | DialSet | Renamed | Moved | Played | Paused | Stopped | Reset,
+    Added | Removed | Selected | DialSet | Renamed | Moved | Played | Paused | Stopped | Reset | Baked,
     Field(discriminator="type"),
 ]
