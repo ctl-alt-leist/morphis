@@ -798,6 +798,16 @@ class Scene:
 
         self._backend.render()
 
+    def process_events(self) -> None:
+        """
+        Let the window handle what has happened since the last capture: the
+        mouse turning the camera, keys, resizing. A front end that paces its
+        own frames calls this each frame, since capture only does so while it
+        waits.
+        """
+        if self._backend_initialized and self._window:
+            self._backend.process_events()
+
     def show(self) -> None:
         """Show the window and wait for the user to close it; an off-screen scene has nothing to show."""
         self._ensure_backend()

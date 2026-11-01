@@ -140,6 +140,10 @@ class Expression(Dials):
 
         return text
 
+    def about(self) -> list[str]:
+        """What the expression is: its own line."""
+        return [f"written  {self.text}"]
+
 
 def evaluate(text: str, metric: Metric) -> Vector:
     """
@@ -256,6 +260,10 @@ class Sphere(Dials):
     radius: float = Dial(1.0, Interval(0.1, 5.0))
     resolution: int = Dial(24, Interval(4, 96))
 
+    def about(self) -> list[str]:
+        """What the sphere is, as mathematics."""
+        return ["sphere  S²", "x = r (sin θ cos φ, sin θ sin φ, cos θ)", f"r = {self.radius:.2f}"]
+
 
 class Torus(Dials):
     """
@@ -269,11 +277,25 @@ class Torus(Dials):
     minor: float = Dial(0.4, Interval(0.05, 5.0))
     resolution: int = Dial(32, Interval(4, 96))
 
+    def about(self) -> list[str]:
+        """What the torus is, as mathematics."""
+        if len(_spatial(self.metric)) >= 4:
+            lines = ["Clifford torus  S¹ × S¹", "x = (a cos θ, a sin θ, b cos φ, b sin φ)", "flat"]
+        else:
+            lines = ["ring torus  S¹ × S¹", "x = ((a + b cos φ) cos θ, (a + b cos φ) sin θ, b sin φ)"]
+        result = [*lines, f"a = {self.major:.2f}   b = {self.minor:.2f}"]
+
+        return result
+
 
 class Square(Dials):
     metric: Metric = Field(exclude=True, repr=False)
     side: float = Dial(2.0, Interval(0.1, 10.0))
     resolution: int = Dial(8, Interval(1, 64))
+
+    def about(self) -> list[str]:
+        """What the plane is, as mathematics."""
+        return ["plane  e₁₂", "x = (u, v),  |u|, |v| ≤ ℓ / 2", f"ℓ = {self.side:.2f}"]
 
 
 def sphere(dials: Sphere) -> Mesh:

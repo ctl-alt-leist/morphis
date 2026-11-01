@@ -8,7 +8,8 @@ button with `press`; it never decides for itself what a key means, so the
 picture and the panel cannot drift apart in behaviour any more than in keys.
 
 The controls also hold where the user is: which screen is shown, which list
-has focus, the dial highlighted in the inspector, a plane half named by its
+has focus (the outline, the selection's dials, or the space's), the dial
+highlighted in each, a plane half named by its
 first digit, and a command waiting on its second press. The selection itself
 is the stage's, so a script or another front end that changes it changes it
 here too.
@@ -37,7 +38,10 @@ from morphis.stage.dial import DialSpec
 from morphis.stage.stage import Actor, Entry, Operation, Placed
 
 
-Focus = Literal["outline", "inspector"]
+Focus = Literal["outline", "dials", "space"]
+
+# The panes in the order the focus moves through them
+FOCI: tuple[Focus, ...] = ("outline", "dials", "space")
 
 # A picker's line: the key that takes it ("" for none), what taking it means, and how it reads.
 Choice = tuple[str, Any, str]
@@ -54,7 +58,7 @@ ASKS = {Command.FIND: "find", Command.TAKE: "value", Command.SAVE: "save to", Co
 PICKERS = {Command.ADD: "add", Command.GO: "go to"}
 
 # Commands live on every screen; the rest belong to the Stage screen.
-EVERYWHERE = (Command.GO, Command.DONE, Command.SAVE, Command.OPEN, Command.RECORD)
+EVERYWHERE = (Command.GO, Command.DONE, Command.SAVE, Command.OPEN, Command.RECORD, Command.QUIT)
 
 
 class Controls:
@@ -64,8 +68,9 @@ class Controls:
     Attributes:
         stage: The stage the commands act on
         screen: The screen shown
-        focus: The list the arrows walk, the outline or the inspector
-        highlight: The path of the dial highlighted in the inspector, its group first
+        focus: The pane the arrows walk: the outline, the selection's dials, or the space's
+        highlight: The path of the selection's dial highlighted, its group first
+        space_highlight: The path of the space's dial highlighted, its group first
         sense: +1, or -1 when the highlighted plane was named in reversed order
         naming: The first label of a plane half named, or none
         waiting: The command waiting on its second press, or none
@@ -78,12 +83,14 @@ class Controls:
         stage: Stage,
         ask: Callable[[Command], None] = lambda command: None,
         record: Callable[[str | None], None] = lambda path: None,
+        quit: Callable[[], None] = lambda: None,
     ) -> None:
         """
         Args:
             ask: Asks the user for a line of text for a command in ASKS, or
                 opens the picker for a command in PICKERS
             record: Starts recording the picture to a path, or stops on none
+            quit: Closes the front end
         """
         self.stage = stage
         self._ask = ask
@@ -91,6 +98,7 @@ class Controls:
         self.screen = Screen.STAGE
         self.focus: Focus = "outline"
         self.highlight: str | None = None
+        self.space_highlight: str | None = None
         self.sense = 1.0
         self.naming: Label | None = None
         self.waiting: Command | None = None
@@ -98,7 +106,7 @@ class Controls:
         self.recording: str | None = None
         self.saved_to: str | None = None
         self.actions: dict[Command, Callable[[], None]] = {
-            Command.ADD: lambda: ask(Command.ADD),
+            Command.ADD: lambda: self._ask(Command.ADD),
             Command.PLAY: lambda: self.stage.pause() if self.stage.playing else self.stage.play(),
             Command.STOP: lambda: self.stage.stop(),
             Command.RESET: lambda: self.stage.reset(),
@@ -113,12 +121,13 @@ class Controls:
             Command.RAISE: lambda: self._turn(+1),
             Command.FOCUS: self._toggle_focus,
             Command.TAKE: self._take,
-            Command.FIND: lambda: ask(Command.FIND),
-            Command.GO: lambda: ask(Command.GO),
+            Command.FIND: lambda: self._ask(Command.FIND),
+            Command.GO: lambda: self._ask(Command.GO),
             Command.DONE: self._done,
             Command.SAVE: self._save,
             Command.OPEN: lambda: self.stage.notice("opening a journal is not built yet", "warning"),
             Command.RECORD: self._toggle_recording,
+            Command.QUIT: quit,
         }
 
     # =========================================================================
@@ -252,8 +261,9 @@ class Controls:
             if command is Command.FIND:
                 self.filter = text
                 self._select_first()
-            elif command is Command.TAKE and self.highlight is not None:
-                self.stage.set(self.stage.selected, self.highlight, _typed(text))
+            elif command is Command.TAKE and self._target() is not None:
+                entry, spec = self._target()
+                self.stage.set(entry, spec.path, _typed(text))
             elif command is Command.SAVE and text:
                 self.stage.save(text)
                 self.saved_to = text
@@ -277,13 +287,14 @@ class Controls:
     def outline(self) -> list[Entry]:
         """
         Returns the entries the outline lists, in order, those matching the
-        filter by name or kind; the space always first.
+        filter by name or kind. The space is not among them: its dials have a
+        pane of their own.
         """
         found = self.filter.lower()
         result = [
             entry
             for entry in self.stage.walk()
-            if entry is self.stage.space or found in entry.name.lower() or found in entry.kind.lower()
+            if entry is not self.stage.space and (found in entry.name.lower() or found in entry.kind.lower())
         ]
 
         return result
@@ -298,6 +309,14 @@ class Controls:
 
         return result
 
+    def space_dials(self) -> list[DialSpec]:
+        """
+        Returns the space's own dials, every path starting with its group.
+        """
+        result = [spec for name, group in self.stage.space.dials.items() for spec in group.describe(f"{name}.")]
+
+        return result
+
     def _walk(self, step: int) -> None:
         if self.focus == "outline":
             entries = self.outline()
@@ -307,15 +326,19 @@ class Controls:
                 n = min(max(ids.index(current) + step, 0), len(ids) - 1)
             else:
                 n = 0 if step > 0 else len(ids) - 1
-            self._select(ids[n])
+            if ids:
+                self._select(ids[n])
         else:
-            paths = [spec.path for spec in self.dials()]
-            if self.highlight in paths:
-                n = min(max(paths.index(self.highlight) + step, 0), len(paths) - 1)
+            paths = [spec.path for spec in (self.dials() if self.focus == "dials" else self.space_dials())]
+            current = self.highlight if self.focus == "dials" else self.space_highlight
+            if current in paths:
+                n = min(max(paths.index(current) + step, 0), len(paths) - 1)
             else:
                 n = 0 if step > 0 else len(paths) - 1
-            if paths:
+            if paths and self.focus == "dials":
                 self.highlight, self.sense = paths[n], 1.0
+            elif paths:
+                self.space_highlight = paths[n]
 
     def _select(self, id: int | None) -> None:
         if id != self.stage.selection:
@@ -325,18 +348,18 @@ class Controls:
             self.sense = 1.0
 
     def _select_first(self) -> None:
-        listed = [entry for entry in self.outline() if entry is not self.stage.space]
+        listed = self.outline()
         if listed:
             self._select(listed[0].id)
 
     def _toggle_focus(self) -> None:
-        self.focus = "inspector" if self.focus == "outline" else "outline"
+        self.focus = FOCI[(FOCI.index(self.focus) + 1) % len(FOCI)]
 
     def _take(self) -> None:
-        if self.focus == "inspector" and self.highlight is not None:
+        if self.focus != "outline" and self._target() is not None:
             self._ask(Command.TAKE)
         elif self.focus == "outline" and self.stage.selection is not None:
-            self.focus = "inspector"
+            self.focus = "dials"
 
     def _done(self) -> None:
         if self.waiting is not None:
@@ -345,7 +368,7 @@ class Controls:
             self.screen = Screen.STAGE
         elif self.naming is not None:
             self.naming = None
-        elif self.focus == "inspector":
+        elif self.focus != "outline":
             self.focus = "outline"
         elif self.stage.selection is not None:
             self._select(None)
@@ -367,23 +390,33 @@ class Controls:
             rates = selected.motion.rate
             if forward in rates:
                 self.highlight, self.sense = f"motion.rate.{forward}", 1.0
-                self.focus = "inspector"
+                self.focus = "dials"
             elif backward in rates:
                 self.highlight, self.sense = f"motion.rate.{backward}", -1.0
-                self.focus = "inspector"
+                self.focus = "dials"
             else:
                 self.stage.notice(f"there is no plane e{first}{label} in this space", "warning")
 
     def _turn(self, step: int) -> None:
-        """Turn the highlighted dial down or up by one step of its kind."""
-        specs = {spec.path: spec for spec in self.dials()}
-        spec = specs.get(self.highlight)
-        if spec is None:
-            self.stage.notice("highlight a dial to turn it: ⇥ to the inspector, or name a plane", "warning")
+        """Turn the highlighted dial of the focused pane down or up by one step of its kind."""
+        target = self._target()
+        if target is None:
+            self.stage.notice("highlight a dial to turn it: ⇥ to the dials, or name a plane", "warning")
         else:
-            entry = self.stage.selected
-            value = entry.get(spec.path)
-            self.stage.set(entry, spec.path, _turned(spec, value, self.sense * step))
+            entry, spec = target
+            sense = self.sense if self.focus == "dials" else 1.0
+            self.stage.set(entry, spec.path, _turned(spec, entry.get(spec.path), sense * step))
+
+    def _target(self) -> tuple[Entry, DialSpec] | None:
+        """The entry and dial the focused pane has highlighted, if any."""
+        if self.focus == "space":
+            entry, specs, path = self.stage.space, self.space_dials(), self.space_highlight
+        else:
+            entry, specs, path = self.stage.selected, self.dials(), self.highlight
+        spec = next((spec for spec in specs if spec.path == path), None)
+        result = None if spec is None or entry is None else (entry, spec)
+
+        return result
 
     def _hide(self) -> None:
         entry = self.stage.selected

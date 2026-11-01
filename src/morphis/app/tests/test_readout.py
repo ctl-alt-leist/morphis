@@ -5,10 +5,11 @@ Unit tests for the readout: how the playground is worded.
 from math import pi
 
 from morphis.app.controls import Controls
-from morphis.app.readout import action_row, dial_rows, outline_rows, status_line
+from morphis.app.readout import Readout, action_row, blade, dial_rows, outline_rows, space_name, status_line
 from morphis.app.vocabulary import Command
 from morphis.elements import metric
 from morphis.stage import Stage
+from morphis.stage.catalog import evaluate
 
 
 def controls_with_a_torus():
@@ -21,7 +22,7 @@ def controls_with_a_torus():
 class TestStatus:
     def test_reads_left_to_right(self):
         controls = controls_with_a_torus()
-        assert status_line(controls) == "❚❚ t = 0.00   orthographic, κ = 0.00   torus"
+        assert status_line(controls) == "❚❚ t = 0.00   ℝ⁴   orthographic, κ = 0.00   torus"
 
     def test_marks(self):
         controls = controls_with_a_torus()
@@ -44,11 +45,10 @@ class TestRows:
         controls.take(Command.ADD, "Group")
         rows = outline_rows(controls)
         assert [(depth, name, kind) for depth, _, name, kind, _, _ in rows] == [
-            (0, "space", "Space"),
-            (1, "torus", "Mesh"),
-            (1, "group", "Group"),
+            (0, "torus", "Mesh"),
+            (0, "group", "Group"),
         ]
-        assert rows[2][4] and rows[2][5]
+        assert rows[1][4] and rows[1][5]
 
     def test_dials_by_their_letters(self):
         controls = controls_with_a_torus()
@@ -77,3 +77,36 @@ class TestRows:
         assert row["Hide"] == ("h", "lit")
         controls.take(Command.ADD, "Rotation")
         assert "On" in {label for _, label, _ in action_row(controls)}
+
+
+class TestAbout:
+    def test_space_names(self):
+        assert space_name(metric(space=4)) == "ℝ⁴"
+        assert space_name(metric(time=1, space=3)) == "ℝ¹˒³"
+        assert space_name(metric(modes=2)) == "ℂ²"
+        assert space_name(metric(space=3, projective=1)) == "PGA of ℝ³"
+
+    def test_blades_in_the_basis(self):
+        g = metric(space=4)
+        assert blade(evaluate("e1 + 0.5 * e3", g)) == "e₁ + 0.50 e₃"
+        assert blade(evaluate("e12 - 0.5 * e34", g)) == "e₁₂ - 0.50 e₃₄"
+        assert blade(evaluate("-e21", g)) == "e₁₂"
+
+    def test_about_an_element_and_its_pose(self):
+        controls = Controls(Stage(metric(space=4)))
+        controls.take(Command.ADD, "Bivector")
+        controls.stage.set(controls.stage.selected, "motion.rate.1,3", 0.4)
+        assert Readout(controls).about() == ["bivector  e₃₄", "turning  0.40 e₁₃"]
+
+    def test_about_an_operation(self):
+        controls = Controls(Stage(metric(space=4)))
+        controls.take(Command.ADD, "Vector")
+        controls.take(Command.ADD, "Rotation")
+        assert Readout(controls).about() == ["rotation  0.50 e₁₂", "acts on vector", "off"]
+
+    def test_sections_mark_the_highlight(self):
+        controls = controls_with_a_torus()
+        controls.key("2")
+        controls.key("4")
+        motion = dict((name, lit) for name, _, lit in Readout(controls).dials()[0][1])
+        assert motion["e₂₄"] and not motion["e₁₃"]

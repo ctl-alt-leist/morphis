@@ -53,7 +53,7 @@ class TestPlanes:
         controls.take(Command.ADD, "Torus")
         keys(controls, "1", "3")
         assert controls.highlight == "motion.rate.1,3"
-        assert controls.focus == "inspector"
+        assert controls.focus == "dials"
         keys(controls, "right", "right")
         assert controls.stage.selected.get("motion.rate.1,3") == pytest.approx(2 * RATE_STEP)
 
@@ -128,9 +128,16 @@ class TestLists:
         controls.take(Command.ADD, "Vector")
         controls.take(Command.ADD, "Frame")
         keys(controls, "escape", "escape", "down")
-        assert controls.stage.selected is controls.stage.space
+        assert controls.stage.selected.name == "vector"
         keys(controls, "down", "down", "down")
         assert controls.stage.selected.name == "frame"
+
+    def test_space_has_its_own_pane(self, controls):
+        keys(controls, "tab", "tab")
+        assert controls.focus == "space"
+        keys(controls, "down", "right")
+        assert controls.space_highlight == "clock.speed"
+        assert controls.stage.space.get("clock.speed") > 1.0
 
     def test_inspector_walk_and_typed_value(self, controls, asked):
         controls.take(Command.ADD, "Torus")
@@ -159,7 +166,7 @@ class TestLists:
         controls.take(Command.ADD, "Vector")
         controls.take(Command.ADD, "Torus")
         controls.answer(Command.FIND, "mesh")
-        assert [entry.name for entry in controls.outline()] == ["space", "torus"]
+        assert [entry.name for entry in controls.outline()] == ["torus"]
         assert controls.stage.selected.name == "torus"
 
 

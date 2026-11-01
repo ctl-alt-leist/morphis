@@ -43,8 +43,8 @@ def script(journal: str) -> list[Step]:
         (SPACE, 0.5, lambda c: c.stage.playing and abs(c.stage.time - 0.5) < 1e-9),
         (ESCAPE + "ah", 0.0, lambda c: selected(c) == "rotation"),  # beside the torus
         ("o", 1.0, lambda c: c.stage.selected.on),
-        (UP * 3, 0.0, lambda c: selected(c) == "space"),
-        (TAB + DOWN + ENTER + "0.25" + ENTER, 0.0, lambda c: c.stage.space.get("clock.speed") == 0.25),
+        (UP * 3, 0.0, lambda c: selected(c) == "torus"),
+        (TAB + TAB + DOWN + ENTER + "0.25" + ENTER, 0.0, lambda c: c.stage.space.get("clock.speed") == 0.25),
         (ESCAPE + "/tor" + ENTER, 0.0, lambda c: selected(c) == "torus"),
         ("x" + ESCAPE, 0.0, lambda c: selected(c) == "torus" and c.waiting is None),  # called off
         ("rr", 0.0, lambda c: type(c.stage.journal[-1]).__name__ == "Reset"),

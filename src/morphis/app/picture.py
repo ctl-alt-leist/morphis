@@ -170,10 +170,10 @@ class Picture:
             for depth, _, name, kind, selected, _ in outline_rows(controls)
         ]
         dials = [f"{'▸' if lit else ' '} {label:<10} {shown}" for _, label, shown, lit in dial_rows(controls)]
-        mark = {name: " ◂" if controls.focus == name else "" for name in ("outline", "inspector")}
+        mark = {name: " ◂" if controls.focus == name else "" for name in ("outline", "dials")}
         lines = [status_line(controls), RULE, "outline" + mark["outline"], *outline]
         if dials:
-            lines += [RULE, "dials" + mark["inspector"], *dials]
+            lines += [RULE, "dials" + mark["dials"], *dials]
         lines += [RULE, self._message(), self._row()]
         result = "\n".join(lines)
 
