@@ -221,6 +221,8 @@ T = e^{-\mathbf{t}/2} = 1 - \frac{1}{2}\mathbf{t}
 
 This **translator** implements pure translation via the sandwich product.
 
+> **Known issue.** In morphis, points are grade-1 vectors, $\mathbf{p} = \mathbf{e}_0 + x^m \mathbf{e}_m$. The sandwich $T \mathbf{p} \tilde T$ does not translate such a point. Since $\mathbf{e}_0$ anticommutes with every $\mathbf{e}_m$ and squares to zero, it sends $\mathbf{p}$ to $\mathbf{p} + (\mathbf{t} \cdot \mathbf{x}) \mathbf{e}_0$, which changes the weight instead: `transform(point([1, 0, 0]), translator(direction([2, 0, 0])))` lands at $(0.5, 0, 0)$. Rotations about the origin are unaffected, because the rotation planes commute with $\mathbf{e}_0$. Translators act correctly on the dual representation, where a point is a grade-$(d - 1)$ element. The fix is to act on the right complement and take the complement back, which is metric-free and so valid in the degenerate metric. That fix also needs the translator's sign and factor checked, because the complement route first tried moves points by $-\mathbf{t}/2$.
+
 ```python
 from morphis.transforms import translator
 
