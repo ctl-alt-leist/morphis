@@ -97,7 +97,7 @@ def _wedge_vectors(*vectors: Vector) -> Vector:
     sig = wedge_signature(grades)
     delta = generalized_delta(n, d)
     norm = wedge_normalization(grades)
-    result = norm * einsum(sig, *[u.data for u in vectors], delta)
+    result = norm * einsum(sig, *[u.data for u in vectors], delta, optimize=True)
 
     return Vector(data=result, grade=n, metric=metric)
 
@@ -434,19 +434,19 @@ def _geometric_v_v(u: Vector, v: Vector) -> MultiVector:
 
         if r == 0:
             # Scalar result
-            result_data = norm * einsum(sig, *metric_args, u.data, v.data)
+            result_data = norm * einsum(sig, *metric_args, u.data, v.data, optimize=True)
             component = Vector(result_data, grade=0, metric=metric)
 
         elif c == 0:
             # Pure wedge (no contractions)
             delta = generalized_delta(r, d)
-            result_data = norm * einsum(sig, u.data, v.data, delta)
+            result_data = norm * einsum(sig, u.data, v.data, delta, optimize=True)
             component = Vector(data=result_data, grade=r, metric=metric)
 
         else:
             # Mixed: contractions + antisymmetrization
             delta = generalized_delta(r, d)
-            result_data = norm * einsum(sig, *metric_args, u.data, v.data, delta)
+            result_data = norm * einsum(sig, *metric_args, u.data, v.data, delta, optimize=True)
             component = Vector(data=result_data, grade=r, metric=metric)
 
         components[r] = component

@@ -64,7 +64,7 @@ def interior_left(u: Vector, v: Vector) -> Vector:
     result_grade = k - j
     sig = interior_left_signature(j, k)
     metric_args = [g.data] * j
-    result = einsum(sig, *metric_args, u.data, v.data)
+    result = einsum(sig, *metric_args, u.data, v.data, optimize=True)
 
     return Vector(data=result, grade=result_grade, metric=metric)
 
@@ -107,7 +107,7 @@ def interior_right(u: Vector, v: Vector) -> Vector:
     result_grade = j - k
     sig = interior_right_signature(j, k)
     metric_args = [g.data] * k
-    result = einsum(sig, *metric_args, u.data, v.data)
+    result = einsum(sig, *metric_args, u.data, v.data, optimize=True)
 
     return Vector(data=result, grade=result_grade, metric=metric)
 
