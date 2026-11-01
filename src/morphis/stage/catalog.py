@@ -212,7 +212,7 @@ def _vector(space: Metric) -> Addition:
 
 @entry("Bivector", section="Elements")
 def _bivector(space: Metric) -> Addition:
-    first, second = space.labels[-2:]
+    first, second = [space.labels[n] for n in _spatial(space)][:2]
 
     return Addition(basis_vector(first, space) ^ basis_vector(second, space))
 

@@ -402,6 +402,7 @@ class Scene:
         """Where each lot entry (or the single element) is attached, in the element's own space."""
         is_lot = count > 1 or bool(element.lot)
         given = options.get("origins") if is_lot else options.get("origin")
+        given = given.data if isinstance(given, Vector) else given
         origins = zeros((count, element.dim)) if given is None else array(given, dtype=float).reshape(count, -1)
 
         return origins

@@ -38,7 +38,7 @@ from typing import Any, Literal
 from numpy import zeros
 from pydantic import BaseModel, ConfigDict
 
-from morphis.elements import Metric, Vector
+from morphis.elements import Frame, Metric, Vector
 from morphis.stage import journal
 from morphis.stage.carriers import carrier
 from morphis.stage.catalog import CATALOG
@@ -224,6 +224,9 @@ class Actor(Placed):
         super().__init__(id, name, parent, groups, metric)
         self.object = drawn
         self.rest = _copy(drawn)
+        # A vector or frame is drawn from a point, so that a velocity has somewhere to move it
+        if origin is None and isinstance(drawn, (Vector, Frame)):
+            origin = Vector(zeros(metric.dim), grade=1, metric=metric)
         self.origin = None if origin is None else origin.copy()
         self.rest_origin = origin
         self.step = step

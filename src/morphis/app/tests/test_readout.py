@@ -96,7 +96,7 @@ class TestAbout:
         controls = Controls(Stage(metric(space=4)))
         controls.take(Command.ADD, "Bivector")
         controls.stage.set(controls.stage.selected, "motion.rate.1,3", 0.4)
-        assert Readout(controls).about() == ["bivector  e₃₄", "turning  0.40 e₁₃"]
+        assert Readout(controls).about() == ["bivector  e₁₂", "turning  0.40 e₁₃"]
 
     def test_about_an_operation(self):
         controls = Controls(Stage(metric(space=4)))
