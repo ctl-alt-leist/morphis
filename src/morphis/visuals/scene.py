@@ -695,7 +695,7 @@ class Scene:
                 time_module.sleep(0.001)
 
     @contextmanager
-    def record(self, path: str | Path, frame_rate: float | None = None) -> Iterator[Recording]:
+    def record(self, path: str | Path, frame_rate: float | None = None, trail: float = 0.0) -> Iterator[Recording]:
         """
         Record every capture inside the block to a video or GIF.
 
@@ -710,11 +710,13 @@ class Scene:
         Args:
             path: Output file, ending in .mp4 or .gif
             frame_rate: Frames per second; defaults to the scene's frame rate
+            trail: Afterimage kept in each recorded frame, 0 for none; set
+                recording.trail to change it mid-clip. The window shows no trail.
 
         Yields:
             The Recording, whose frame_count tells how many frames were written
         """
-        recording = Recording(path, frame_rate or self._frame_rate)
+        recording = Recording(path, frame_rate or self._frame_rate, trail=trail)
         self._recording = recording
         try:
             yield recording

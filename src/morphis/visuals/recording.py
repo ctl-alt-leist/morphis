@@ -16,6 +16,11 @@ losslessly in a temporary video, one 256-color palette is chosen for the whole
 clip, and each frame stores only the rectangle that changed. With one palette
 a still part of the picture has the same pixels in every frame, so a figure
 whose background holds still costs little more than its moving parts.
+
+A recording may keep an afterimage: with trail a, each frame is (1 - a) times
+the new image plus a times the frame before it, so what moves leaves a fading
+trace and what holds still is unchanged. The trail can change
+from frame to frame, to blur only part of a clip.
 """
 
 from __future__ import annotations
@@ -51,12 +56,14 @@ class Recording:
     Args:
         path: Output file, ending in .mp4 or .gif
         frame_rate: Frames per second at which frames are appended
+        trail: Fraction of the previous frame kept in each new one, from 0 (none)
+            toward 1; it may be changed between frames
 
     Raises:
         ValueError: If the suffix is not .mp4 or .gif
     """
 
-    def __init__(self, path: str | Path, frame_rate: float):
+    def __init__(self, path: str | Path, frame_rate: float, trail: float = 0.0):
         target = Path(path).expanduser()
         suffix = target.suffix.lower()
         if suffix not in FORMATS:
@@ -70,6 +77,8 @@ class Recording:
         self.frame_rate = frame_rate
         self.frame_count = 0
         self.written_count = 0
+        self.trail = trail
+        self._afterimage: NDArray | None = None
         self._output_period = delay / 100.0 if is_gif else 1.0 / frame_rate
 
         # A GIF's frames wait, lossless, in a scratch video until its palette can be chosen
@@ -93,11 +102,16 @@ class Recording:
         Frames arrive at the recording's frame rate. Each is written when it
         reaches the output's next tick, which for video is every frame.
         """
+        # The afterimage runs at the arrival rate, so the trail is the same whether or not a frame is written
+        frame = asarray(image)[..., :3].astype(float)
+        if self._afterimage is not None and self._afterimage.shape == frame.shape:
+            frame = (1.0 - self.trail) * frame + self.trail * self._afterimage
+        self._afterimage = frame
+
         arrival = self.frame_count / self.frame_rate
         is_due = arrival + 1e-9 >= self.written_count * self._output_period
         if is_due:
-            frame = asarray(image)[..., :3].astype(uint8)
-            self._writer.append_data(frame)
+            self._writer.append_data(frame.round().astype(uint8))
             self.written_count += 1
         self.frame_count += 1
 

@@ -6,9 +6,11 @@ Implements the RenderBackend protocol using PyVista/VTK for 3D rendering.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
+from matplotlib import get_data_path
 from numpy import array, zeros
 from numpy.linalg import norm
 from numpy.typing import NDArray
@@ -23,6 +25,9 @@ if TYPE_CHECKING:
 
 # Caption inset from the window edges, as a fraction of the shorter side
 CAPTION_INSET = 0.05
+# VTK's built-in fonts have no Greek; captions use DejaVu Sans, which ships with matplotlib and covers Greek and math
+CAPTION_FONT = Path(get_data_path()) / "fonts" / "ttf" / "DejaVuSans.ttf"
+VTK_FONT_FILE = 4
 
 
 class TrackedObject:
@@ -614,6 +619,8 @@ class PyVistaBackend:
                 color=self._theme.text_color,
             )
             properties = actor.GetTextProperty()
+            properties.SetFontFamily(VTK_FONT_FILE)
+            properties.SetFontFile(str(CAPTION_FONT))
             properties.SetJustificationToRight()
             properties.SetVerticalJustificationToTop()
             self._caption_actor = actor

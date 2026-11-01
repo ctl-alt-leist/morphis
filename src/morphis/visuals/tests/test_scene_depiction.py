@@ -7,14 +7,14 @@ current state. These tests run off screen (window=False); no window opens.
 
 import pytest
 from imageio.v2 import get_reader
-from numpy import array, cbrt, linspace, pi
+from numpy import array, cbrt, full, linspace, pi, zeros
 from numpy.linalg import norm
 from numpy.testing import assert_allclose
 from numpy.typing import NDArray
 
 from morphis.elements import Frame, Vector, basis_vectors, euclidean_metric
 from morphis.transforms import rotor
-from morphis.visuals import Scene, VisualModel
+from morphis.visuals import Recording, Scene, VisualModel
 from morphis.visuals.drawing.blades import bivector_normal, oriented_ball, oriented_disk
 from morphis.visuals.projective import Orthographic, Perspective, Stereographic
 
@@ -240,6 +240,19 @@ class TestRecording:
         scene.capture(0.2)
 
         assert recording.frame_count == 1
+
+    def test_trail_keeps_an_afterimage(self, tmp_path):
+        recording = Recording(tmp_path / "trail.mp4", frame_rate=10, trail=0.25)
+        written = []
+        recording._writer.close()
+        recording._writer = type("Collect", (), {"append_data": lambda self, frame: written.append(frame)})()
+        black, white = zeros((2, 2, 3)), full((2, 2, 3), 200.0)
+        for image in (black, white, white):
+            recording.append(image)
+        recording.trail = 0.0
+        recording.append(black)
+
+        assert [frame[0, 0, 0] for frame in written] == [0, 150, 188, 0]
 
     def test_unknown_format_raises(self, tmp_path):
         with pytest.raises(ValueError):
