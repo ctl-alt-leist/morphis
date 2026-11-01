@@ -4,9 +4,12 @@ Stage - Events
 Every change to a stage is an event, appended to its journal with the clock
 time it happened at and applied by the stage's one reducer. The state every
 front end draws from is the journal's events applied in order, so a session
-can be replayed, and between two events every rate is constant, so the poses
-at each event's time do not depend on how finely the time between was
-stepped.
+can be replayed. Between two events every rate is constant, and steps of
+constant rates compose exactly, so the poses at each event's time do not
+depend on how finely the time between was stepped. The one exception is an
+entry turned both by its own extrinsic motion and by an operation at once:
+the two turn about different centers, one of them moving, and the steps then
+agree only to second order in their length.
 
 Entries are named by their identity, a number given when they are added and
 kept through renaming and moving; the space at the root of the tree is 0.
@@ -100,6 +103,12 @@ class Baked(Event):
     id: int
 
 
+class Saved(Event):
+    """The stage written to disk, at its clock time: where a replay runs to."""
+
+    type: Literal["saved"] = "saved"
+
+
 class Reset(Event):
     """An entry's pose returned to rest."""
 
@@ -108,6 +117,6 @@ class Reset(Event):
 
 
 AnyEvent = Annotated[
-    Added | Removed | Selected | DialSet | Renamed | Moved | Played | Paused | Stopped | Reset | Baked,
+    Added | Removed | Selected | DialSet | Renamed | Moved | Played | Paused | Stopped | Reset | Baked | Saved,
     Field(discriminator="type"),
 ]

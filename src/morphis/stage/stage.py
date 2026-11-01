@@ -31,6 +31,7 @@ next capture without knowing the stage exists.
 """
 
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any, Literal
 
 from numpy import zeros
@@ -38,6 +39,7 @@ from pydantic import BaseModel, ConfigDict
 
 from morphis.elements import Metric, Vector
 from morphis.manifold.domain import Interval
+from morphis.stage import journal
 from morphis.stage.carriers import carrier
 from morphis.stage.catalog import CATALOG
 from morphis.stage.dial import Dial, Dials
@@ -52,6 +54,7 @@ from morphis.stage.events import (
     Removed,
     Renamed,
     Reset,
+    Saved,
     Selected,
     Stopped,
 )
@@ -503,7 +506,8 @@ class Stage:
         Apply an event to the stage: the one place the stage is changed.
         """
         if isinstance(event, Added):
-            entry = self._arriving.pop(event.id)
+            entry = self._arriving.pop(event.id, None) or self._rebuild(event)
+            self._next_id = max(self._next_id, event.id + 1)
             self.entries[event.id] = entry
             self._place(entry, event.parent, event.position)
             self._draw(entry)
@@ -550,15 +554,85 @@ class Stage:
         actor's own law; then every actor is carried to where it now is.
         """
         if self.playing:
-            elapsed = dt * self.space.dials["clock"].speed
-            self.time += elapsed
-            for entry in self.walk():
-                self._step(entry, elapsed)
-            for entry in list(self.walk()):
-                if isinstance(entry, Operation) and entry.on:
-                    self._operate(entry, elapsed)
+            self._run(dt * self.space.dials["clock"].speed)
         self.carry()
         self._changed()
+
+    # =========================================================================
+    # Saving and Replaying
+    # =========================================================================
+
+    def save(self, path: str | Path) -> None:
+        """
+        Write the stage's journal, which is its whole state and history,
+        marked with the time it was saved at.
+        """
+        self._record(Saved())
+        journal.write(path, self.metric, self.journal)
+
+    @classmethod
+    def load(
+        cls,
+        path: str | Path,
+        setup: Callable[["Stage"], None] | None = None,
+        scene: Any = None,
+        frame_rate: float | None = None,
+    ) -> "Stage":
+        """
+        Returns the stage a journal was written from, by replaying its events.
+
+        Entries made from the catalog are rebuilt from it. Entries a script
+        handed in are made again by running the script's setup on the new
+        stage first; its events must be the journal's first, and the rest are
+        replayed after them. Given a frame rate, the time between events is
+        stepped and captured at that rate, so a session played by hand is
+        recorded smoothly (inside `scene.record`).
+        """
+        space, events = journal.read(path)
+        stage = cls(space, scene)
+        if setup is not None:
+            setup(stage)
+        count = len(stage.journal)
+        for made, written in zip(stage.journal, events[:count], strict=False):
+            if made.model_dump(exclude={"time"}) != written.model_dump(exclude={"time"}):
+                raise ValueError(f"the setup does not match the journal: {made} where it wrote {written}")
+        stage.replay(events[count:], frame_rate)
+
+        return stage
+
+    def replay(self, events: list[Event], frame_rate: float | None = None, until: float | None = None) -> None:
+        """
+        Apply events in order, running the clock up to each one's time first:
+        in one step, or given a frame rate, in steps of one frame, each
+        captured. Steps of constant rates compose exactly, so either way the
+        stage reaches every event in the same state, except where an entry is
+        turned at once by its own extrinsic motion and by an operation.
+        """
+        for event in events:
+            self._run_to(event.time, frame_rate)
+            self.journal.append(event)
+            self.apply(event)
+            self.carry()
+            self._changed()
+        if until is not None:
+            self._run_to(until, frame_rate)
+
+    def _run_to(self, time: float, frame_rate: float | None) -> None:
+        while self.playing and time - self.time > 1e-12:
+            remaining = time - self.time
+            self._run(remaining if frame_rate is None else min(1.0 / frame_rate, remaining))
+            if frame_rate is not None and self.scene is not None:
+                self.carry()
+                self.capture()
+
+    def _run(self, elapsed: float) -> None:
+        """Advance the clock by elapsed stage time: own motions and laws, then operations, in order."""
+        self.time += elapsed
+        for entry in self.walk():
+            self._step(entry, elapsed)
+        for entry in list(self.walk()):
+            if isinstance(entry, Operation) and entry.on:
+                self._operate(entry, elapsed)
 
     def carry(self) -> None:
         """
@@ -613,6 +687,23 @@ class Stage:
         self._record(Added(id=id, name=name, kind="actor", parent=holder.id, position=position, source=source))
 
         return self.entries[id]
+
+    def _rebuild(self, event: Added) -> Entry:
+        """An entry made again from the catalog line it came from, for replay."""
+        if event.source is None and event.kind != "group":
+            raise ValueError(f"{event.name} was handed in by a script; load the journal with that script's setup")
+
+        if event.kind == "group":
+            result = Group(event.id, event.name, event.parent, self.metric)
+        elif event.kind == "operation":
+            result = Operation(event.id, event.name, event.parent, self.metric, event.source)
+            for path, value in CATALOG[event.source].make(self.metric).items():
+                result.set(path, value)
+        else:
+            obj, dials, step, options = CATALOG[event.source].make(self.metric)
+            result = Actor(event.id, event.name, event.parent, obj, self.metric, dials, step, None, options)
+
+        return result
 
     def _take_id(self) -> int:
         id = self._next_id
