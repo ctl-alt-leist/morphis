@@ -2,7 +2,7 @@
 
 This document is the design for interactive control of morphis pictures: a playground where many kinds of mathematical objects, in many kinds of spaces, are moved, reshaped, and evolved by hand or by key, from a panel in a window of its own beside the picture.
 
-The first two phases are built, in `morphis.stage`: dials and motion, and the stage itself with its tree, catalog, operations, journal, and Scene. The visuals the rest stands on are the Scene that draws what it is handed, the `View` and `Projective` family that name a picture, the general bivector exponential, and the `Recording`.
+The first three phases are built: dials and motion, and the stage itself with its tree, catalog, operations, journal, and Scene, in `morphis.stage`; and the vocabulary, controls, readout, and the picture, in `morphis.app`. The visuals the rest stands on are the Scene that draws what it is handed, the `View` and `Projective` family that name a picture, the general bivector exponential, and the `Recording`.
 
 ## The One Idea
 
@@ -384,6 +384,6 @@ src/morphis/app/
 
 1. **Dials and motion, headless (built).** `Dial`, `Dials`, `Motion`, `Pose`, values by path. Tested without any window: the extrinsic and intrinsic steps, the exact flow for constant $Ω$, the kinds of rate from the metric.
 2. **The stage, scripted (built).** Actors holding any object, dial providers and carriers, the catalog with written expressions and surfaces, global operations scoped by the tree, groups, selection, the journal and its reducer, `advance`, saving and replay, and the Scene driven by the space's view, camera, and look dials. The view's axes are not yet dials, and surfaces are not offered in PGA until translators move points there.
-3. **The vocabulary, controls, and the picture.** Commands and their keys, `Controls`, the run loop at wall-clock pace, the picture's key bindings and status line. The playground is usable from the keyboard alone at the end of this phase.
+3. **The vocabulary, controls, and the picture (built).** Commands and their keys, `Controls`, the readout, the run loop at wall-clock pace, the picture's key bindings, and its corner: the status line, outline, dials, notices, and action row, with its own prompt for typed lines and pickers. One key script drives it in the tests. The playground is usable from the keyboard alone: `uv run python -m morphis.app.picture`.
 4. **The NiceGUI panel.** The panes, the outline with filtering and selection, the inspector rebuilt on selection, the action row, readouts. The key script drives both front ends.
 5. **Further.** Dragging in the outline to reorder and regroup; clicking an object in the picture to select it; selecting several objects and showing the dials they share; undo from the journal; the Library and Journal screens; a global-phase dial for Kähler spaces; a slicing-hyperplane control for manifolds; physical knobs behind the same commands; local operations, gauge transformations among them.
