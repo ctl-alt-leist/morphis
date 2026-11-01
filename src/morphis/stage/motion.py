@@ -27,13 +27,14 @@ generally not simple, which the general bivector exponential handles.
 
 from typing import Any, Literal, NamedTuple
 
-from numpy import sqrt, zeros
-from pydantic import BaseModel, ConfigDict, Field
+from numpy import zeros
+from pydantic import Field
 
-from morphis.elements import Metric, MultiVector, Vector, basis_vector
+from morphis.elements import Metric, Vector, basis_vector
 from morphis.elements.metric import Label
 from morphis.operations.products import geometric, grade_project
 from morphis.stage.dial import Dials, DialSpec
+from morphis.stage.pose import Pose, unit
 from morphis.transforms import rotor
 
 
@@ -57,33 +58,6 @@ class Plane(NamedTuple):
     def key(self) -> str:
         """The plane as a dial's key: its labels, joined by a comma."""
         return f"{self.first},{self.second}"
-
-
-class Pose(BaseModel):
-    """
-    Where a moving object is: its rest shape carried by the versor and moved
-    by the offset.
-
-    Attributes:
-        versor: The rotor, boost, or motor carrying the rest shape
-        offset: The displacement of the object's origin, zero in PGA, where
-            the versor carries translation too
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
-
-    versor: MultiVector
-    offset: Vector
-
-    @classmethod
-    def identity(cls, metric: Metric) -> "Pose":
-        """
-        Returns the pose of an object at rest: the unit versor and no offset.
-        """
-        one = MultiVector(data={0: Vector(1.0, grade=0, metric=metric)}, metric=metric)
-        result = cls(versor=one, offset=Vector(zeros(metric.dim), grade=1, metric=metric))
-
-        return result
 
 
 class Motion(Dials):
@@ -230,7 +204,7 @@ class Motion(Dials):
         else:
             versor = S * M
             velocity = self.drift
-        result = Pose(versor=_unit(versor), offset=pose.offset + dt * velocity)
+        result = Pose(versor=unit(versor), offset=pose.offset + dt * velocity)
 
         return result
 
@@ -269,11 +243,3 @@ def planes(metric: Metric) -> tuple[Plane, ...]:
             result.append(Plane(first, second, kind))
 
     return tuple(result)
-
-
-def _unit(versor: MultiVector) -> MultiVector:
-    """The versor scaled so that M M̃ = 1, against the drift of many products."""
-    square = float((versor * ~versor)[0].data)
-    result = (1.0 / sqrt(abs(square))) * versor
-
-    return result
