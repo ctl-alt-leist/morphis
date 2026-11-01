@@ -2087,6 +2087,87 @@ def get_ink_theme(theme: 'str | InkTheme') -> 'InkTheme'
 
 ---
 
+## Stage
+
+The backend of the playground. See [Controls and the Playground](../5_design/8_controls.md).
+
+### `morphis.stage.dial`
+
+*Dials*
+
+```python
+def Dial(default: Any, domain: Interval | None = None, rate: bool = False, description: str | None = None) -> Any
+    """A field of a Dials model, with the domain its value must lie in."""
+
+class DialSpec(BaseModel):
+    """What a dial is, as plain data a front end draws from: path, kind, domain, choices, rate, quantity."""
+
+class Dials(BaseModel):
+    """A group of dials: every field is a dial, or a nested group of them."""
+
+    def get(self, path: str) -> Any
+        """Returns the value of the dial at a path, its keys joined by dots."""
+
+    def set(self, path: str, value: Any) -> None
+        """Set the dial at a path; a value outside its domain is refused."""
+
+    def values(self) -> dict[str, Any]
+        """Returns every dial's value, by path."""
+
+    def describe(self, prefix: str = "") -> list[DialSpec]
+        """Returns what each dial is, in declaration order."""
+```
+
+### `morphis.stage.motion`
+
+*Motion*
+
+```python
+class Plane(NamedTuple):
+    """A basis plane e_a ∧ e_b, by the labels of its directions, and its kind."""
+
+class Pose(BaseModel):
+    """Where a moving object is: its rest shape carried by the versor and moved by the offset."""
+
+    @classmethod
+    def identity(cls, metric: Metric) -> Pose
+        """Returns the pose of an object at rest."""
+
+class Motion(Dials):
+    """The rates a rigid motion is driven by, one per basis plane, and the side the step is taken on."""
+
+    def __init__(self, metric: Metric, **data: Any) -> None
+
+    def __getitem__(self, labels: tuple[Label, Label]) -> float
+    def __setitem__(self, labels: tuple[Label, Label], rate: float) -> None
+
+    @property
+    def planes(self) -> tuple[Plane, ...]
+
+    @property
+    def generator(self) -> Vector
+        """Returns the bivector Ω of the rates."""
+
+    @property
+    def drift(self) -> Vector
+        """Returns the velocity v of the origin."""
+
+    def advance(self, pose: Pose, dt: float) -> Pose
+        """Returns the pose a time dt later, the rates held constant."""
+
+    def stop(self) -> None
+        """Set every rate and velocity to zero."""
+```
+
+**Functions:**
+
+```python
+def planes(metric: Metric) -> tuple[Plane, ...]
+    """Returns the basis planes of a space, each with its kind."""
+```
+
+---
+
 ## Utilities
 
 Helper utilities.

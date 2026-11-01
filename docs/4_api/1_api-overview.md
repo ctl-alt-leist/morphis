@@ -573,3 +573,27 @@ sketch.save("figures/example.png")
 ```
 
 Pen-and-ink conceptual figures rendered with matplotlib. A sketch takes the same views and projections as the Scene; marks that set out displacements need an affine one. See [Visualization Architecture](../5_design/4_visuals_architecture.md) and the [examples](../2_examples/).
+
+### Stage
+
+```python
+from morphis.elements import metric
+from morphis.manifold import Circle, Interval
+from morphis.stage import Dial, Dials, Motion, Pose
+
+class Torus(Dials):
+    major: float = Dial(1.0, Interval(0.2, 3.0))   # refused outside [0.2, 3]
+    phase: float = Dial(0.0, Circle())             # wrapped onto the circle
+
+torus = Torus()
+torus.set("major", 1.4)                            # by path, as a panel or a key would
+torus.describe()                                   # what each dial is, as plain data
+
+g = metric(space=4)
+motion = Motion(g)                                 # one rate per plane, the kinds from the metric
+motion[1, 3] = 0.5                                 # motion[3, 1] is then -0.5
+motion.intrinsic = True                            # turn in the object's own planes
+pose = motion.advance(Pose.identity(g), 0.1)       # the exact step exp(-½ Ω dt)
+```
+
+The backend of the playground: dials with domains, read and set by path, and the rates that move an object rigidly. See [Controls and the Playground](../5_design/8_controls.md).
