@@ -250,7 +250,8 @@ Reference = Entry | str | int
 
 def _copy(obj: Any) -> Any:
     """A copy of an object to keep at rest, however its class copies."""
-    if hasattr(obj, "copy"):
+    own = getattr(type(obj), "copy", None)
+    if own is not None and own is not BaseModel.copy:
         result = obj.copy()
     elif isinstance(obj, BaseModel):
         result = obj.model_copy(deep=True)

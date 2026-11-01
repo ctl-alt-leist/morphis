@@ -123,3 +123,12 @@ class TestSurfaces:
         stage.set(torus, "shape.resolution", 12)
         assert torus.object.n_vertices == 144
         assert torus.get("look.opacity") == 0.6
+
+    def test_rest_is_kept_apart_from_the_drawn(self):
+        stage = Stage(metric(space=4))
+        torus = stage.create("Torus")
+        stage.set(torus, "motion.rate.1,3", pi / 2)
+        stage.play()
+        stage.advance(1.0)
+        assert torus.rest.vertices.data is not torus.object.vertices.data
+        assert not allclose(torus.rest.vertices.data, torus.object.vertices.data)
