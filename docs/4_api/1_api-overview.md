@@ -596,4 +596,27 @@ motion.intrinsic = True                            # turn in the object's own pl
 pose = motion.advance(Pose.identity(g), 0.1)       # the exact step exp(-½ Ω dt)
 ```
 
-The backend of the playground: dials with domains, read and set by path, and the rates that move an object rigidly. See [Controls and the Playground](../5_design/8_controls.md).
+```python
+from morphis.elements import Frame, basis_vectors, metric
+from morphis.stage import Stage
+from morphis.visuals import Scene
+
+g = metric(space=4)
+stage = Stage(g, Scene())                          # the Scene is optional; a stage runs headless
+cube = stage.add("cube", Frame(*basis_vectors(g)), filled=True)
+torus = stage.create("Torus")                      # from the catalog, with shape dials
+turn = stage.create("Rotation")                    # an operation, acting on the entries beside it
+pair = stage.group("pair", [cube, torus])
+
+stage.set(cube, "motion.rate.1,4", 0.5)            # every change is an event in the journal
+stage.set("space", "view.eye", 1 / 3)              # the space's own dials: clock, view, camera
+stage.toggle_on(turn)
+stage.play()
+stage.advance(1 / 30)                              # step the clock; the Scene redraws at capture
+stage.capture()
+
+stage.save("session.jsonl")                        # the journal is the whole state
+again = Stage.load("session.jsonl")                # replayed; handed-in entries need the setup
+```
+
+The backend of the playground: dials with domains, read and set by path; the rates that move an object rigidly; and the stage, whose tree of actors, groups, and operations changes only through events in its journal. See [Controls and the Playground](../5_design/8_controls.md).

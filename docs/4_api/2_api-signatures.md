@@ -2166,6 +2166,119 @@ def planes(metric: Metric) -> tuple[Plane, ...]
     """Returns the basis planes of a space, each with its kind."""
 ```
 
+### `morphis.stage.pose`
+
+*Poses*
+
+```python
+class Pose(BaseModel):
+    """A rigid map of the space: directions carried by the versor, points carried and moved by the offset."""
+
+    @classmethod
+    def identity(cls, metric: Metric) -> Pose
+
+    def directions(self, v: Vector) -> Vector
+        """Returns a direction or blade carried by the versor, M v M̃."""
+
+    def points(self, x: Vector) -> Vector
+        """Returns points carried by the versor and moved by the offset, M x M̃ + o."""
+
+    def compose(self, inner: Pose) -> Pose
+        """Returns this pose applied after the inner one."""
+
+    def about(self, pivot: Vector) -> Pose
+        """Returns the pose taken about a pivot."""
+
+    def rebased(self, pivot: Vector) -> Pose
+        """Returns the pose whose map about the pivot is this map: the inverse of about."""
+```
+
+### `morphis.stage.stage`
+
+*The Stage*
+
+```python
+class Stage:
+    """The space, the tree of entries in it, the selection, the clock, and the journal."""
+
+    def __init__(self, metric: Metric, scene: Scene | None = None) -> None
+
+    def __getitem__(self, reference: Entry | str | int) -> Entry
+    def entry(self, reference: Entry | str | int) -> Entry
+    def walk(self, start: Entry | str | int = 0) -> Iterator[Entry]
+        """Yields an entry and everything beneath it, in the order of the outline."""
+
+    def add(self, name: str, obj: Any, dials: Dials | None = None, *, step=None, parent=0,
+            position: int | None = None, origin: Vector | None = None, **options) -> Actor
+        """Put an object on the stage; a callable with dials is a shape built from them."""
+
+    def create(self, line: str, name: str | None = None, parent=0, position: int | None = None) -> Entry
+        """Add what a catalog entry makes."""
+
+    def group(self, name: str, members: list = (), parent=0) -> Group
+    def remove(self, reference) -> None
+    def select(self, reference | None) -> None
+    def set(self, reference, path: str, value: Any) -> None
+        """Set a dial by group and path; refused before anything is recorded."""
+    def rename(self, reference, name: str) -> None
+    def move(self, reference, parent, position: int | None = None) -> None
+    def play(self) -> None
+    def pause(self) -> None
+    def stop(self, reference=None) -> None
+    def reset(self, reference=None) -> None
+    def toggle_frame(self, reference=None) -> None
+    def toggle_on(self, reference=None) -> None
+    def bake(self, reference=None) -> None
+    def scope(self, reference) -> list[Placed]
+        """Returns the entries an operation acts on directly."""
+
+    def apply(self, event: Event) -> None
+        """The one reducer: the one place the stage is changed."""
+
+    def advance(self, dt: float) -> None
+    def carry(self) -> None
+    def capture(self) -> None
+
+    def save(self, path: str | Path) -> None
+    @classmethod
+    def load(cls, path, setup=None, scene=None, frame_rate: float | None = None) -> Stage
+    def replay(self, events: list[Event], frame_rate: float | None = None, until: float | None = None) -> None
+
+    def subscribe(self, callback: Callable[[], None]) -> None
+    def notice(self, text: str, level: str = "info") -> None
+
+class Actor(Placed):
+    """One object on the stage, its rest shape carried through its pose into the drawn object."""
+
+class Group(Placed, Container):
+    """Entries held together, moved together by the group's own pose."""
+
+class Operation(Entry):
+    """An entry that moves the entries beside it in its group, and everything beneath them."""
+```
+
+### `morphis.stage.catalog`
+
+*The Catalog*
+
+```python
+class Addition(NamedTuple):
+    obj: Any
+    dials: Dials | None = None
+    step: Callable | None = None
+    options: dict = {}
+
+def entry(name: str, section: str, applies=...) -> Callable
+    """Register a catalog entry: a function from the space to an addition."""
+
+def operation(name: str, applies=...) -> Callable
+    """Register an operation: a function from the space to its dials' starting values."""
+
+def sections(space: Metric | None = None) -> dict[str, list[str]]
+def evaluate(text: str, metric: Metric) -> Vector
+    """Returns the element a line of text gives in a space."""
+```
+
 ---
 
 ## Utilities

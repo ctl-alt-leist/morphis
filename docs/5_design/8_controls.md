@@ -2,7 +2,7 @@
 
 This document is the design for interactive control of morphis pictures: a playground where many kinds of mathematical objects, in many kinds of spaces, are moved, reshaped, and evolved by hand or by key, from a panel in a window of its own beside the picture.
 
-The first phase is built: dials and motion, in `morphis.stage`. The visuals the rest stands on are the Scene that draws what it is handed, the `View` and `Projective` family that name a picture, the general bivector exponential, and the `Recording`.
+The first two phases are built, in `morphis.stage`: dials and motion, and the stage itself with its tree, catalog, operations, journal, and Scene. The visuals the rest stands on are the Scene that draws what it is handed, the `View` and `Projective` family that name a picture, the general bivector exponential, and the `Recording`.
 
 ## The One Idea
 
@@ -53,7 +53,7 @@ The stage also words the **notices**, the running messages the user reads, once 
 ```python
 g = metric(space=4)
 
-stage = Stage(g, view=Projective())
+stage = Stage(g, Scene())
 stage.add("cube", Frame(*basis_vectors(g)), filled=True)
 stage.add("torus", clifford_torus, Torus())
 stage.add("plane", e1 ^ e2)
@@ -81,7 +81,7 @@ Today a script owns both the loop and the clock: `for t in times: update; captur
 
 The panel supplies commands, the step laws hold the mathematics, and the Scene draws.
 
-**Scripted use.** The same stage runs with no front end. `stage.advance(dt)` steps it once, values are set by name (`stage["torus"].dials.major = 1.4`, `stage["cube"].motion[1, 3] = 0.5`, where `[1, 3]` addresses the $\mathbf e_{13}$ rate through the metric's labels), and `stage.scene.record(...)` records it, so a figure script and a live session share all of their code.
+**Scripted use.** The same stage runs with no front end. `stage.advance(dt)` steps it once, values are set by entry and path (`stage.set("torus", "shape.major", 1.4)`, `stage.set("cube", "motion.rate.1,3", 0.5)`, where `1,3` addresses the $\mathbf e_{13}$ rate through the metric's labels), and `stage.scene.record(...)` records it, so a figure script and a live session share all of their code.
 
 ## The Layout
 
@@ -135,7 +135,7 @@ A dial is a parameter with a domain. The domains are the ones the manifold code 
 | a set of choices | picker | one of them |
 | boolean | toggle | on or off |
 
-A group of dials is a `Dials` model, pydantic, knowing nothing of any GUI: it validates, describes itself as a JSON schema, and saves as TOML. Nested groups are sections of the inspector, shown in declaration order. A value is checked against its domain where it is entered and refused with what is allowed ("a number from 0.05 to 1") before it reaches the stage.
+A group of dials is a `Dials` model, pydantic, knowing nothing of any GUI: it validates, describes each dial as plain data, and reads and writes every dial by path. A field holding a table of numbers, such as a rate per plane or a coordinate per label, is a dial per key, and its keys continue the path. Nested groups are sections of the inspector, shown in declaration order. A value is checked against its domain where it is entered and refused with what is allowed ("a number from 0.05 to 1") before it reaches the stage.
 
 Dials are **absolute** or **rates**. An absolute dial is the value itself: a sphere's radius, the view's $κ$. A rate dial is a time derivative: the picture is a function of its history, advanced each tick by $Δt$. Motions are rates.
 
@@ -192,20 +192,19 @@ An object may be something the Scene draws, something built from parameters, or 
 A **dial provider** is a function from an object to a `Dials` group, registered against a class. When an actor is added, its dials are the groups of every provider registered for a class the object is an instance of, from the most general class to the most specific. A new kind of object gets dials by registering a provider for its class, with no change to the stage or any front end.
 
 ```python
-@provide(Element)
-def motion(element: Element) -> Motion:
+@provide(Mesh, "motion")
+def motion(element: Mesh) -> Motion:
     return Motion(element.metric)
 
-@provide(Drawable)
-def look(element: Drawable) -> Look:
-    return Look()                     # color, opacity, visible
+@provide(Mesh, "look")
+def look(element: Mesh) -> Look:
+    return Look()                     # opacity, visible
 ```
 
 | Provider | For | Dials |
 |----------|-----|-------|
 | `motion` | anything with a metric | the rates of its space, the extrinsic/intrinsic toggle |
-| `look` | anything the Scene draws | color, opacity, visibility |
-| `sampling` | a `Patch` | the resolution of its mesh |
+| `look` | anything the Scene draws | opacity, visibility |
 | `motion` | a group | the rates, moving every member together |
 
 ### Shapes Built from Parameters
@@ -250,16 +249,16 @@ Objects are added from any front end. In a script, `stage.add` takes an object a
 The catalog is registered the way dial providers are: an entry is a name, a section, and a function from the space to a new object, so a new kind of object is offered by registering it, with no change to any front end.
 
 ```python
-@catalog("Torus", section="Surfaces")
-def torus(space: Metric) -> Actor:
-    return Actor(clifford_torus, Torus())
+@entry("Torus", section="Surfaces")
+def _torus(space: Metric) -> Addition:
+    return Addition(torus, Torus(metric=space), options={"opacity": 0.6})
 ```
 
 | Section | Entries |
 |---------|---------|
 | Elements | a vector, a bivector, a frame, an expression |
-| Surfaces | a plane, a sphere, a torus, a patch from a function |
-| Operations | a rotation, a translation, a boost, a reflection |
+| Surfaces | a sphere, a torus, a plane, each with its resolution |
+| Operations | a rotation, a translation, and a boost where the space has one |
 | Groups | an empty group |
 
 **An expression** asks for a line of text and evaluates it in the space, where the basis vectors are named by their labels: `e1 ^ e3`, `0.5 * (e1 + e2)`, `exp(e12 * pi / 4)`. A physicist's fastest way to put a particular element on the stage is to write it, and the line is kept on the actor, so the expression is its dial and can be edited.
@@ -351,19 +350,25 @@ One script of keys (`morphis/app/tests/script.py`) drives the picture's key bind
 
 ## Saving
 
-The state of a stage is its space dials, the tree of actors, and for each actor its dials and its pose. `stage.save("state.toml")` writes all of it in readable TOML, and `Stage.load` restores it, so a view tuned by hand is reproduced exactly by a figure script. The journal is saved beside it when asked for, for replay.
+The journal is the stage's whole state, so saving a stage is writing its journal: `stage.save("session.jsonl")` writes a line naming the space, then one line per event, and marks the time of the save with an event of its own. `Stage.load` replays the events onto a new stage, which gives the state back exactly, with the clock run up to the save.
+
+Entries made from the catalog are rebuilt from the catalog, since each `Added` event names the entry it came from. Entries a script handed in are not data, so a journal holding them is loaded with that script's setup: `Stage.load(path, setup)` runs the setup on the new stage first, checks its events against the journal's opening ones, and replays the rest. A view tuned by hand is then reproduced exactly by the figure script that set it up, and given a frame rate inside `scene.record`, the load records the session as it was played.
 
 ## Module Structure
 
 ```
 src/morphis/stage/
-  dial.py          Dial and its domains, the Dials base model: schema, values by path, TOML
+  dial.py          Dial and its domains, the Dials base model: specs, values by path, tables
   motion.py        Motion(metric): rates, extrinsic or intrinsic, the exact step
-  providers.py     dial providers registered by class, and the common ones
-  catalog.py       what can be added, registered by name and section
-  operation.py     operations: scope, order, on or applied once
+  pose.py          Pose: a rigid map of the space, composed down the tree, taken about a pivot
+  providers.py     dial providers registered by class: motion and look
+  carriers.py      how a pose is applied to each class of object
+  space.py         the space's dials: clock, view, camera
+  catalog.py       what can be added: elements, expressions, surfaces, operations, groups
+  operation.py     operations: their dials, the map they apply, how it acts
   events.py        the journal's events
-  stage.py         Stage and Actor: the space, the tree, selection, the reducer, the run loop
+  journal.py       the journal on disk
+  stage.py         Stage, its entries, the reducer, saving and replay
 src/morphis/app/
   vocabulary.py    every command, its key, label, and where it is live
   controls.py      what each command does, when, and how its button reads
@@ -378,7 +383,7 @@ src/morphis/app/
 ## Phases
 
 1. **Dials and motion, headless (built).** `Dial`, `Dials`, `Motion`, `Pose`, values by path. Tested without any window: the extrinsic and intrinsic steps, the exact flow for constant $Ω$, the kinds of rate from the metric.
-2. **The stage, scripted.** Actors holding any object, dial providers, the catalog, global operations scoped by the tree, the tree with groups, selection, the journal and its reducer, `advance`, saving, replay into a recording.
+2. **The stage, scripted (built).** Actors holding any object, dial providers and carriers, the catalog with written expressions and surfaces, global operations scoped by the tree, groups, selection, the journal and its reducer, `advance`, saving and replay, and the Scene driven by the space's view, camera, and look dials. The view's axes are not yet dials, and surfaces are not offered in PGA until translators move points there.
 3. **The vocabulary, controls, and the picture.** Commands and their keys, `Controls`, the run loop at wall-clock pace, the picture's key bindings and status line. The playground is usable from the keyboard alone at the end of this phase.
 4. **The NiceGUI panel.** The panes, the outline with filtering and selection, the inspector rebuilt on selection, the action row, readouts. The key script drives both front ends.
 5. **Further.** Dragging in the outline to reorder and regroup; clicking an object in the picture to select it; selecting several objects and showing the dials they share; undo from the journal; the Library and Journal screens; a global-phase dial for Kähler spaces; a slicing-hyperplane control for manifolds; physical knobs behind the same commands; local operations, gauge transformations among them.
