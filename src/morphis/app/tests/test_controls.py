@@ -186,3 +186,16 @@ class TestScreens:
         assert (tmp_path / "session.jsonl").exists()
         keys(controls, "mod-s")
         assert asked == [Command.SAVE]
+
+
+class TestPausedClock:
+    def test_a_motion_dial_says_the_clock_is_paused(self, controls):
+        controls.take(Command.ADD, "Vector")
+        keys(controls, "1", "2", "right", "right")
+        texts = [notice.text for notice in controls.stage.notices]
+        assert texts.count("the clock is paused: ␣ plays") == 1
+
+    def test_not_while_playing(self, controls):
+        controls.take(Command.ADD, "Vector")
+        keys(controls, "space", "1", "2", "right")
+        assert "paused" not in controls.stage.notices[-1].text

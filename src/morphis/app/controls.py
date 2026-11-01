@@ -263,7 +263,7 @@ class Controls:
                 self._select_first()
             elif command is Command.TAKE and self._target() is not None:
                 entry, spec = self._target()
-                self.stage.set(entry, spec.path, _typed(text))
+                self._set(entry, spec.path, _typed(text))
             elif command is Command.SAVE and text:
                 self.stage.save(text)
                 self.saved_to = text
@@ -405,7 +405,15 @@ class Controls:
         else:
             entry, spec = target
             sense = self.sense if self.focus == "dials" else 1.0
-            self.stage.set(entry, spec.path, _turned(spec, entry.get(spec.path), sense * step))
+            self._set(entry, spec.path, _turned(spec, entry.get(spec.path), sense * step))
+
+    def _set(self, entry: Entry, path: str, value: Any) -> None:
+        """Set a dial, saying so when it is a motion's and the clock stands still, so nothing moves yet."""
+        self.stage.set(entry, path, value)
+        paused = f"the clock is paused: {Command.PLAY.glyph()} plays"
+        last = self.stage.notices[-1].text if self.stage.notices else None
+        if path.startswith("motion.") and not self.stage.playing and last != paused:
+            self.stage.notice(paused)
 
     def _target(self) -> tuple[Entry, DialSpec] | None:
         """The entry and dial the focused pane has highlighted, if any."""

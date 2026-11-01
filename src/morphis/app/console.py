@@ -333,6 +333,8 @@ def main(arguments: list[str]) -> None:
     dimension = int(next((argument for argument in arguments if argument.isdigit()), 4))
     scene = None if "--alone" in arguments else Scene()
     controls = Controls(Stage(metric(space=dimension), scene))
+    # The clock runs from the start, so a turned dial shows at once; nothing moves until one is
+    controls.stage.play()
     if scene is not None:
         scene.on_key(lambda keysym, character, control, shift: _picture_key(controls, keysym, character, control))
     asyncio.run(Console(controls).run())
