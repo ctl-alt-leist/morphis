@@ -3,12 +3,13 @@ Unit tests for projective maps to the picture.
 """
 
 import pytest
-from numpy import allclose, array, cos, cross, eye, sin, sqrt
+from numpy import allclose, array, cos, cross, eye, pi, sin, sqrt
 from numpy.random import default_rng
 
 from morphis.elements import Dot, Frame, Vector, basis_vector, metric
 from morphis.manifold import Circle, Patch
-from morphis.visuals.projective import Orthographic, Perspective, Projection, Stereographic, resolve
+from morphis.transforms import rotor
+from morphis.visuals.projective import Orthographic, Perspective, Projection, Projective, Stereographic, resolve
 
 
 def random_points(g, lot, seed=0):
@@ -213,3 +214,58 @@ class TestViews:
 
         with pytest.raises(ValueError):
             resolve(projection, metric(space=5))
+
+
+class TestProjective:
+    def test_holds_orthographic_and_perspective(self):
+        g = metric(space=5)
+        x = random_points(g, (6,), seed=20)
+        axes = (1, 3, 5)
+        assert allclose(Projective(axes=axes).resolve(g)(x), Orthographic(axes=axes).resolve(g)(x))
+        assert allclose(
+            Projective(axes=axes, eye=0.25).resolve(g)(x), Perspective(axes=axes, distance=4.0).resolve(g)(x)
+        )
+
+    def test_eye_on_the_sphere_is_stereographic(self):
+        g = metric(space=4)
+        radius = 2.0
+        x = random_points(g, (7,), seed=21)
+        x = Vector(radius * x.data / sqrt((x.data**2).sum(-1, keepdims=True)), grade=1, metric=g)
+        assert allclose(Projective(eye=1 / radius).resolve(g)(x), Stereographic(radius=radius).resolve(g)(x))
+
+    def test_shear_draws_the_dropped_direction(self):
+        g = metric(space=4)
+        shear = (0.3, -0.2, 0.5)
+        x = random_points(g, (5,), seed=22)
+        expected = x.data[:, :3] + x.data[:, 3:] * array(shear)
+        assert allclose(Projective(shear=shear).resolve(g)(x), expected)
+
+    def test_quarter_turn_trades_axis_and_dropped(self):
+        g = metric(space=4)
+        x = random_points(g, (5,), seed=23)
+        drawn = Projective(turn={(1, 4): pi / 2}).resolve(g)(x)
+        assert allclose(abs(drawn[:, 0]), abs(x.data[:, 3]))
+        assert allclose(drawn[:, 1:], x.data[:, 1:3])
+
+    def test_turning_the_screen_is_turning_the_space_back(self):
+        g = metric(space=4)
+        x = random_points(g, (5,), seed=24)
+        e1, e2, e3, e4 = (basis_vector(n, g) for n in (1, 2, 3, 4))
+        B = 0.4 * (e1 ^ e4) + 0.7 * (e2 ^ e3)
+        R = rotor(B, 1.0)
+        turned = (~R * x * R)[1]
+        view = Projective(eye=0.3, turn={(1, 4): 0.4, (2, 3): 0.7})
+        assert allclose(view.resolve(g)(x), Projective(eye=0.3).resolve(g)(turned))
+
+    def test_toward_moves_every_parameter_linearly(self):
+        start = Projective(eye=0.1, turn={(1, 4): 1.0})
+        end = Projective(eye=0.5, shear=(0.2, 0.0, 0.0), turn={(2, 4): 2.0})
+        middle = start.toward(end, 0.25)
+        assert middle.eye == pytest.approx(0.2)
+        assert allclose(middle.shear, (0.05, 0.0, 0.0))
+        assert middle.turn == pytest.approx({(1, 4): 0.75, (2, 4): 0.5})
+        assert start.toward(end, 1.0) == Projective(eye=0.5, shear=(0.2, 0.0, 0.0), turn={(1, 4): 0.0, (2, 4): 2.0})
+
+    def test_toward_needs_the_same_axes(self):
+        with pytest.raises(ValueError):
+            Projective().toward(Projective(axes=(2, 3, 4)), 0.5)

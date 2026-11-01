@@ -25,20 +25,22 @@ metric into a Projection to the 3D drawing space.
     Orthographic(axes=(1, 2, 3))                 the axes, read off directly
     Perspective(axes=(1, 2, 3), distance=4.0)    an eye at that distance along the dropped directions
     Stereographic(axes=(1, 2, 3), pole=4)        from the pole of the sphere, then onto the axes
+    Projective(axes=(1, 2, 3), eye=0.25, ...)    the family holding the first two, with a shear and a turned screen
 """
 
 from __future__ import annotations
 
 from typing import Mapping, Sequence
 
-from numpy import asarray, concatenate, einsum, eye, ones, sqrt, zeros
+from numpy import asarray, concatenate, einsum, eye, ones, sqrt, stack, zeros
 from numpy.linalg import svd
 from numpy.typing import NDArray
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from morphis.elements.frame import Frame
 from morphis.elements.metric import Label, Metric, euclidean_metric
 from morphis.elements.vector import Vector, basis_vector
+from morphis.transforms.rotations import rotor
 
 
 # The first three spatial directions; x is 1 in every signature
@@ -353,6 +355,91 @@ class Perspective(View):
         matrix[3, metric.dim] = 1.0
 
         return Projection(matrix, metric)
+
+
+class Projective(View):
+    """
+    The projective family of views: an eye along the dropped directions, a shear, and a turned screen.
+
+    The screen is first turned by the rotor R = exp(-½ B) of the turn bivector B, which draws each point as the
+    point R̃ x R would be drawn by the unturned screen. With x' that point and u the sum of its components along the
+    dropped directions, the picture is:
+
+        Π(x) = (x'_axes + u s) / (1 - κ u)
+
+    The eye κ is the inverse distance of the center of projection: at κ = 0 the center is ideal and the map is
+    orthographic, and as κ grows the eye comes in from infinity. On the sphere of radius ρ about the origin, κ = 1 / ρ
+    puts the eye on the sphere and the map is stereographic from that pole. The shear s is the picture vector each
+    unit of u is drawn as, an oblique parallel projection when κ = 0. The turn names its planes by label, so it holds
+    no metric; turning the screen through a quarter turn in the plane of an axis and a dropped direction trades the
+    two.
+
+    Orthographic(axes) is Projective(axes), and Perspective(axes, distance=D) is Projective(axes, eye=1 / D). The
+    weight 1 - κ u must stay positive on what is drawn, which holds for points within distance 1 / κ of the origin
+    when there is one dropped direction.
+
+    Every parameter is a coordinate on the family, so views blend: toward() moves each one linearly, and an eased
+    fraction carries the picture smoothly from one view to another.
+
+    Args:
+        eye: Inverse distance κ of the eye; 0 for a parallel projection
+        shear: Picture vector s of a unit step along the dropped directions
+        turn: The turn bivector, as angles keyed by planes (a, b) of labels, the plane of e_a ∧ e_b
+    """
+
+    eye: float = 0.0
+    shear: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    turn: dict[tuple[Label, Label], float] = Field(default_factory=dict)
+
+    def toward(self, other: Projective, fraction: float) -> Projective:
+        """
+        The view a fraction of the way from this view to another, every parameter moved linearly.
+
+        A plane absent from one turn counts there as angle 0. Name each plane the same way in both views, since
+        (a, b) and (b, a) are the same plane with opposite sense.
+        """
+        if other.axes != self.axes:
+            raise ValueError(f"views blend only over the same axes, got {self.axes!r} and {other.axes!r}")
+
+        def mix(start: float, end: float) -> float:
+            return start + fraction * (end - start)
+
+        planes = {**self.turn, **other.turn}
+        result = Projective(
+            axes=self.axes,
+            eye=mix(self.eye, other.eye),
+            shear=tuple(mix(a, b) for a, b in zip(self.shear, other.shear, strict=True)),
+            turn={plane: mix(self.turn.get(plane, 0.0), other.turn.get(plane, 0.0)) for plane in planes},
+        )
+
+        return result
+
+    def _project(self, metric: Metric) -> Projection:
+        slots = self._slots(metric)
+        dropped = [slot for slot in range(metric.dim) if slot not in slots]
+        matrix = zeros((4, metric.dim + 1))
+        for row, slot in enumerate(slots):
+            matrix[row, slot] = 1.0
+            matrix[row, dropped] = self.shear[row]
+
+        matrix[3, dropped] = -self.eye
+        matrix[3, metric.dim] = 1.0
+
+        # The turned point R̃ x R is linear in x; column n is the image of the n-th basis vector
+        turning = eye(metric.dim + 1)
+        if self.turn:
+            R = rotor(_turn_bivector(self.turn, metric), 1.0)
+            vectors = [basis_vector(metric.to_user(n), metric) for n in range(metric.dim)]
+            turning[: metric.dim, : metric.dim] = stack([(~R * e * R)[1].data for e in vectors], axis=-1)
+
+        return Projection(matrix @ turning, metric)
+
+
+def _turn_bivector(turn: Mapping[tuple[Label, Label], float], metric: Metric) -> Vector:
+    """The bivector Σ θ_ab e_a ∧ e_b of a turn keyed by planes of labels."""
+    planes = [angle * (basis_vector(a, metric) ^ basis_vector(b, metric)) for (a, b), angle in turn.items()]
+
+    return sum(planes[1:], planes[0])
 
 
 class Stereographic(View):

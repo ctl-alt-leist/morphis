@@ -10,9 +10,9 @@ Main classes:
 - Text: 3D text annotations
 
 Elements of any dimension are drawn through a View (Orthographic, Perspective,
-Stereographic), which names the directions drawn as x, y, z by their labels
-and resolves against each element's Metric: (1, 2, 3) is x, y, z in every
-signature.
+Stereographic, or the Projective family that holds the first two), which names
+the directions drawn as x, y, z by their labels and resolves against each
+element's Metric: (1, 2, 3) is x, y, z in every signature.
 
 For PGA-specific visualization, see the contexts submodule. For pen-and-ink
 conceptual figures, see morphis.visuals.ink.
@@ -63,6 +63,7 @@ from morphis.visuals.projective import (
     Orthographic as Orthographic,
     Perspective as Perspective,
     Projection as Projection,
+    Projective as Projective,
     Stereographic as Stereographic,
     View as View,
 )
