@@ -231,7 +231,7 @@ def contract(signature: str, *tensors: "Vector | Operator") -> "Vector":
     sig = signature.replace(" ", "")
 
     # Perform einsum
-    result_data = einsum(sig, *data_arrays)
+    result_data = einsum(sig, *data_arrays, optimize=True)
 
     # Get metric from first tensor that has one
     metric = None

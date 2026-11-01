@@ -118,7 +118,7 @@ def hodge_dual(u: Vector) -> Vector:
         metric_parts = ", ".join(f"{vector_indices[m]}{lowered_indices[m]}" for m in range(k))
         sig = f"{metric_parts}, ...{vector_indices}, {lowered_indices} -> ..."
         metric_args = [g.data] * k
-        result_data = einsum(sig, *metric_args, u.data, eps) / factorial(k)
+        result_data = einsum(sig, *metric_args, u.data, eps, optimize=True) / factorial(k)
         return Vector(data=result_data, grade=0, metric=u.metric, collection=u.collection)
 
     vector_indices = INDICES[:k]
@@ -128,7 +128,7 @@ def hodge_dual(u: Vector) -> Vector:
     eps_sub = lowered_indices + result_indices
     sig = f"{metric_parts}, ...{vector_indices}, {eps_sub} -> ...{result_indices}"
     metric_args = [g.data] * k
-    result_data = einsum(sig, *metric_args, u.data, eps) / factorial(k)
+    result_data = einsum(sig, *metric_args, u.data, eps, optimize=True) / factorial(k)
 
     return Vector(
         data=result_data,
