@@ -149,7 +149,7 @@ def apply_exterior_power(A: "Operator", blade: "Vector", k: int) -> "Vector":
 
     # Build einsum signature and apply k copies of the vector map
     sig = exterior_power_signature(k)
-    result_data = einsum(sig, *([vector_map] * k), blade.data)
+    result_data = einsum(sig, *([vector_map] * k), blade.data, optimize=True)
 
     return Vector(
         data=result_data,
