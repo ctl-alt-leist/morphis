@@ -151,25 +151,44 @@ The basis k-vectors $\mathbf{e}_{mn\ldots}$ are conventionally written as antisy
 
 However, in computation we need a concrete representation. Morphis uses an **ordered basis** with antisymmetry carried on the components. We write:
 
-```math
-\mathbf{e}^{<}_{mn} \quad \text{(ordered basis, indices satisfy } m < n \text{)}
-```
-
-Any k-vector can then be expressed in two equivalent ways. Summed over all index values, every ordered set of $k$ directions appears $k!$ times, so the sum carries a factor $1 / k!$. Summed over the ordered basis, each set appears once:
-
 $$
-b = \frac{1}{2} b^{mn} \mathbf e_{mn} = \sum_{m \lt n} b^{mn} \mathbf e_{mn}^{\lt}
+\hat{\mathbf e}_{mn} \quad \text{(ordered basis, indices sorted ascending)}
 $$
 
-The stored components $b^{mn}$ are the antisymmetric ones, with no factor absorbed into them. The wedge of two vectors stores $b^{mn} = u^m v^n - u^n v^m$, and in 2D:
+The hat sorts its indices and so carries no sign of its own: $\hat e_{21} = \hat e_{12} = e_{12}$.
+
+Any k-vector can then be expressed in two equivalent ways:
 
 $$
-\mathbf{u} \wedge \mathbf{v} = (u^1 v^2 - u^2 v^1) \mathbf{e}_{12}
+b = b^{mn} \mathbf e_{mn}
+  = \tilde b^{mn} \hat{\mathbf e}_{mn}
 $$
 
-so that $\mathbf e_1 \wedge \mathbf e_2$ is stored as $+1$ at $(1, 2)$ and $-1$ at $(2, 1)$.
+where the "symmetric" components $b^{mn}$ are the raw products (such as $u^m v^n$) used with the unordered (conceptual) basis, and the antisymmetric components $\tilde{b}^{mn}$ incorporate the full alternating structure:
 
-This choice fixes the factorials everywhere else. An operation that contracts all $k$ indices of a stored k-vector sums each set of directions $k!$ times, and divides by $k!$ to count it once: the norm, the interior products, the complements, and the Hodge dual all carry that factor.
+$$
+\tilde b^{mn} = b^{mn} ε^{mn}
+$$
+
+The $k$-index antisymmetric symbol $ε^{m_1 \ldots m_k}$ automatically handles sign changes from index ordering. For a bivector in 2D:
+
+$$
+b = (u^1 v^2 - u^2 v^1) \mathbf e_{12} = u^m v^n ε^{mn} \hat{\mathbf e}_{mn}
+$$
+
+The antisymmetric combination arises from the Levi-Civita structure. No factorial appears, since each term of the wedge occurs once in the sum.
+
+This convention allows efficient computation: we sum over ordered index combinations and let the antisymmetric symbol handle the signs, rather than explicitly storing and manipulating signed basis elements.
+
+### Factorials in Component Formulas
+
+What an array stores is the signed combination over all orderings, the components of $b$ as an antisymmetric tensor. For a wedge of vectors this is $u^m v^n - u^n v^m$, so $\mathbf e_1 \wedge \mathbf e_2$ is stored as $+1$ at $(1, 2)$ and $-1$ at $(2, 1)$. Each term then occurs $k!$ times in a sum over all indices:
+
+$$
+b = \frac{1}{k!} b^{m \ldots n} \mathbf e_{m \ldots n} \quad \text{(stored components)}
+$$
+
+An operation that contracts all $k$ indices of a stored k-vector divides by $k!$ for the same reason: the norm, the interior products, the complements, and the Hodge dual all carry that factor.
 
 ## Lot Dimensions
 
