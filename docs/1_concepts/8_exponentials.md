@@ -144,15 +144,21 @@ turned = R * e1 * ~R                   # e1 turned by π/(3√2) in the e_14 pla
 
 ## The Logarithm
 
-The **logarithm** extracts the generator from a versor. For rotor $R = a + b$ where $a$ is the scalar part and $b$ is the bivector part:
+The **logarithm** extracts the generator from a versor. For a simple rotor $R = a + b$, where $a$ is the scalar part and the bivector part $b$ squares to a scalar $λ$:
 
-```math
-\log R = \arctan2(|b|, a) \cdot \frac{b}{|b|}
-```
+$$
+\log R = \begin{cases}
+\arctan2(\sqrt{-λ}, a) \frac{b}{\sqrt{-λ}} & \text{if } λ \lt 0 \\
+\text{arctanh}(\sqrt{λ} / a) \frac{b}{\sqrt{λ}} & \text{if } λ \gt 0 \\
+\frac{b}{a} & \text{if } λ = 0
+\end{cases}
+$$
+
+The three cases are rotations, boosts, and translations. A rotor that is not simple raises `ValueError`.
 
 The result is a bivector whose:
-- Direction defines the rotation plane
-- Magnitude equals half the rotation angle
+- Direction defines the invariant plane
+- Magnitude equals half the rotation angle or rapidity
 
 ```python
 from morphis.operations import log_versor

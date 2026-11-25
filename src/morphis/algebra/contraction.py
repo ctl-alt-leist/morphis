@@ -130,16 +130,11 @@ def _contract_indexed(*indexed_tensors: IndexedTensor) -> "Vector":
         for idx in indices:
             index_counts[idx] = index_counts.get(idx, 0) + 1
 
-    # Output indices are those that appear exactly once (not contracted)
-    # Preserve order of first appearance
-    seen = set()
-    output_indices = ""
-    for indices in all_indices:
-        for idx in indices:
-            if idx not in seen:
-                seen.add(idx)
-                if index_counts[idx] == 1:
-                    output_indices += idx
+    # Output indices are those that appear exactly once (not contracted), in
+    # order of first appearance, lot before geometric to match Vector storage
+    free = [idx for indices in all_indices for idx in indices if index_counts[idx] == 1]
+    geo_indices = {idx for it in indexed_tensors for idx in it.output_geo_indices}
+    output_indices = "".join(sorted(free, key=lambda idx: idx in geo_indices))
 
     # Build einsum signature
     input_sig = ",".join(all_indices)
@@ -159,6 +154,28 @@ def _contract_indexed(*indexed_tensors: IndexedTensor) -> "Vector":
     result_grade = _infer_grade_from_indexed(indexed_tensors, output_indices)
 
     return Vector(data=result_data, grade=result_grade, metric=metric)
+
+
+def _output_geo_indices(tensor: "Vector | Operator", indices: str) -> str:
+    """
+    The labels, among one per axis of the tensor, of its output geometric axes.
+
+    A Vector is stored (*lot, *geo) and all its geometric axes are output. An
+    Operator is stored (*out_lot, *in_lot, *out_geo, *in_geo).
+    """
+    from morphis.elements.vector import Vector
+    from morphis.operations.operator import Operator
+
+    result = ""
+
+    if isinstance(tensor, Vector):
+        result = indices[len(tensor.lot) :]
+
+    elif isinstance(tensor, Operator):
+        start = tensor.output_spec.collection + tensor.input_spec.collection
+        result = indices[start : start + tensor.output_spec.grade]
+
+    return result
 
 
 def _infer_grade_from_indexed(indexed_tensors: tuple[IndexedTensor, ...], output_indices: str) -> int:
@@ -241,36 +258,29 @@ def contract(signature: str, *tensors: "Vector | Operator") -> "Vector":
             break
 
     # Infer grade from output shape
-    result_grade = _infer_grade_from_signature(sig, tensors, result_data)
+    result_grade = _infer_grade_from_signature(sig, tensors)
 
     return Vector(data=result_data, grade=result_grade, metric=metric)
 
 
-def _infer_grade_from_signature(signature: str, tensors: tuple, result_data) -> int:
-    """Infer grade for einsum-style contraction result."""
-    from morphis.elements.vector import Vector
+def _infer_grade_from_signature(signature: str, tensors: tuple) -> int:
+    """
+    Infer grade for einsum-style contraction result.
 
-    # Parse signature to get output indices
+    The result grade equals the number of output geometric indices that appear
+    in the result, as it does for the bracket syntax.
+    """
     if "->" in signature:
         input_part, output_indices = signature.split("->")
     else:
-        # No explicit output - numpy determines it
-        return 0 if result_data.ndim == 0 else result_data.ndim
+        # einsum's implicit output: indices that appear exactly once, sorted
+        input_part = signature
+        letters = input_part.replace(",", "")
+        output_indices = "".join(sorted(idx for idx in set(letters) if letters.count(idx) == 1))
 
-    input_parts = input_part.split(",")
-
-    # Track which indices are geometric (vs lot)
     geo_indices = set()
-
-    for k, t in enumerate(tensors):
-        if k < len(input_parts) and isinstance(t, Vector):
-            indices = input_parts[k]
-            n_lot = len(t.lot)
-            n_geo = t.grade
-            # Geometric indices are the last 'grade' indices
-            if len(indices) >= n_lot + n_geo:
-                geo_part = indices[n_lot : n_lot + n_geo]
-                geo_indices.update(geo_part)
+    for indices, t in zip(input_part.split(","), tensors, strict=False):
+        geo_indices.update(_output_geo_indices(t, indices))
 
     # Count geometric indices in output
     result_grade = sum(1 for idx in output_indices if idx in geo_indices)

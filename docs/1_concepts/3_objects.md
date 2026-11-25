@@ -110,7 +110,7 @@ b = e1 ^ e2
 vectors = b.span()  # Returns (v1, v2) where b = v1 ^ v2
 ```
 
-Note: Factorization is not unique. Any $k$ linearly independent vectors spanning the same subspace yield the same blade (up to scalar).
+The vectors returned wedge to the blade itself and are orthogonal in the metric. Factorization is not unique: other vectors spanning the same subspace give the same blade up to a scalar. A k-vector that is not a blade raises `ValueError`.
 
 ## MultiVectors
 

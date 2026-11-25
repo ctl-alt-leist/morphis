@@ -271,25 +271,26 @@ class Vector(IndexableMixin, Tensor):
         A blade can be factorized as v1 ^ v2 ^ ... ^ vk, representing a
         k-dimensional oriented subspace. Not all k-vectors are blades.
 
-        For grades 0 and 1, all Vectors are blades.
-        For grade 2+, checks if the Vector is factorizable.
+        For grades 0 and 1, all Vectors are blades. For grade 2+, checks if
+        the Vector is factorizable, for every element of the lot.
 
         Returns:
-            True if this Vector is a simple k-vector (vec)
+            True if this Vector is a simple k-vector
         """
-        # Scalars and grade-1 vectors are always blades
-        if self.grade <= 1:
-            return True
+        from numpy import ndindex
 
-        # For higher grades, use factorization to check
-        # A k-vector is a blade iff it has rank 1 as an antisymmetric tensor
         from morphis.operations.factorization import factor
 
-        try:
-            factor(self)
-            return True
-        except ValueError:
-            return False
+        result = True
+
+        if self.grade > 1:
+            try:
+                for index in ndindex(self.lot):
+                    factor(Vector(self.data[index], grade=self.grade, metric=self.metric))
+            except ValueError:
+                result = False
+
+        return result
 
     @property
     def at(self) -> AtAccessor:
@@ -453,10 +454,9 @@ class Vector(IndexableMixin, Tensor):
         elif len(indices) == n_total:
             # Full indexing -> IndexedTensor
             # All geometric indices (after lot) are "output geometric" for Vectors
-            from morphis.algebra.contraction import IndexedTensor
+            from morphis.algebra.contraction import IndexedTensor, _output_geo_indices
 
-            output_geo_indices = indices[n_lot:]
-            return IndexedTensor(self, indices, output_geo_indices=output_geo_indices)
+            return IndexedTensor(self, indices, output_geo_indices=_output_geo_indices(self, indices))
         else:
             raise ValueError(
                 f"Index string '{indices}' has {len(indices)} indices, but expected "
