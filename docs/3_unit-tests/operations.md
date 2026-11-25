@@ -2,6 +2,8 @@
 
 Mathematical foundations for wedge product, interior product, duality, norms, and projections.
 
+`operations/tests/test_identities.py` checks these for every grade, in Euclidean, spacetime (both sign conventions), complex, and projective metrics. It uses random k-vectors, and random blades not aligned with the axes where an identity holds only for blades. Its reference for the geometric product is a multiplication table of basis blades built from the metric alone, and every other operation is tied to the geometric product by the identity that defines it.
+
 ## Wedge Product
 
 The wedge (exterior) product constructs higher-grade blades.
@@ -62,9 +64,14 @@ The interior product (left contraction) contracts indices using the metric.
 
 For grade-$j$ blade $\mathbf{A}$ and grade-$k$ blade $\mathbf{B}$ with $j \leq k$:
 
-```math
-(\mathbf{A} \lrcorner \mathbf{B})^{n_1 \ldots n_{k - j}} = A^{m_1 \ldots m_j} B_{m_1 \ldots m_j}^{n_1 \ldots n_{k - j}}
-```
+$$
+\begin{aligned}
+A \lrcorner B &= \langle A B \rangle_{k - j} \\
+(A \lrcorner B)^{n_1 \ldots n_{k - j}} &= \frac{1}{j!} A^{m_j \ldots m_1} B_{m_1 \ldots m_j}^{\ \ \ \ \ \ \ \ n_1 \ldots n_{k - j}}
+\end{aligned}
+$$
+
+so that $\mathbf e_{12} \lrcorner \mathbf e_{12} = -1$. The right contraction is $A \llcorner B = \langle A B \rangle_{j - k}$ for $j \geq k$.
 
 Indices lowered via metric:
 
@@ -92,6 +99,20 @@ Scalar contraction:
 s \lrcorner \mathbf{B} = s \mathbf{B}
 ```
 
+### Identities
+
+With $x$ a vector and $A$ of grade $j$:
+
+$$
+\begin{aligned}
+(A \wedge B) \lrcorner C &= A \lrcorner (B \lrcorner C) \\
+x \lrcorner (A \wedge B) &= (x \lrcorner A) \wedge B + (-1)^j A \wedge (x \lrcorner B) \\
+x A &= x \lrcorner A + x \wedge A \\
+\widetilde{A \lrcorner B} &= \tilde B \llcorner \tilde A \\
+\tilde A \lrcorner A &= \text{form}(A)
+\end{aligned}
+$$
+
 ### Orthogonality
 
 For orthogonal basis vectors $\mathbf{e}_m \perp \mathbf{e}_n$ with $m \neq n$:
@@ -108,15 +129,15 @@ Complement operations map between dual grades using the Levi-Civita symbol.
 
 For grade-$k$ blade in $d$ dimensions:
 
-```math
-\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
-```
+$$
+\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
+$$
 
 ### Left Complement
 
-```math
-\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = ε_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
-```
+$$
+\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = \frac{1}{k!} ε_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
+$$
 
 ### Grade Mapping
 
@@ -126,9 +147,25 @@ For grade-$k$ blade in $d$ dimensions:
 
 ### Double Complement
 
-```math
-\overline{\overline{\mathbf{B}}} = \pm \mathbf{B}
-```
+$$
+\begin{aligned}
+\overline{\overline{\mathbf B}} &= (-1)^{k(d - k)} \mathbf B \\
+\underline{\overline{\mathbf B}} &= \mathbf B
+\end{aligned}
+$$
+
+### Volume and Norm
+
+For basis blades, with $\mathbb 1$ the unit pseudoscalar:
+
+$$
+\begin{aligned}
+\mathbf B \wedge \overline{\mathbf B} &= \mathbb 1 \\
+\underline{\mathbf B} \wedge \mathbf B &= \mathbb 1
+\end{aligned}
+$$
+
+In Euclidean space a complement has the norm of its element. Complements do not depend on the metric.
 
 ## Hodge Dual
 
@@ -144,6 +181,16 @@ The Hodge dual incorporates metric structure:
 \text{grade}(\star \mathbf{B}) = d - \text{grade}(\mathbf{B})
 ```
 
+### Identities
+
+$$
+\begin{aligned}
+\mathbf A \wedge \star \mathbf B &= (\mathbf A \cdot \mathbf B) \mathbb 1 \\
+\star \mathbf B &= \tilde{\mathbf B} \mathbb 1 \\
+\star \star \mathbf B &= (-1)^{k(d - k)} \det(g) \mathbf B
+\end{aligned}
+$$
+
 ### Examples
 
 Scalar dual:
@@ -156,15 +203,15 @@ where $\mathbb{1}$ is the pseudoscalar.
 
 3D vector dual:
 
-```math
-\star \mathbf{v} = v^m ε^{mnp} \mathbf{e}_{np}
-```
+$$
+\star \mathbf{v} = \frac{1}{2} v^m ε^{mnp} \mathbf{e}_{np}
+$$
 
 3D bivector dual:
 
-```math
-\star (\mathbf{e}_1 \wedge \mathbf{e}_2) = \pm \mathbf{e}_3
-```
+$$
+\star (\mathbf{e}_1 \wedge \mathbf{e}_2) = \mathbf{e}_3
+$$
 
 ## Norms
 
@@ -282,9 +329,9 @@ For vectors:
 
 ### Projection Formula
 
-```math
-\text{proj}_{\mathbf{B}}(\mathbf{A}) = \frac{(\mathbf{A} \lrcorner \mathbf{B}) \lrcorner \mathbf{B}}{|\mathbf{B}|^2}
-```
+$$
+\text{proj}_{\mathbf{B}}(\mathbf{A}) = (\mathbf{A} \lrcorner \mathbf{B}) \lrcorner \mathbf{B}^{-1}
+$$
 
 ### Rejection Formula
 
@@ -298,33 +345,63 @@ For vectors:
 \mathbf{A} = \text{proj}_{\mathbf{B}}(\mathbf{A}) + \text{rej}_{\mathbf{B}}(\mathbf{A})
 ```
 
+### Properties
+
+- a blade that is not null projects onto itself unchanged, in any signature
+- projecting twice changes nothing, and the rejection projects to zero
+- the projection $\mathbf p$ of a vector satisfies $\mathbf p \wedge \mathbf B = 0$, and its rejection $\mathbf r$ satisfies $\mathbf r \lrcorner \mathbf B = 0$
+- projection is an outermorphism, and does not depend on the scale or sign of $\mathbf B$
+- a higher grade projects onto a lower one as zero, and so does anything onto a null blade
+
+## Factorization
+
+A blade factors into vectors that are orthogonal in the metric and wedge to it exactly, sign included, in any signature:
+
+$$
+\mathbf{B} = \mathbf{v}_1 \wedge \cdots \wedge \mathbf{v}_k
+$$
+
+A k-vector that is not a blade, such as $\mathbf e_{12} + \mathbf e_{34}$, raises an error.
+
 ## Join and Meet
 
 ### Join (Union)
 
-```math
-\mathbf{A} \vee \mathbf{B} = \mathbf{A} \wedge \mathbf{B}
-```
+$$
+\text{join}(\mathbf{A}, \mathbf{B}) = \mathbf{A} \wedge \mathbf{B}
+$$
 
 ### Meet (Intersection)
 
-```math
-\mathbf{A} \wedge \mathbf{B} = \overline{\left(\overline{\mathbf{A}} \wedge \overline{\mathbf{B}}\right)}
-```
+$$
+\mathbf{A} \vee \mathbf{B} = \underline{\left(\overline{\mathbf{A}} \wedge \overline{\mathbf{B}}\right)}
+$$
 
 ### Grade Behavior
 
 Join:
 
-```math
-\text{grade}(\mathbf{A} \vee \mathbf{B}) = j + k
-```
+$$
+\text{grade}(\mathbf{A} \wedge \mathbf{B}) = j + k
+$$
 
 Meet (transverse):
 
-```math
-\text{grade}(\mathbf{A} \wedge \mathbf{B}) = j + k - d
-```
+$$
+\text{grade}(\mathbf{A} \vee \mathbf{B}) = j + k - d
+$$
+
+### Meet Identities
+
+$$
+\begin{aligned}
+\overline{\mathbf A \vee \mathbf B} &= \overline{\mathbf A} \wedge \overline{\mathbf B} \\
+\mathbf A \vee \mathbb 1 &= \mathbf A \\
+\mathbf A \vee \mathbf B &= (-1)^{(d - j)(d - k)} \mathbf B \vee \mathbf A
+\end{aligned}
+$$
+
+The meet is associative and metric-independent, lies in both blades, and is scalar zero when $j + k \lt d$. Values: $\mathbf e_{12} \vee \mathbf e_{13} = \mathbf e_1$ and $\mathbf e_{12} \vee \mathbf e_{23} = \mathbf e_2$ in 3D.
 
 ## Geometric Product
 

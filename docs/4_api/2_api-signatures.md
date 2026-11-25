@@ -670,10 +670,10 @@ def dot(u: 'Vector', v: 'Vector') -> 'NDArray'
     """Compute the inner product of two grade-1 vectors: g_{mn} u^m v^n."""
 
 def project(u: 'Vector', v: 'Vector') -> 'Vector'
-    """Project vector u onto vector v:"""
+    """Project u onto the subspace of the blade v:"""
 
 def reject(u: 'Vector', v: 'Vector') -> 'Vector'
-    """Compute the rejection of vector u from vector v: the component of u"""
+    """Compute the rejection of u from the blade v:"""
 
 def interior(u: 'Vector', v: 'Vector') -> 'Vector'
     """Compute the left interior product (left contraction) of u into v:"""
@@ -805,10 +805,10 @@ def interior_signature(j: int, k: int) -> str
 
 ```python
 def factor(b: 'Vector', tol: 'float | None' = None) -> 'Vector'
-    """Factor a k-vector into k spanning grade-1 vectors."""
+    """Factor a blade into k spanning grade-1 vectors, orthogonal in the metric:"""
 
 def spanning_vectors(b: 'Vector', tol: 'float | None' = None) -> 'tuple[Vector, ...]'
-    """Factor a vector into its constituent grade-1 vectors."""
+    """Factor a blade into its constituent grade-1 vectors."""
 ```
 
 

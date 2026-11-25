@@ -343,9 +343,14 @@ The interior product (left contraction) contracts indices using the metric.
 
 For grade-$j$ Vector $\mathbf{A}$ and grade-$k$ Vector $\mathbf{B}$ with $j \leq k$:
 
-```math
-(\mathbf{A} \lrcorner \mathbf{B})^{n_1 \ldots n_{k - j}} = A^{m_1 \ldots m_j} B_{m_1 \ldots m_j}^{n_1 \ldots n_{k - j}}
-```
+$$
+\begin{aligned}
+A \lrcorner B &= \langle A B \rangle_{k - j} \\
+(A \lrcorner B)^{n_1 \ldots n_{k - j}} &= \frac{1}{j!} A^{m_j \ldots m_1} B_{m_1 \ldots m_j}^{\ \ \ \ \ \ \ \ n_1 \ldots n_{k - j}}
+\end{aligned}
+$$
+
+so that $\mathbf e_{12} \lrcorner \mathbf e_{12} = -1$. The right contraction is $A \llcorner B = \langle A B \rangle_{j - k}$ for $j \geq k$.
 
 where indices are lowered via the metric:
 
@@ -394,10 +399,8 @@ when $m \notin \lbrace n, p \rbrace$.
 For vector $\mathbf{e}_1$ and bivector $\mathbf{e}_1 \wedge \mathbf{e}_2$:
 
 ```math
-\mathbf{e}_1 \lrcorner (\mathbf{e}_1 \wedge \mathbf{e}_2) = \pm \mathbf{e}_2
+\mathbf{e}_1 \lrcorner (\mathbf{e}_1 \wedge \mathbf{e}_2) = \mathbf{e}_2
 ```
-
-with sign determined by orientation.
 
 ### Complement Operations
 
@@ -407,9 +410,9 @@ Complement operations map between dual grades using the Levi-Civita symbol.
 
 For grade-$k$ Vector in $d$ dimensions:
 
-```math
-\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = B^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
-```
+$$
+\overline{\mathbf{B}}^{m_{k + 1} \ldots m_d} = \frac{1}{k!} B^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
+$$
 
 This maps grade $k$ to grade $(d - k)$:
 
@@ -421,9 +424,9 @@ This maps grade $k$ to grade $(d - k)$:
 
 The left complement:
 
-```math
-\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = ε_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
-```
+$$
+\underline{\mathbf{B}}^{m_1 \ldots m_{d - k}} = \frac{1}{k!} ε_{m_1 \ldots m_d} B^{m_{d - k + 1} \ldots m_d}
+$$
 
 also maps grade $k$ to grade $(d - k)$.
 
@@ -443,11 +446,14 @@ In 4D, bivectors map to bivectors:
 
 **Double Complement**
 
-Applying complement twice recovers the original (up to sign):
+Applying the same complement twice recovers the original up to a sign, and each complement undoes the other:
 
-```math
-\overline{\overline{\mathbf{B}}} = \pm \mathbf{B}
-```
+$$
+\begin{aligned}
+\overline{\overline{\mathbf B}} &= (-1)^{k(d - k)} \mathbf B \\
+\underline{\overline{\mathbf B}} &= \mathbf B
+\end{aligned}
+$$
 
 ### Hodge Dual
 
@@ -593,9 +599,9 @@ Join and meet are dual operations connecting union and intersection of subspaces
 
 The join of two Vectors is their wedge product:
 
-```math
-\mathbf{A} \vee \mathbf{B} = \mathbf{A} \wedge \mathbf{B}
-```
+$$
+\text{join}(\mathbf{A}, \mathbf{B}) = \mathbf{A} \wedge \mathbf{B}
+$$
 
 This constructs the smallest subspace containing both.
 
@@ -603,23 +609,23 @@ This constructs the smallest subspace containing both.
 
 The meet uses complement duality:
 
-```math
-\mathbf{A} \wedge \mathbf{B} = \overline{\left(\overline{\mathbf{A}} \wedge \overline{\mathbf{B}}\right)}
-```
+$$
+\mathbf{A} \vee \mathbf{B} = \underline{\left(\overline{\mathbf{A}} \wedge \overline{\mathbf{B}}\right)}
+$$
 
 **Grade Behavior**
 
 For grade-$j$ and grade-$k$ Vectors:
 
-```math
-\text{grade}(\mathbf{A} \vee \mathbf{B}) = j + k
-```
+$$
+\text{grade}(\mathbf{A} \wedge \mathbf{B}) = j + k
+$$
 
 The meet grade depends on intersection dimension:
 
-```math
-\text{grade}(\mathbf{A} \wedge \mathbf{B}) = j + k - d
-```
+$$
+\text{grade}(\mathbf{A} \vee \mathbf{B}) = j + k - d
+$$
 
 when the Vectors span transverse subspaces.
 
@@ -628,7 +634,7 @@ when the Vectors span transverse subspaces.
 In 4D, two planes (trivectors) meet in a line:
 
 ```math
-\text{grade}(\text{plane}_1 \wedge \text{plane}_2) = 3 + 3 - 4 = 2
+\text{grade}(\text{plane}_1 \vee \text{plane}_2) = 3 + 3 - 4 = 2
 ```
 
 **Plane-Line Intersection**
@@ -636,7 +642,7 @@ In 4D, two planes (trivectors) meet in a line:
 A plane and line meet in a point:
 
 ```math
-\text{grade}(\text{plane} \wedge \text{line}) = 3 + 2 - 4 = 1
+\text{grade}(\text{plane} \vee \text{line}) = 3 + 2 - 4 = 1
 ```
 
 ### Dot Product
@@ -689,9 +695,9 @@ Projection and rejection decompose a Vector relative to another.
 
 The projection of $\mathbf{A}$ onto $\mathbf{B}$:
 
-```math
-\text{proj}_{\mathbf{B}}(\mathbf{A}) = \frac{(\mathbf{A} \lrcorner \mathbf{B}) \lrcorner \mathbf{B}}{|\mathbf{B}|^2}
-```
+$$
+\text{proj}_{\mathbf{B}}(\mathbf{A}) = (\mathbf{A} \lrcorner \mathbf{B}) \lrcorner \mathbf{B}^{-1}
+$$
 
 **Rejection Formula**
 
