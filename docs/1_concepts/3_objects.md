@@ -203,13 +203,13 @@ v_rotated = R * v * ~R  # v becomes e2
 
 ## Motors (PGA)
 
-In **Projective Geometric Algebra** (PGA), a **motor** combines rotation and translation in a single element. Motors have grades $\lbrace 0, 2 \rbrace$ and satisfy $M \tilde{M} = 1$.
+In **Projective Geometric Algebra** (PGA), a **motor** combines rotation and translation in a single element. Motors have grades $\lbrace 0, 2, 4 \rbrace$ and satisfy $M \tilde{M} = 1$.
 
 $$
-M = R + \frac{ε}{2} \mathbf{t} R
+M = R - \frac{1}{2} (\mathbf e_0 \wedge \mathbf t) R
 $$
 
-where $R$ is a rotor, $\mathbf{t}$ is the translation vector, and $ε$ is the degenerate direction.
+where $R$ is a rotor, $\mathbf{t}$ is the translation vector, and $\mathbf e_0$ is the degenerate direction.
 
 ```python
 from morphis.elements import pga_metric

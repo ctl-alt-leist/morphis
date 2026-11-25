@@ -794,7 +794,7 @@ class Vector(IndexableMixin, Tensor):
         """
         Transform this Vector in-place by a motor/versor.
 
-        Performs the sandwich product M * self * ~M and updates self.data.
+        Applies transforms.transform and updates self.data.
         This is efficient for animation since no new Vector object is created.
 
         Args:

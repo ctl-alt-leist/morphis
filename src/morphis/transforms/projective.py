@@ -204,22 +204,38 @@ def distance_point_to_point(p: Vector, q: Vector) -> NDArray:
     return sqrt(einsum("ab, ...a, ...b -> ...", g_eucl, diff, diff))
 
 
-def distance_point_to_line(p: Vector, l: Vector) -> NDArray:
-    """Compute distance from a point to a line as |p ^ l| / |l|."""
-    Metric.merge(p.metric, l.metric)
-    p_wedge_l = p ^ l
-    numerator = norm(p_wedge_l)
-    denominator = norm(l)
+def _weight_norm(b: Vector) -> NDArray:
+    """
+    Norm of the weight of a blade, the part that contains e_0.
+
+    The weight of a wedge of points is e_0 ^ (the wedge of their differences),
+    so this is the volume they span. The metric norm sees only the bulk, which
+    depends on where the origin is.
+    """
+    from morphis.elements.vector import Vector
+
+    attitude = b.data[(..., 0) + (slice(None),) * (b.grade - 1)]
+
+    return norm(Vector(attitude, grade=b.grade - 1, metric=b.metric))
+
+
+def _distance_to_flat(p: Vector, b: Vector) -> NDArray:
+    """Distance from a point to a flat, as the ratio of two spanned volumes."""
+    Metric.merge(p.metric, b.metric)
+    numerator = _weight_norm(p ^ b)
+    denominator = _weight_norm(p) * _weight_norm(b)
+
     return numerator / where(denominator > TOLERANCE, denominator, 1.0)
+
+
+def distance_point_to_line(p: Vector, l: Vector) -> NDArray:
+    """Compute distance from a point to a line as |p ^ l| / (|p| |l|), in weight norms."""
+    return _distance_to_flat(p, l)
 
 
 def distance_point_to_plane(p: Vector, h: Vector) -> NDArray:
-    """Compute distance from a point to a plane as |p ^ h| / |h|."""
-    Metric.merge(p.metric, h.metric)
-    p_wedge_h = p ^ h
-    numerator = norm(p_wedge_h)
-    denominator = norm(h)
-    return numerator / where(denominator > TOLERANCE, denominator, 1.0)
+    """Compute distance from a point to a plane as |p ^ h| / (|p| |h|), in weight norms."""
+    return _distance_to_flat(p, h)
 
 
 # =============================================================================
@@ -260,10 +276,22 @@ def point_on_plane(p: Vector, h: Vector, tol: float | None = None) -> NDArray:
 
 
 def line_in_plane(l: Vector, h: Vector, tol: float | None = None) -> NDArray:
-    """Check if a line lies in a plane: l ^ h = 0."""
+    """
+    Check if a line lies in a plane: every point of the line lies in it.
+
+    The rows l^{m n} e_n span the line, so each must satisfy x ^ h = 0. The
+    wedge l ^ h itself vanishes for every line of a 3D space.
+    """
+    from morphis.elements.vector import Vector
+
     if tol is None:
         tol = TOLERANCE
-    joined = l ^ h
+
+    metric = Metric.merge(l.metric, h.metric)
+    rows = Vector(l.data, grade=1, metric=metric)
+    planes = Vector(h.data[(..., newaxis) + (slice(None),) * h.grade], grade=h.grade, metric=metric)
+    joined = rows ^ planes
+
     return np_all(np_abs(joined.data) < tol, axis=tuple(range(-5, 0)))
 
 
@@ -276,11 +304,12 @@ def translator(v: Vector) -> MultiVector:
     """
     Create a translator for pure translation (PGA only).
 
-    M = 1 + (1/2) t^m e_{0m}
+    M = exp(-(1/2) e_0 ^ t) = 1 - (1/2) t^m e_{0m}
 
     The translator is a MultiVector with grades {0, 2} where the bivector
-    part uses only degenerate (e_0) components. Apply via sandwich product:
-        translated = M * p * ~M
+    part uses only degenerate (e_0) components. Apply it with transform, which
+    acts on the complements of points:
+        translated = transform(p, M)
 
     Args:
         v: Direction Vector (grade-1) representing the translation.
@@ -294,7 +323,7 @@ def translator(v: Vector) -> MultiVector:
         from morphis.transforms.projective import direction
         v = direction([1, 0, 0])
         M = translator(v)
-        p_translated = M * p * ~M
+        p_translated = transform(p, M)
     """
     from morphis.elements.multivector import MultiVector
     from morphis.elements.vector import Vector
@@ -306,6 +335,9 @@ def translator(v: Vector) -> MultiVector:
     dim = metric.dim
     collection = v.collection
 
+    if not metric.is_projective or metric.kinds[0] != "projective":
+        raise ValueError("translator requires a projective metric with the ideal direction e_0 first")
+
     # Extract Euclidean components (bulk) from the direction vector
     displacement = bulk(v)
 
@@ -313,11 +345,12 @@ def translator(v: Vector) -> MultiVector:
     shape_0 = collection if collection else ()
     scalar_data = ones(shape_0)
 
-    # Bivector part: (1/2) t^m e_{0m}
+    # Bivector part: -(1/2) t^m e_{0m}
     shape_2 = collection + (dim, dim)
     bivector_data = zeros(shape_2)
     for m in range(1, dim):
-        bivector_data[..., 0, m] = 0.5 * displacement[..., m - 1]
+        bivector_data[..., 0, m] = -0.5 * displacement[..., m - 1]
+        bivector_data[..., m, 0] = 0.5 * displacement[..., m - 1]
 
     components = {
         0: Vector(scalar_data, grade=0, metric=metric, collection=collection),
@@ -351,16 +384,15 @@ def screw(
         center: Optional point Vector for rotation center (default: origin).
 
     Returns:
-        MultiVector (motor) representing the screw motion.
+        MultiVector (motor) representing the screw motion, with grades {0, 2, 4}.
 
     Example:
         # Rotation in xy-plane + translation along z
         B = e1 ^ e2
         t = direction([0, 0, 1])
         M = screw(B, angle=pi/2, translation=t)
-        p_transformed = M * p * ~M
+        p_transformed = transform(p, M)
     """
-    from morphis.elements.multivector import MultiVector
     from morphis.transforms.rotations import rotor
 
     metric = B.metric
@@ -386,11 +418,4 @@ def screw(
     else:
         result = geometric(T, R)
 
-    # Project to motor grades {0, 2}
-    motor_components = {k: v for k, v in result.data.items() if k in {0, 2}}
-
-    return MultiVector(
-        data=motor_components,
-        metric=metric,
-        collection=B.collection,
-    )
+    return result

@@ -132,7 +132,7 @@ $$
 where $\mathbf e_{0m}$ are degenerate bivectors (involving the ideal direction $\mathbf e_0$).
 
 ```python
-from morphis.transforms import translator, direction
+from morphis.transforms import direction, transform, translator
 from morphis.elements import pga_metric
 
 h = pga_metric(3)
@@ -142,8 +142,20 @@ d = direction([1, 0, 0], metric=h)
 T = translator(d)
 
 # Apply translation
-p_translated = T * p * ~T
+p_translated = transform(p, T)
 ```
+
+### Action
+
+The sandwich product moves hyperplanes when hyperplanes are the grade-1 elements. In morphis the grade-1 elements are points, so a motor acts on the complement, and the left complement undoes the right one:
+
+$$
+b' = \underline{M \overline{b} \tilde M}
+$$
+
+`transform`, `translate`, `rotate`, and the `transform` methods of `Vector` and `Frame` all apply a motor this way in a projective space. The action distributes over the wedge, so lines and planes move with their points, and a translator leaves directions alone. The written-out sandwich `M * p * ~M` agrees for rotors about the origin, and does not translate.
+
+With $s = M \tilde M$ and $s A$ the matrix of the sandwich on grade 1, the same map contracts each index of $b$ with $A^{-T}$ and scales by $s \det(A)$, which is how it is computed.
 
 ### Properties
 
@@ -156,16 +168,16 @@ p_translated = T * p * ~T
 A **motor** combines rotation and translation in PGA:
 
 $$
-M = RT
+M = TR
 $$
 
 or via line exponential:
 
 $$
-M = e^{-\ell θ/2}
+M = e^{-\overline{\ell} θ/2}
 $$
 
-where $\ell$ is a line (bivector in PGA).
+where $\overline{\ell}$ is the complement of a line $\ell = \mathbf p \wedge \mathbf q$ of unit weight, $|\mathbf q - \mathbf p| = 1$, in 3D. This turns by $θ$ about the line, right-handed along $\mathbf q - \mathbf p$. A motor has grades 0, 2, and 4, with a grade-4 part when the translation leaves the rotation plane.
 
 ```python
 from morphis.transforms import rotation_about_point
@@ -220,8 +232,6 @@ p = point([1, 2, 3], metric=h)
 # Extract Euclidean coordinates
 coords = euclidean(p)  # [1, 2, 3]
 ```
-
-> **Known issue.** A translator does not move a point in this representation. The sandwich $T \mathbf p \tilde T$ changes the weight instead, because $\mathbf e_0$ anticommutes with every $\mathbf e_m$ and squares to zero, so `transform(point([1, 0, 0]), translator(direction([2, 0, 0])))` lands at $(0.5, 0, 0)$. Rotations about the origin are unaffected. The sandwich does translate the complement $\overline{\mathbf p}$, by $+\mathbf t$ for $T = 1 - \frac{1}{2} \mathbf e_0 \wedge \mathbf t$, and the left complement brings it back.
 
 ### Direction Representation
 
@@ -287,14 +297,18 @@ point_on_line(p, l)
 **Point to point**:
 
 $$
-d(\mathbf{p}, \mathbf{q}) = |\mathbf{p} \wedge \mathbf{q}| / (w(\mathbf{p}) \cdot w(\mathbf{q}))
+d(\mathbf{p}, \mathbf{q}) = \frac{\Vert \mathbf{p} \wedge \mathbf{q} \Vert_0}{\Vert \mathbf{p} \Vert_0 \Vert \mathbf{q} \Vert_0}
 $$
 
 **Point to line**:
 
 $$
-d(\mathbf{p}, \ell) = |\mathbf{p} \wedge \ell| / |\ell|
+d(\mathbf{p}, \ell) = \frac{\Vert \mathbf{p} \wedge \ell \Vert_0}{\Vert \mathbf{p} \Vert_0 \Vert \ell \Vert_0}
 $$
+
+**Point to plane**: the same, with a plane $π$ in place of $\ell$.
+
+Here $\Vert b \Vert_0$ is the norm of the weight of $b$, the part that contains $\mathbf e_0$. The weight of a wedge of points is $\mathbf e_0$ times the wedge of their differences, so its norm is the volume they span. The metric norm sees only the bulk, which depends on where the origin is.
 
 ```python
 from morphis.transforms import distance_point_to_point, distance_point_to_line
@@ -319,6 +333,6 @@ These are the defining properties of rigid motions (Euclidean isometries).
 | ------------ | ------------------- | ----------------- | ------------- |
 | Reflection   | Unit vector $n$     | Odd               | $-nxn$        |
 | Rotation     | Bivector $b$        | Even (rotor)      | $Rx\tilde{R}$ |
-| Translation  | Degenerate bivector | Even (translator) | $Tx\tilde{T}$ |
-| Rigid motion | Line $\ell$         | Even (motor)      | $Mx\tilde{M}$ |
+| Translation  | Degenerate bivector | Even (translator) | $\underline{T \overline{x} \tilde T}$ |
+| Rigid motion | Complement of a line, and translation | Even (motor) | $\underline{M \overline{x} \tilde M}$ |
 | Boost        | Timelike bivector   | Even              | $Bx\tilde{B}$ |

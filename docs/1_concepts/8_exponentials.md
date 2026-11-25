@@ -227,7 +227,7 @@ $$
 T = e^{-\mathbf{t}/2} = 1 - \frac{1}{2}\mathbf{t}
 $$
 
-This **translator** implements pure translation via the sandwich product.
+Here $\mathbf{t} = t^m \mathbf e_{0m}$. This **translator** implements pure translation through the sandwich product, carried through complements since points are grade-1 (see [Transforms](9_transforms.md)).
 
 ```python
 from morphis.transforms import translator
@@ -244,16 +244,16 @@ T_composed = T1 * T2  # = translator(d1 + d2)
 A **motor** combines rotation and translation:
 
 $$
-M = RT
+M = TR
 $$
 
-or equivalently via the exponential of a line:
+A rotation about a line of 3D space is the exponential of its complement:
 
 $$
-M = e^{-\ell θ/2}
+M = e^{-\overline{\ell} θ/2}
 $$
 
-where $\ell$ is a PGA line (bivector + bivector).
+where $\ell = \mathbf p \wedge \mathbf q$ is a line of unit weight.
 
 ```python
 from morphis.transforms import rotor, translator, rotation_about_point
@@ -291,4 +291,4 @@ This Lie algebra structure governs:
 | Euclidean bivector | $e^{-bθ/2}$ | Rotor (rotation) |
 | Minkowski timelike bivector | $e^{bφ/2}$ | Boost |
 | PGA degenerate bivector | $e^{-t/2}$ | Translator |
-| PGA line | $e^{-Lθ/2}$ | Motor (screw motion) |
+| Complement of a PGA line | $e^{-\overline{\ell} θ/2}$ | Motor (rotation about the line) |

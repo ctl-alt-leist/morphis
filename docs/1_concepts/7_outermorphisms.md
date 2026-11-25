@@ -133,7 +133,7 @@ $$
 \mathbf{x} \mapsto V \mathbf{x} V^{-1}
 $$
 
-For a rotor $R$, this gives a rotation. The fact that $R b \tilde{R}$ preserves grade for k-vectors is precisely because the sandwich product is an outermorphism when $V$ is a versor.
+For a rotor $R$, this gives a rotation. The fact that $R b \tilde{R}$ preserves grade for k-vectors is precisely because the sandwich product is an outermorphism when $V$ is a versor. In a projective space, motors act on points through the complement of this map, which is again an outermorphism (see [Transforms](9_transforms.md)).
 
 ## Implementation Details
 

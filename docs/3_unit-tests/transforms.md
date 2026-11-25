@@ -134,8 +134,10 @@ so the exponential truncates to linear term.
 
 ### Translation Action
 
+A motor acts on the complement, since the grade-1 elements are points:
+
 $$
-\mathbf{p}' = T \mathbf{p} \tilde{T}
+\mathbf{p}' = \underline{T \overline{\mathbf p} \tilde T}
 $$
 
 For point $\mathbf{p} = \mathbf e_0 + x^m \mathbf e_m$:
@@ -171,13 +173,13 @@ Motors combine rotation and translation.
 ### Composition
 
 $$
-M = RT
+M = TR
 $$
 
-or via line exponential:
+or, for a rotation about a line of unit weight in 3D:
 
 $$
-M = e^{-Lθ/2}
+M = e^{-\overline{\ell} θ/2}
 $$
 
 ### Rotation About Arbitrary Center
@@ -189,7 +191,7 @@ $$
 ### Center Invariance
 
 $$
-M \mathbf{p}_c \tilde{M} = \mathbf{p}_c
+\underline{M \overline{\mathbf p}_c \tilde M} = \mathbf p_c
 $$
 
 ### Non-Commutativity
@@ -333,8 +335,14 @@ $$
 Point-to-line:
 
 $$
-d(\mathbf{p}, \ell) = \frac{|\mathbf{p} \wedge \ell|}{|\ell|}
+d(\mathbf{p}, \ell) = \frac{\Vert \mathbf{p} \wedge \ell \Vert_0}{\Vert \mathbf{p} \Vert_0 \Vert \ell \Vert_0}
 $$
+
+Here $\Vert b \Vert_0$ is the norm of the part of $b$ that contains $\mathbf e_0$. Point-to-plane distance has the same form.
+
+### Motions Against Vector Algebra
+
+`transforms/tests/test_motions.py` checks in 2D, 3D, and 4D that translators add to coordinates, fix directions, and compose by addition, that rotations about a point and screws act as their matrices, that lines and planes move with their points, and that every way of applying a motor agrees with the complement definition. Distances are checked against cross products and are preserved by rigid motions.
 
 ### Incidence Predicates
 

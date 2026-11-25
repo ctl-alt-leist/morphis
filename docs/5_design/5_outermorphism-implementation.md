@@ -267,7 +267,7 @@ $$
 \mathbf{v} \mapsto M \mathbf{v} \tilde{M}
 $$
 
-The grade-1 action extends to all grades through the exterior power, and grade preservation under $M \mathbf{B} \tilde{M}$ is what identifies the sandwich product as an outermorphism whenever $M$ is a versor.
+The grade-1 action extends to all grades through the exterior power, and grade preservation under $M \mathbf{B} \tilde{M}$ is what identifies the sandwich product as an outermorphism whenever $M$ is a versor. In a projective space `transform` uses the complement of this map, whose grade-1 matrix is the inverse transpose up to scale.
 
 A constructor could build the operator from a versor:
 

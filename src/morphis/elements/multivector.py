@@ -191,18 +191,18 @@ class MultiVector(CompositeElement):
     @property
     def is_motor(self) -> bool:
         """
-        True if this is a PGA motor (grades {0, 2} with M * ~M = 1).
+        True if this is a PGA motor (grades {0, 2, 4} with M * ~M = 1).
 
         A motor in Projective Geometric Algebra represents a rigid motion
-        (rotation + translation). Motors have grades 0 and 2 only, and
-        satisfy M * ~M = 1.
+        (rotation + translation). Motors are even and satisfy M * ~M = 1; a
+        grade-4 part appears when the translation is out of the rotation plane.
 
         Note: This checks structural requirements, not metric signature.
         """
         from numpy import allclose
 
-        # Motors have only grades 0 and 2
-        if not all(k in {0, 2} for k in self.grades):
+        # Motors have only grades 0, 2, and 4
+        if not all(k in {0, 2, 4} for k in self.grades):
             return False
 
         # Check M * ~M = 1
@@ -559,12 +559,12 @@ class MultiVector(CompositeElement):
             t = Vector([1, 0, 0], grade=1, metric=g)
             M_transformed = M.apply_similarity(S, t)
         """
-        from morphis.operations.products import geometric, reverse
+        from morphis.transforms.actions import transform
 
-        # Sandwich product: S * self * ~S
-        S_rev = reverse(S)
-        temp = geometric(S, self)
-        result = geometric(temp, S_rev)
+        result = MultiVector(
+            data={k: transform(component, S) for k, component in self.data.items()},
+            metric=self.metric,
+        )
 
         if t is not None:
             # Translation applies to grade-1 component only

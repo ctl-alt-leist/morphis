@@ -17,7 +17,7 @@ A unified mathematical framework for geometric computation, providing elegant to
 - **Metric-Aware**: Objects carry their metric context (Euclidean, projective, etc.)
 - **Linear Operators**: Structured linear maps between vector spaces with SVD, pseudoinverse, least squares
 - **Visualization**: 3D rendering of vectors with PyVista, timeline-based animation, 4D projection
-- **Motor Transforms**: Rotors and translations via sandwich product
+- **Motor Transforms**: Rotors, translators, and motors acting on elements of every grade
 
 ## Documentation
 
@@ -31,8 +31,7 @@ A unified mathematical framework for geometric computation, providing elegant to
 
 ```python
 from morphis.elements import Frame, basis_vectors, euclidean_metric
-from morphis.operations import normalize
-from morphis.transforms import rotor
+from morphis.transforms import rotor, transform
 from numpy import pi
 
 # Create a 3D Euclidean metric and basis vectors
@@ -40,7 +39,7 @@ g = euclidean_metric(3)
 e1, e2, e3 = basis_vectors(g)
 
 # Bivector: oriented plane of rotation
-b = (e1 ^ e2).normalize()
+b = (e1 ^ e2).unit()
 
 # Frame: ordered collection of vectors
 F = Frame(e1, e2, e3)
@@ -48,8 +47,8 @@ F = Frame(e1, e2, e3)
 # Rotor: multivector that performs rotation
 R = rotor(b, pi / 4)
 
-# Transform vector and frame via sandwich product
-e1_rotated = e1.transform(R)
+# Transform vector and frame
+e1_rotated = transform(e1, R)
 F_rotated = F.transform(R)
 ```
 

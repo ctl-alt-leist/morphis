@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from numpy import array, broadcast_shapes, newaxis, sqrt as np_sqrt
+from numpy import array, newaxis, sqrt as np_sqrt
 
 from morphis.config import TOLERANCE
 from morphis.operations.products import geometric
@@ -111,10 +111,9 @@ def rotation_about_point(
         p = point([1, 0, 0])  # Center at x=1
         B = e1 ^ e2
         M = rotation_about_point(p, B, pi/2)
-        v_rotated = M * v * ~M
+        v_rotated = transform(v, M)
     """
     from morphis.elements.metric import Metric
-    from morphis.elements.multivector import MultiVector
     from morphis.transforms.projective import direction, euclidean as to_euclidean, translator
 
     # Validate metrics
@@ -132,16 +131,8 @@ def rotation_about_point(
 
     # Compose via geometric product: T2 * R * T1
     temp = geometric(R, T1)
-    result = geometric(T2, temp)
 
-    # Project to motor grades {0, 2}
-    motor_components = {k: v for k, v in result.data.items() if k in {0, 2}}
-
-    return MultiVector(
-        data=motor_components,
-        metric=metric,
-        collection=broadcast_shapes(p.collection, B.collection),
-    )
+    return geometric(T2, temp)
 
 
 # =============================================================================

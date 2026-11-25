@@ -159,7 +159,7 @@ def demo_translation() -> None:
     _e0, _e1, _e2, _e3 = basis_vectors(h)  # noqa: F841
 
     print("Translator T = exp(-t/2) = 1 - (1/2) t")
-    print("where t is a degenerate bivector e0 ^ direction.")
+    print("where t is the degenerate bivector e0 ^ direction.")
 
     subsection("Create translator")
     d = direction([2.0, 0.0, 0.0], metric=h)
@@ -173,7 +173,7 @@ def demo_translation() -> None:
     p_translated = transform(p, T)
 
     print(f"  Original: euclidean(p) = {euclidean(p)}")
-    print(f"  After T:  euclidean(T*p*~T) = {euclidean(p_translated)}")
+    print(f"  After T:  euclidean(transform(p, T)) = {euclidean(p_translated)}")
     print("  -> Moved by [2, 0, 0]")
 
     subsection("Translation is additive")
@@ -282,7 +282,7 @@ def demo_summary() -> None:
     print("  Motor M = T * R or R * T")
     print()
     print("ACTION:")
-    print("  x' = M * x * ~M  (sandwich product)")
+    print("  x' = transform(x, M)  (sandwich product on the complement of x)")
     print()
     print("PROPERTIES:")
     print("  - Rigid motions preserve distances")
