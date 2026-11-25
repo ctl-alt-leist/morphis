@@ -155,28 +155,21 @@ However, in computation we need a concrete representation. Morphis uses an **ord
 \mathbf{e}^{<}_{mn} \quad \text{(ordered basis, indices satisfy } m < n \text{)}
 ```
 
-Any k-vector can then be expressed in two equivalent ways:
+Any k-vector can then be expressed in two equivalent ways. Summed over all index values, every ordered set of $k$ directions appears $k!$ times, so the sum carries a factor $1 / k!$. Summed over the ordered basis, each set appears once:
 
-```math
-b = b^{mn} \mathbf{e}_{mn}
-  = \tilde{b}^{mn} \mathbf{e}^{<}_{mn}
-```
+$$
+b = \frac{1}{2} b^{mn} \mathbf e_{mn} = \sum_{m \lt n} b^{mn} \mathbf e_{mn}^{\lt}
+$$
 
-where the "symmetric" components $b^{mn}$ are used with the unordered (conceptual) basis, and the antisymmetric components $\tilde{b}^{mn}$ incorporate the full alternating structure:
+The stored components $b^{mn}$ are the antisymmetric ones, with no factor absorbed into them. The wedge of two vectors stores $b^{mn} = u^m v^n - u^n v^m$, and in 2D:
 
-```math
-\tilde{b}^{mn} = b^{mn} ε^{mn}
-```
+$$
+\mathbf{u} \wedge \mathbf{v} = (u^1 v^2 - u^2 v^1) \mathbf{e}_{12}
+$$
 
-The $k$-index antisymmetric symbol $ε^{m_1 \ldots m_k}$ automatically handles sign changes from index ordering. For a bivector in 2D:
+so that $\mathbf e_1 \wedge \mathbf e_2$ is stored as $+1$ at $(1, 2)$ and $-1$ at $(2, 1)$.
 
-```math
-b = \frac{1}{2}(u^1 v^2 - u^2 v^1) \mathbf{e}_{12}
-```
-
-The factor $\frac{1}{2}$ ensures proper normalization, while the antisymmetric combination arises from the Levi-Civita structure.
-
-This convention allows efficient computation: we sum over ordered index combinations and let the antisymmetric symbol handle the signs, rather than explicitly storing and manipulating signed basis elements.
+This choice fixes the factorials everywhere else. An operation that contracts all $k$ indices of a stored k-vector sums each set of directions $k!$ times, and divides by $k!$ to count it once: the norm, the interior products, the complements, and the Hodge dual all carry that factor.
 
 ## Lot Dimensions
 

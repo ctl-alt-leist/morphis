@@ -104,10 +104,11 @@ def demo_complements() -> None:
     print(f"  grade: {b.grade} -> {b_right.grade}")
     print("  -> Bivector in 3D maps to vector (its 'normal')")
 
-    subsection("Involution: double complement = identity")
-    b_double = right_complement(right_complement(b))
-    diff = norm(b - b_double)
-    print(f"  right(right(b)) - b = {diff:.2e}")
+    subsection("Inverse: left undoes right")
+    b_back = left_complement(right_complement(b))
+    diff = norm(b - b_back)
+    print(f"  left(right(b)) - b = {diff:.2e}")
+    print("  right(right(b)) = (-1)^{grade * antigrade} * b")
 
 
 # =============================================================================
@@ -123,8 +124,8 @@ def demo_hodge_dual() -> None:
     e1, e2, e3 = basis_vectors(g)
 
     print("Hodge dual = complement + metric")
-    print("  *u = G(right_complement(u))")
-    print("where G raises/lowers indices via the metric.")
+    print("  *u = right_complement(G(u))")
+    print("where G lowers indices via the metric.")
 
     subsection("Hodge dual of basis vectors")
     for i, e in enumerate([e1, e2, e3], 1):
@@ -174,7 +175,7 @@ def demo_meet() -> None:
     e1, e2, e3 = basis_vectors(g)
 
     print("The meet finds the intersection of subspaces:")
-    print("  A ∨ B = right(right(A) ^ right(B))")
+    print("  A ∨ B = left(right(A) ^ right(B))")
 
     subsection("Meet of two planes (bivectors)")
     # Two planes in 3D intersect in a line (represented as a vector)

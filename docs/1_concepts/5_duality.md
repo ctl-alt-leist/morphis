@@ -28,19 +28,19 @@ Complements map between grades $k$ and $(d - k)$ using only the **Levi-Civita sy
 
 For a grade-$k$ k-vector $b$:
 
-```math
-\bar{b}^{m_{k + 1} \ldots m_d} = b^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
-```
+$$
+\bar{b}^{m_{k + 1} \ldots m_d} = \frac{1}{k!} b^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
+$$
 
 ### Left Complement
 
-```math
-\underline{b}^{m_1 \ldots m_{d - k}} = ε_{m_1 \ldots m_d} b^{m_{d - k + 1} \ldots m_d}
-```
+$$
+\underline{b}^{m_1 \ldots m_{d - k}} = \frac{1}{k!} ε_{m_1 \ldots m_d} b^{m_{d - k + 1} \ldots m_d}
+$$
 
 ### Orthogonality
 
-Complements satisfy the fundamental orthogonality relationship:
+The complements of a basis blade $u$ satisfy the fundamental relationship:
 
 ```math
 u \wedge \overline{u} = \mathbb{1}
@@ -60,17 +60,21 @@ This reveals that a k-vector and its complement span the entire space with no ov
 
 where antigrade = $d -$ grade.
 
-### Involution Property
+### Inverse Property
 
-Complements are involutions—applying them twice returns the original:
+Each complement undoes the other:
 
-```math
-\overline{\overline{u}} = u
-```
+$$
+\underline{\overline{u}} = \overline{\underline{u}} = u
+$$
 
-```math
-\underline{\underline{u}} = u
-```
+Applying the same one twice returns the original up to the sign above:
+
+$$
+\overline{\overline{u}} = \underline{\underline{u}} = (-1)^{k(d - k)} u
+$$
+
+The sign is $+1$ for every grade in odd dimensions, where the two complements coincide. In even dimensions it is $-1$ on odd grades: in 4D, the double complement of a vector is its negative.
 
 ```python
 from morphis.operations import right_complement, left_complement
@@ -97,17 +101,26 @@ This generalizes to higher dimensions:
 
 The **Hodge dual** is the metric-dependent counterpart to complements:
 
-```math
-\star v = G(\bar{v})
-```
+$$
+\star v = \overline{G v}
+$$
 
-where $G$ applies the metric to raise/lower indices.
+where $G$ lowers the indices of $v$ with the metric. No inverse metric appears, so the dual is defined for degenerate metrics too.
 
 In components:
 
-```math
-(\star v)^{m_{k + 1} \ldots m_d} = \frac{1}{k!} g^{m_{k + 1} n_{k + 1}} \cdots g^{m_d n_d} v^{m_1 \ldots m_k} ε_{m_1 \ldots m_d}
-```
+$$
+(\star v)^{m_{k + 1} \ldots m_d} = \frac{1}{k!} v^{n_1 \ldots n_k} g_{n_1 m_1} \cdots g_{n_k m_k} ε^{m_1 \ldots m_d}
+$$
+
+Equivalently, the dual is fixed by the dot product, or given by a geometric product with the pseudoscalar:
+
+$$
+\begin{aligned}
+u \wedge \star v &= (u \cdot v) \mathbb 1 \\
+\star v &= \tilde v \mathbb 1
+\end{aligned}
+$$
 
 The key distinction:
 - **Complement**: Uses only Levi-Civita symbol (metric-independent)
@@ -182,11 +195,21 @@ b_dual = hodge_dual(b)  # Requires metric
 
 The intersection (meet) of two subspaces can be computed using complements:
 
-```math
-u \vee v = \overline{\left(\overline{u} \wedge \overline{v}\right)}
-```
+$$
+u \vee v = \underline{\left(\overline{u} \wedge \overline{v}\right)}
+$$
 
-This duality formula converts intersection to a wedge product in the complement space.
+This duality formula converts intersection to a wedge product in the complement space. The outer complement is the left one, the inverse of the right, so that in every dimension:
+
+$$
+\begin{aligned}
+\overline{u \vee v} &= \overline{u} \wedge \overline{v} \\
+u \vee \mathbb 1 &= u \\
+u \vee v &= (-1)^{(d - j)(d - k)} v \vee u
+\end{aligned}
+$$
+
+and the meet is associative. With the right complement outside instead, the meet would change sign in even dimensions whenever its result has odd grade, and the first two of these would fail there.
 
 ```python
 from morphis.operations import meet
@@ -218,4 +241,4 @@ Duality operations enable computing in whichever grade is more convenient:
 - Finding intersection of $(d - 1)$-dimensional hyperplanes: work with their 1-dimensional normal vectors
 - Testing incidence: work in the simpler dual space
 
-The involution property $\overline{\overline{u}} = u$ ensures all such transformations are reversible.
+The inverse property $\underline{\overline{u}} = u$ makes all such transformations reversible.
