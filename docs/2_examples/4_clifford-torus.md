@@ -12,9 +12,9 @@ It prints its checks and writes `figures/clifford-torus/clifford-torus.png`.
 
 $\mathbb{C}^2$ is the space with two modes, $\mathbb{R}^4$ with directions $1, \dot 1, 2, \dot 2$. On the Bloch sphere a state has polar angle $χ$, with populations $|z^1|^2 = \cos^2(χ/2)$ and $|z^2|^2 = \sin^2(χ/2)$. The states of a fixed $χ$ are:
 
-```math
+$$
 \mathbf{X}(θ, φ) = \left( \cos(χ/2) e^{iθ}, \sin(χ/2) e^{iφ} \right)
-```
+$$
 
 with $θ$ and $φ$ each running over a circle. The Bloch vector of a state depends on $χ$ and on the relative phase $φ - θ$, so this torus is the preimage of the circle of latitude $χ$ on the Bloch sphere. At $χ = π/2$ both moduli are $1/\sqrt{2}$, the latitude circle is the equator, and the torus is the Clifford torus.
 
@@ -36,25 +36,25 @@ TORUS = Patch(state, Circle() * Circle(), SPACE)
 
 The tangent vectors are $∂_θ \mathbf{X} = (i z^1, 0)$ and $∂_φ \mathbf{X} = (0, i z^2)$, orthogonal and of squared lengths $|z^1|^2$ and $|z^2|^2$. On the Clifford torus the induced metric is therefore constant:
 
-```math
+$$
 h_{ab} = \tfrac{1}{2} δ_{ab}
-```
+$$
 
 so the torus is flat, with Gaussian curvature $K = 0$, though it is bent in $\mathbb{R}^4$: each coordinate circle curves toward the axis of its own conjugate plane.
 
 The mean curvature measures that bending. The second derivatives are $∂_θ^2 \mathbf{X} = -(z^1, 0)$ and $∂_φ^2 \mathbf{X} = -(0, z^2)$, and with equal moduli their trace against $h$ points straight back toward the origin:
 
-```math
+$$
 \mathbf{k} = -\mathbf{X}
-```
+$$
 
 Any surface in the unit sphere has a mean-curvature component $-\mathbf{X}$ normal to the sphere, from the sphere's own curvature. A surface whose mean curvature is exactly that has no mean curvature within $S^3$, so the Clifford torus is a minimal surface of $S^3$. For $χ \ne π/2$ the two circles have different radii, the trace is no longer parallel to $\mathbf{X}$, and the torus is not minimal.
 
 The complex structure $J$ multiplies by $i$, so $J ∂_θ \mathbf{X} = -(z^1, 0)$ and $J ∂_φ \mathbf{X} = -(0, z^2)$. Both are orthogonal to the two tangent vectors, so $J$ carries each tangent plane into the normal plane, and the Kähler angle is:
 
-```math
+$$
 θ_K = π/2
-```
+$$
 
 The torus is Lagrangian, the opposite extreme from the complex curves of the [Calabi–Yau slice](6_calabi-yau-slice.md), whose tangent planes are closed under $J$ with Kähler angle 0. Every torus of fixed populations is flat and Lagrangian, and the Clifford torus is the one among them that is also minimal.
 
@@ -87,9 +87,9 @@ The global phase $e^{iα} \mathbf{ψ}$ moves $θ$ and $φ$ together, $(θ, φ) \
 
 The torus lies in $S^3$, and stereographic projection draws all of $S^3$ but one point in three dimensions. The figure projects from the pole $\mathbf e_{\dot 2}$ onto the hyperplane of the directions $1, \dot 1, 2$, which become the drawing's $x$, $y$, $z$:
 
-```math
+$$
 \mathbf{y} = \frac{\mathbf{x}_\perp}{1 - \mathbf{e}_{\dot 2} \cdot \mathbf{x}}
-```
+$$
 
 The pole has $|z^2| = 1$, which no point of the Clifford torus reaches, so the whole torus is drawn, one-to-one and conformally. A turn of $θ$ is a rotation in the $\mathbf e_{1 \dot 1}$-plane, which fixes the pole and is drawn as a rotation about the vertical axis, so the image is a torus of revolution. In a meridian half-plane the circle of constant $θ$ is drawn as a circle of radius 1 whose center lies at distance $\sqrt{2}$ from the axis. The axis itself is the image of the great circle $z^1 = 0$, which passes through the pole and is therefore drawn as a straight line.
 

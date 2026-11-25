@@ -6,20 +6,20 @@ Geometric algebra provides a unified framework for all orthogonal transformation
 
 Transformations in geometric algebra act via:
 
-```math
+$$
 \mathbf{x}' = M \mathbf{x} \tilde{M}
-```
+$$
 
 or for reflections:
 
-```math
+$$
 \mathbf{x}' = -\mathbf{n} \mathbf{x} \mathbf{n}
-```
+$$
 
 This pattern:
 - Preserves geometric structure (grade, norm)
 - Is an outermorphism (preserves wedge products)
-- Composes naturally: $(M_2 M_1) \mathbf{x} \widetilde{(M_2 M_1)} = M_2 (M_1 \mathbf{x} \tilde{M}_1) \tilde{M}_2$
+- Composes naturally: $(M_2 M_1) \mathbf{x} \widetilde{(M_2 M_1)} = M_2 (M_1 \mathbf{x} \tilde M_1) \tilde M_2$
 
 ```python
 from morphis.transforms import transform
@@ -32,9 +32,9 @@ x_transformed = transform(x, M)  # M * x * ~M
 
 A reflection through the hyperplane perpendicular to unit vector $\mathbf{n}$:
 
-```math
+$$
 \mathbf{v}' = -\mathbf{n} \mathbf{v} \mathbf{n}
-```
+$$
 
 Properties:
 - **Involution**: Two reflections give identity
@@ -49,15 +49,15 @@ Any orthogonal transformation in $d$ dimensions factors as at most $d$ reflectio
 
 A **rotor** is an even versor satisfying $R \tilde{R} = 1$. It represents rotation:
 
-```math
+$$
 v' = R v \tilde{R}
-```
+$$
 
 ### Construction from Bivector
 
-```math
+$$
 R = e^{-bθ/2} = \cos(θ/2) - \sin(θ/2) \hat{b}
-```
+$$
 
 where $\hat{b}$ is the unit bivector defining the rotation plane.
 
@@ -81,17 +81,17 @@ v_rotated = R * e1 * ~R  # e1 -> e2
 
 The rotation action expands to:
 
-```math
-x' = x + \sin(θ) b \cdot x + (1 - \cos(θ)) b \cdot (b \cdot x)
-```
+$$
+x' = x + \sin(θ) (x \lrcorner b) + (1 - \cos(θ)) ((x \lrcorner b) \lrcorner b)
+$$
 
 ### Two Reflections = One Rotation
 
 A rotor equals the product of two reflection vectors:
 
-```math
+$$
 R = \mathbf{n}_2 \mathbf{n}_1
-```
+$$
 
 The rotation angle is twice the angle between the reflection planes.
 
@@ -99,9 +99,9 @@ The rotation angle is twice the angle between the reflection planes.
 
 In $d$ dimensions, there are $\binom{d}{2}$ independent rotation planes. In 4D:
 
-```math
-\{\mathbf{e}_{12}, \mathbf{e}_{13}, \mathbf{e}_{14}, \mathbf{e}_{23}, \mathbf{e}_{24}, \mathbf{e}_{34}\}
-```
+$$
+\lbrace \mathbf{e}_{12}, \mathbf{e}_{13}, \mathbf{e}_{14}, \mathbf{e}_{23}, \mathbf{e}_{24}, \mathbf{e}_{34} \rbrace
+$$
 
 A general 4D rotation may involve multiple simultaneous planes (double rotation).
 
@@ -125,11 +125,11 @@ In Projective Geometric Algebra, translation is a versor transformation.
 
 For translation by vector $\mathbf{t}$:
 
-```math
+$$
 T = e^{-\mathbf{t}_0/2} = 1 - \frac{1}{2}t^m \mathbf{e}_{0m}
-```
+$$
 
-where $\mathbf{e}_{0m}$ are degenerate bivectors (involving the ideal direction $\mathbf{e}_0$).
+where $\mathbf e_{0m}$ are degenerate bivectors (involving the ideal direction $\mathbf e_0$).
 
 ```python
 from morphis.transforms import translator, direction
@@ -155,15 +155,15 @@ p_translated = T * p * ~T
 
 A **motor** combines rotation and translation in PGA:
 
-```math
+$$
 M = RT
-```
+$$
 
 or via line exponential:
 
-```math
+$$
 M = e^{-\ell θ/2}
-```
+$$
 
 where $\ell$ is a line (bivector in PGA).
 
@@ -182,9 +182,9 @@ M = R * T  # Rotate after translate (different result!)
 
 Rotation and translation do not commute:
 
-```math
+$$
 RT \neq TR
-```
+$$
 
 "Rotate then translate" differs from "translate then rotate."
 
@@ -194,19 +194,19 @@ PGA embeds $d$-dimensional Euclidean space in a $(d + 1)$-dimensional Clifford a
 
 ### Metric Structure
 
-```math
+$$
 g = \text{diag}(0, 1, 1, \ldots, 1)
-```
+$$
 
-The $\mathbf{e}_0$ direction is **ideal** (at infinity).
+The $\mathbf e_0$ direction is **ideal** (at infinity).
 
 ### Point Representation
 
 A Euclidean point $\mathbf{x} = (x^1, \ldots, x^d)$ embeds as:
 
-```math
+$$
 \mathbf{p} = \mathbf{e}_0 + x^m \mathbf{e}_m
-```
+$$
 
 ```python
 from morphis.transforms import point, euclidean
@@ -221,15 +221,17 @@ p = point([1, 2, 3], metric=h)
 coords = euclidean(p)  # [1, 2, 3]
 ```
 
+> **Known issue.** A translator does not move a point in this representation. The sandwich $T \mathbf p \tilde T$ changes the weight instead, because $\mathbf e_0$ anticommutes with every $\mathbf e_m$ and squares to zero, so `transform(point([1, 0, 0]), translator(direction([2, 0, 0])))` lands at $(0.5, 0, 0)$. Rotations about the origin are unaffected. The sandwich does translate the complement $\overline{\mathbf p}$, by $+\mathbf t$ for $T = 1 - \frac{1}{2} \mathbf e_0 \wedge \mathbf t$, and the left complement brings it back.
+
 ### Direction Representation
 
 A direction (point at infinity):
 
-```math
+$$
 \mathbf{d} = v^m \mathbf{e}_m
-```
+$$
 
-No $\mathbf{e}_0$ component.
+No $\mathbf e_0$ component.
 
 ```python
 from morphis.transforms import direction, is_direction
@@ -241,14 +243,16 @@ is_direction(d)  # True
 ### Geometric Constructors
 
 **Line through two points**:
-```math
+
+$$
 \ell = \mathbf{p} \wedge \mathbf{q}
-```
+$$
 
 **Plane through three points**:
-```math
+
+$$
 π = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
-```
+$$
 
 ```python
 from morphis.transforms import line, plane
@@ -260,14 +264,16 @@ p = plane(p1, p2, p3)
 ### Incidence Predicates
 
 **Collinearity** (points on a line):
-```math
+
+$$
 \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r} = 0
-```
+$$
 
 **Point on line**:
-```math
+
+$$
 \mathbf{p} \wedge \ell = 0
-```
+$$
 
 ```python
 from morphis.transforms import are_collinear, point_on_line
@@ -279,14 +285,16 @@ point_on_line(p, l)
 ### Distance Functions
 
 **Point to point**:
-```math
+
+$$
 d(\mathbf{p}, \mathbf{q}) = |\mathbf{p} \wedge \mathbf{q}| / (w(\mathbf{p}) \cdot w(\mathbf{q}))
-```
+$$
 
 **Point to line**:
-```math
+
+$$
 d(\mathbf{p}, \ell) = |\mathbf{p} \wedge \ell| / |\ell|
-```
+$$
 
 ```python
 from morphis.transforms import distance_point_to_point, distance_point_to_line
@@ -299,7 +307,7 @@ d = distance_point_to_line(p, l)
 
 All motor transformations preserve:
 
-- **Distance**: $d(\mathbf{p}'_1, \mathbf{p}'_2) = d(\mathbf{p}_1, \mathbf{p}_2)$
+- **Distance**: $d(\mathbf{p}'_1, \mathbf{p}'_2) = d(\mathbf p_1, \mathbf p_2)$
 - **Angle**: $\cos θ' = \cos θ$
 - **Orientation**: $\det(M) = +1$
 

@@ -4,17 +4,17 @@ This document establishes the mathematical structures underlying geometric algeb
 
 ## Vector Spaces
 
-We begin with a finite-dimensional real vector space $V$ of dimension $d$. The **dual space** $V^*$ consists of all linear functionals $ω: V \to \mathbb{R}$. The natural pairing between $V$ and $V^*$ is given by evaluation:
+We begin with a finite-dimensional real vector space $V$ of dimension $d$. The **dual space** $V^{\ast}$ consists of all linear functionals $ω: V \to \mathbb{R}$. The natural pairing between $V$ and $V^{\ast}$ is given by evaluation:
 
-```math
+$$
 \langle ω, v \rangle = ω(v)
-```
+$$
 
-Given a basis $\lbrace \mathbf{e}_m \rbrace$ for $V$, there exists a unique **dual basis** $\lbrace \mathbf{e}^m \rbrace$ for $V^*$ satisfying:
+Given a basis $\lbrace \mathbf e_m \rbrace$ for $V$, there exists a unique **dual basis** $\lbrace \mathbf{e}^m \rbrace$ for $V^{\ast}$ satisfying:
 
-```math
+$$
 \mathbf{e}^m(\mathbf{e}_n) = δ^m_n
-```
+$$
 
 In morphis, the dimension is determined by the `Metric`:
 
@@ -43,19 +43,19 @@ This convention emphasizes that a bivector is still a vector (in $\bigwedge^2 V$
 
 Morphis uses **1-based indexing** for Euclidean basis vectors, matching standard mathematical notation:
 
-```math
+$$
 \mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3 \quad \leftrightarrow \quad x, y, z
-```
+$$
 
 The index 0 is reserved for special directions that extend Euclidean space:
 
-| Algebra | $\mathbf{e}_0$ meaning | Euclidean basis |
+| Algebra | $\mathbf e_0$ meaning | Euclidean basis |
 |---------|------------------------|-----------------|
-| **VGA** (Euclidean) | *not used* | $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ |
-| **PGA** (Projective) | ideal direction ($\mathbf{e}_0^2 = 0$) | $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ |
-| **Lorentzian** | time direction ($\mathbf{e}_0^2 = -1$) | $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ |
+| **VGA** (Euclidean) | *not used* | $\mathbf e_1, \mathbf e_2, \mathbf e_3$ |
+| **PGA** (Projective) | ideal direction ($\mathbf e_0^2 = 0$) | $\mathbf e_1, \mathbf e_2, \mathbf e_3$ |
+| **Lorentzian** | time direction ($\mathbf e_0^2 = -1$) | $\mathbf e_1, \mathbf e_2, \mathbf e_3$ |
 
-In code, the geometric index follows this convention directly. `basis_vector(1, g)` is $\mathbf{e}_1$ (the x direction) in every signature; Euclidean is indexed from 1 (index 0 is invalid), while PGA and Lorentzian are indexed from 0 for their distinguished direction. `basis_vectors()` returns the basis in index order, so the unpacking names match the indices:
+In code, the geometric index follows this convention directly. `basis_vector(1, g)` is $\mathbf e_1$ (the x direction) in every signature; Euclidean is indexed from 1 (index 0 is invalid), while PGA and Lorentzian are indexed from 0 for their distinguished direction. `basis_vectors()` returns the basis in index order, so the unpacking names match the indices:
 
 ```python
 from morphis.elements import euclidean_metric, pga_metric, basis_vectors
@@ -69,15 +69,15 @@ h = pga_metric(3)
 e0, e1, e2, e3 = basis_vectors(h)
 ```
 
-Component access follows the same convention: `v.on[1]` is the x component, and for a bivector `B.on[1, 2]` is the $\mathbf{e}_{12}$ component (with `B.on[2, 1]` its negative). See the design note on the index convention for the full rules.
+Component access follows the same convention: `v.on[1]` is the x component, and for a bivector `B.on[1, 2]` is the $\mathbf e_{12}$ component (with `B.on[2, 1]` its negative). See the design note on the index convention for the full rules.
 
 ## Tensors
 
-A **$(p,q)$-tensor** lives in the space $V^{\otimes p} \otimes (V^*)^{\otimes q}$, with $p$ contravariant indices (upstairs) and $q$ covariant indices (downstairs). In components relative to a basis:
+A **$(p,q)$-tensor** lives in the space $V^{\otimes p} \otimes (V^{\ast})^{\otimes q}$, with $p$ contravariant indices (upstairs) and $q$ covariant indices (downstairs). In components relative to a basis:
 
-```math
+$$
 T = T^{m_1 \ldots m_p}_{n_1 \ldots n_q} \mathbf{e}_{m_1} \otimes \cdots \otimes \mathbf{e}_{m_p} \otimes \mathbf{e}^{n_1} \otimes \cdots \otimes \mathbf{e}^{n_q}
-```
+$$
 
 The `Tensor` class in morphis stores tensors with this structure:
 
@@ -88,29 +88,29 @@ g = euclidean_metric(3)
 T = Tensor(data, contravariant=2, covariant=0, metric=g)
 ```
 
-Under a change of basis $\mathbf{e}_m' = R^n_m \mathbf{e}_n$, tensor components transform to preserve the tensor itself. This transformation law is a **consequence** of the tensor being a basis-independent geometric object, not a definition.
+Under a change of basis $\mathbf e_m' = R^n_m \mathbf e_n$, tensor components transform to preserve the tensor itself. This transformation law is a **consequence** of the tensor being a basis-independent geometric object, not a definition.
 
 ## The Exterior Algebra
 
 The **exterior algebra** $\bigwedge V$ consists of completely antisymmetric tensors:
 
-```math
+$$
 \bigwedge V = \bigoplus_{k=0}^{d} \bigwedge^k V
-```
+$$
 
 The $k$-th exterior power $\bigwedge^k V$ has dimension $\binom{d}{k}$. Elements of $\bigwedge^k V$ are called **$k$-vectors** (or homogeneous multivectors of grade $k$).
 
 The **wedge product** of vectors:
 
-```math
+$$
 \mathbf{a} \wedge \mathbf{b} = \mathbf{a} \otimes \mathbf{b} - \mathbf{b} \otimes \mathbf{a}
-```
+$$
 
 In components:
 
-```math
+$$
 (\mathbf{a} \wedge \mathbf{b})^{mn} = a^m b^n - a^n b^m
-```
+$$
 
 The wedge product is:
 - **Anticommutative**: $\mathbf{a} \wedge \mathbf{b} = -\mathbf{b} \wedge \mathbf{a}$
@@ -143,11 +143,11 @@ The antisymmetry constraint $b^{\ldots m \ldots n \ldots} = -b^{\ldots n \ldots 
 
 ### Antisymmetry on Components
 
-The basis k-vectors $\mathbf{e}_{mn\ldots}$ are conventionally written as antisymmetric:
+The basis k-vectors $\mathbf e_{mn\ldots}$ are conventionally written as antisymmetric:
 
-```math
+$$
 \mathbf{e}_{mn} = \mathbf{e}_m \wedge \mathbf{e}_n = -\mathbf{e}_{nm}
-```
+$$
 
 However, in computation we need a concrete representation. Morphis uses an **ordered basis** with antisymmetry carried on the components. We write:
 
@@ -177,6 +177,15 @@ b = (u^1 v^2 - u^2 v^1) \mathbf e_{12} = u^m v^n ε^{mn} \hat{\mathbf e}_{mn}
 $$
 
 The antisymmetric combination arises from the Levi-Civita structure. No factorial appears, since each term of the wedge occurs once in the sum.
+
+The sum is the ordinary Einstein sum over every set of index values on which the coefficient is defined, and the hat changes only how the basis is written, never what is summed. The symbol $ε$ is at work whether or not it is displayed. When the coefficient is a raw product it is defined for all orderings, and $ε$ appears explicitly to supply the signs the sorted basis has lost. When coefficients are given on ordered index sets alone, the sum over orderings is already done, and plain coefficients pair with the hatted basis:
+
+$$
+\begin{aligned}
+b &= b^{mn} \hat{\mathbf e}_{mn} \\
+b^{mn} &= u^m v^n - u^n v^m \quad \text{for } m \lt n
+\end{aligned}
+$$
 
 This convention allows efficient computation: we sum over ordered index combinations and let the antisymmetric symbol handle the signs, rather than explicitly storing and manipulating signed basis elements.
 

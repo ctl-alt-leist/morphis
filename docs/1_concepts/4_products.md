@@ -10,9 +10,9 @@ The **wedge product** (exterior product) constructs higher-grade Vectors by comb
 
 For grade-$j$ k-vector $u$ and grade-$k$ k-vector $v$, the wedge product $u \wedge v$ is a grade-$(j + k)$ k-vector:
 
-```math
+$$
 (u \wedge v)^{m_1 \ldots m_{j + k}} = \frac{1}{j! k!} u^{[m_1 \ldots m_j} v^{m_{j + 1} \ldots m_{j + k}]}
-```
+$$
 
 where brackets denote antisymmetrization.
 
@@ -20,33 +20,33 @@ where brackets denote antisymmetrization.
 
 **Anticommutativity:**
 
-```math
+$$
 u \wedge v = (-1)^{jk} v \wedge u
-```
+$$
 
 For grade-1 vectors:
 
-```math
+$$
 \mathbf{u} \wedge \mathbf{v} = -\mathbf{v} \wedge \mathbf{u}
-```
+$$
 
 **Nilpotency:**
 
-```math
+$$
 \mathbf{v} \wedge \mathbf{v} = 0
-```
+$$
 
 Linear dependence:
 
-```math
+$$
 \mathbf{u} = α \mathbf{v} \implies \mathbf{u} \wedge \mathbf{v} = 0
-```
+$$
 
 **Associativity:**
 
-```math
+$$
 (\mathbf{a} \wedge \mathbf{b}) \wedge \mathbf{c} = \mathbf{a} \wedge (\mathbf{b} \wedge \mathbf{c})
-```
+$$
 
 ### Usage in Morphis
 
@@ -71,7 +71,7 @@ The wedge product $\mathbf{u} \wedge \mathbf{v}$ represents the **oriented paral
 - Magnitude: area of the parallelogram
 - Orientation: determined by the order of vectors
 
-For $k$ vectors, $\mathbf{v}_1 \wedge \cdots \wedge \mathbf{v}_k$ represents the oriented $k$-volume of the parallelepiped they span.
+For $k$ vectors, $\mathbf v_1 \wedge \cdots \wedge \mathbf v_k$ represents the oriented $k$-volume of the parallelepiped they span.
 
 ## The Interior Product
 
@@ -185,9 +185,9 @@ reject(e1 + e3, e1 ^ e2)   # e3
 
 For grade-1 vectors, the **dot product** extracts the scalar (symmetric) part:
 
-```math
+$$
 \mathbf{u} \cdot \mathbf{v} = g_{ab} u^a v^b
-```
+$$
 
 This equals the full interior product when both operands are grade-1.
 
@@ -203,9 +203,9 @@ The **geometric product** is the fundamental operation of Clifford algebra, comb
 
 ### For Vectors (Grade-1)
 
-```math
+$$
 \mathbf{a} \mathbf{b} = \mathbf{a} \cdot \mathbf{b} + \mathbf{a} \wedge \mathbf{b}
-```
+$$
 
 The symmetric part gives the dot product (scalar), the antisymmetric part gives the wedge product (bivector).
 
@@ -213,9 +213,9 @@ The symmetric part gives the dot product (scalar), the antisymmetric part gives 
 
 For general multivectors, the geometric product distributes over grades:
 
-```math
+$$
 MN = \sum_{r,s} \sum_{t = |r-s|}^{r+s} \langle M_r N_s \rangle_t
-```
+$$
 
 where $M_r = \langle M \rangle_r$ and the sum over $t$ has step 2 (parity preservation).
 
@@ -245,29 +245,29 @@ M = geometric(e1, e2)
 
 **Associativity:**
 
-```math
+$$
 (MN)P = M(NP)
-```
+$$
 
 **Distributivity:**
 
-```math
+$$
 M(N + P) = MN + MP
-```
+$$
 
 **Not commutative (in general):**
 
-```math
+$$
 MN \neq NM
-```
+$$
 
 ### Relationship to Other Products
 
 The wedge and interior products can be extracted from the geometric product. For k-vectors $u$ and $v$ of grades $j$ and $k$:
 
-```math
+$$
 u \wedge v = \langle uv \rangle_{j + k}
-```
+$$
 
 $$
 \begin{aligned}
@@ -298,15 +298,15 @@ intersection = meet(u, v)
 
 The **commutator product**:
 
-```math
+$$
 [M, N] = \frac{1}{2}(MN - NM)
-```
+$$
 
 The **anticommutator product**:
 
-```math
-\{M, N\} = \frac{1}{2}(MN + NM)
-```
+$$
+\lbrace M, N\rbrace  = \frac{1}{2}(MN + NM)
+$$
 
 ```python
 from morphis.operations import commutator, anticommutator
@@ -321,9 +321,9 @@ The commutator of bivectors generates the Lie algebra structure of rotations.
 
 The **scalar product** extracts only the grade-0 part of the geometric product:
 
-```math
+$$
 M * N = \langle MN \rangle_0
-```
+$$
 
 ```python
 from morphis.operations import scalar_product

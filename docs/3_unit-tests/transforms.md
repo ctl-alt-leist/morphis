@@ -10,15 +10,15 @@ A rotor represents rotation via the exponential map from bivector to transformat
 
 For unit bivector $B$ with $B^2 = -1$ and angle $θ$:
 
-```math
+$$
 R = e^{-Bθ/2} = \cos(θ/2) - \sin(θ/2) B
-```
+$$
 
 ### Multivector Structure
 
-```math
+$$
 R = R_0 \mathbf{1} + R^{mn} \mathbf{e}_{mn}
-```
+$$
 
 where:
 - $R_0 = \cos(θ/2)$
@@ -26,89 +26,89 @@ where:
 
 ### Versor Property
 
-```math
+$$
 R \tilde{R} = 1
-```
+$$
 
 Proof:
 
-```math
+$$
 R \tilde{R} = \cos^2(θ/2) + \sin^2(θ/2) = 1
-```
+$$
 
 ### Inverse
 
-```math
+$$
 R^{-1} = \tilde{R} = \cos(θ/2) + \sin(θ/2) B
-```
+$$
 
 ### Identity
 
-```math
+$$
 R(0) = 1
-```
+$$
 
 ### Non-Simple Bivectors
 
 In four and five dimensions $B$ need not be simple, and `exp_bivector` evaluates $e^B$ in closed form through $\langle B^2 \rangle_0$ and $W = \tfrac{1}{2} B \wedge B$. Each case is checked against the defining series $\sum_n B^n / n!$ in the geometric product:
 
 - a random bivector of $\mathbb{R}^4$ and of $\mathbb{R}^5$
-- the isoclinic $θ (\mathbf{e}_{12} + \mathbf{e}_{34})$, where also $\langle e^B \rangle_0 = \cos^2 θ$ and $\langle e^B \rangle_4 = \sin^2 θ \mathbf{e}_{1234}$
+- the isoclinic $θ (\mathbf e_{12} + \mathbf e_{34})$, where also $\langle e^B \rangle_0 = \cos^2 θ$ and $\langle e^B \rangle_4 = \sin^2 θ \mathbf e_{1234}$
 - nearly isoclinic bivectors, whose roots differ by $10^{-5}$ to $10^{-12}$
 - a bivector of size $10^{-5}$, to $10^{-15}$
 - random bivectors of spacetime in both conventions
-- a PGA screw $0.8 \mathbf{e}_{12} + 0.5 \mathbf{e}_{03} + 0.3 \mathbf{e}_{01}$
+- a PGA screw $0.8 \mathbf e_{12} + 0.5 \mathbf e_{03} + 0.3 \mathbf e_{01}$
 - a lot of shape $(3, 2)$
 
-A simple bivector gives $\cos + B \sin$ with no grade-4 part, also in six dimensions, where a non-simple bivector raises `NotImplementedError`. For $B = 0.9 \mathbf{u}_1 \wedge \mathbf{u}_2 - 0.4 \mathbf{u}_3 \wedge \mathbf{u}_4$ in a random orthonormal frame, `rotor(B, 1)` turns vectors as the product of the two plane rotors, and $R \tilde{R} = 1$.
+A simple bivector gives $\cos + B \sin$ with no grade-4 part, also in six dimensions, where a non-simple bivector raises `NotImplementedError`. For $B = 0.9 \mathbf u_1 \wedge \mathbf u_2 - 0.4 \mathbf u_3 \wedge \mathbf u_4$ in a random orthonormal frame, `rotor(B, 1)` turns vectors as the product of the two plane rotors, and $R \tilde{R} = 1$.
 
 ## Sandwich Product
 
 Rotors act via:
 
-```math
+$$
 \mathbf{p}' = R \mathbf{p} \tilde{R}
-```
+$$
 
 ### Rodrigues Formula
 
 For rotation in plane $B$ by angle $θ$:
 
-```math
-x'^m = x^m + \sin(θ) B^{mp} x_p + (1 - \cos(θ)) B^{mp} B_p^{\ q} x_q
-```
+$$
+x'^m = x^m + \sin(θ) x_p B^{pm} + (1 - \cos(θ)) B^{mp} B_p^{\ q} x_q
+$$
 
 ### Rotation in xy-Plane
 
-With $B = \mathbf{e}_{12}$:
+With $B = \mathbf e_{12}$:
 
-```math
+$$
 \begin{align}
 x' &= x \cos θ - y \sin θ \\
 y' &= x \sin θ + y \cos θ \\
 z' &= z
 \end{align}
-```
+$$
 
 ### Specific Rotations
 
 90 degrees ($θ = π/2$):
 
-```math
+$$
 (1, 0, 0) \mapsto (0, 1, 0)
-```
+$$
 
 180 degrees ($θ = π$):
 
-```math
+$$
 (x, y, z) \mapsto (-x, -y, z)
-```
+$$
 
 ### Plane Invariance
 
-```math
+$$
 R B \tilde{R} = B
-```
+$$
 
 ## Translators
 
@@ -116,53 +116,53 @@ A translator represents pure translation in PGA.
 
 ### Exponential Form
 
-```math
+$$
 T = e^{-\mathbf{t}/2} = 1 - \frac{1}{2} t^m \mathbf{e}_{0m}
-```
+$$
 
-where $\mathbf{t} = t^m \mathbf{e}_{0m}$ is the degenerate bivector.
+where $\mathbf{t} = t^m \mathbf e_{0m}$ is the degenerate bivector.
 
 ### Truncation
 
 Degenerate bivectors square to zero:
 
-```math
+$$
 \mathbf{t}^2 = 0
-```
+$$
 
 so the exponential truncates to linear term.
 
 ### Translation Action
 
-```math
+$$
 \mathbf{p}' = T \mathbf{p} \tilde{T}
-```
+$$
 
-For point $\mathbf{p} = \mathbf{e}_0 + x^m \mathbf{e}_m$:
+For point $\mathbf{p} = \mathbf e_0 + x^m \mathbf e_m$:
 
-```math
+$$
 \mathbf{p}' = \mathbf{e}_0 + (x^m + t^m) \mathbf{e}_m
-```
+$$
 
 ### Composition
 
 Translators compose additively:
 
-```math
+$$
 T_{\mathbf{t}} T_{\mathbf{s}} = T_{\mathbf{t} + \mathbf{s}}
-```
+$$
 
 ### Commutativity
 
-```math
+$$
 T_{\mathbf{t}} T_{\mathbf{s}} = T_{\mathbf{s}} T_{\mathbf{t}}
-```
+$$
 
 ### Versor Property
 
-```math
+$$
 T \tilde{T} = 1
-```
+$$
 
 ## Motors
 
@@ -170,41 +170,41 @@ Motors combine rotation and translation.
 
 ### Composition
 
-```math
+$$
 M = RT
-```
+$$
 
 or via line exponential:
 
-```math
+$$
 M = e^{-Lθ/2}
-```
+$$
 
 ### Rotation About Arbitrary Center
 
-```math
+$$
 M = T_{\mathbf{c}} R T_{-\mathbf{c}}
-```
+$$
 
 ### Center Invariance
 
-```math
+$$
 M \mathbf{p}_c \tilde{M} = \mathbf{p}_c
-```
+$$
 
 ### Non-Commutativity
 
-```math
+$$
 RT \neq TR
-```
+$$
 
 "Rotate then translate" differs from "translate then rotate."
 
 ### Associativity
 
-```math
+$$
 (M_3 M_2) M_1 = M_3 (M_2 M_1)
-```
+$$
 
 ### Closure
 
@@ -218,57 +218,57 @@ All maintain versor property: $M \tilde{M} = 1$.
 
 ### Distance Preservation
 
-```math
+$$
 d(\mathbf{p}'_1, \mathbf{p}'_2) = d(\mathbf{p}_1, \mathbf{p}_2)
-```
+$$
 
 ### Angle Preservation
 
-```math
+$$
 \cos θ' = \cos θ
-```
+$$
 
 ### Orientation Preservation
 
-```math
+$$
 \det(M) = +1
-```
+$$
 
 ## Reflections
 
 ### Formula
 
-```math
+$$
 \mathbf{v}' = -\mathbf{n}\mathbf{v}\mathbf{n}
-```
+$$
 
 ### Properties
 
 Involution (twice = identity):
 
-```math
+$$
 -\mathbf{n}(-\mathbf{n}\mathbf{v}\mathbf{n})\mathbf{n} = \mathbf{v}
-```
+$$
 
 Magnitude preservation:
 
-```math
+$$
 |\mathbf{v}'| = |\mathbf{v}|
-```
+$$
 
 ## Versors
 
 ### From Reflections
 
-```math
+$$
 V = \mathbf{n}_k \cdots \mathbf{n}_2 \mathbf{n}_1
-```
+$$
 
 ### Two Reflections = Rotation
 
-```math
+$$
 \mathbf{n}_2 \mathbf{n}_1 = R_{2θ}
-```
+$$
 
 where $θ$ is angle between reflection planes.
 
@@ -280,81 +280,81 @@ Any orthogonal transformation in $d$ dimensions factors as at most $d$ reflectio
 
 ### Point Embedding
 
-```math
+$$
 \mathbf{p} = \mathbf{e}_0 + x^m \mathbf{e}_m
-```
+$$
 
 ### Direction Embedding
 
-```math
+$$
 \mathbf{d} = v^m \mathbf{e}_m
-```
+$$
 
 (zero ideal component)
 
 ### Weight and Bulk
 
-```math
+$$
 w(\mathbf{p}) = p^0
-```
+$$
 
-```math
+$$
 \text{bulk}(\mathbf{p}) = (p^1, \ldots, p^d)
-```
+$$
 
 ### Euclidean Projection
 
-```math
+$$
 \text{euclidean}(\mathbf{p}) = \frac{\text{bulk}(\mathbf{p})}{w(\mathbf{p})}
-```
+$$
 
 ### Geometric Constructors
 
 Line through points:
 
-```math
+$$
 \ell = \mathbf{p} \wedge \mathbf{q}
-```
+$$
 
 Plane through points:
 
-```math
+$$
 π = \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r}
-```
+$$
 
 ### Distance Functions
 
 Point-to-point:
 
-```math
+$$
 d(\mathbf{p}, \mathbf{q}) = \sqrt{g_{mn} (x_q^m - x_p^m)(x_q^n - x_p^n)}
-```
+$$
 
 Point-to-line:
 
-```math
+$$
 d(\mathbf{p}, \ell) = \frac{|\mathbf{p} \wedge \ell|}{|\ell|}
-```
+$$
 
 ### Incidence Predicates
 
 Collinearity:
 
-```math
+$$
 \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r} = 0
-```
+$$
 
 Coplanarity:
 
-```math
+$$
 \mathbf{p} \wedge \mathbf{q} \wedge \mathbf{r} \wedge \mathbf{s} = 0
-```
+$$
 
 Point on line:
 
-```math
+$$
 \mathbf{p} \wedge \ell = 0
-```
+$$
 
 ## Higher Dimensions
 
@@ -364,9 +364,9 @@ In $d$ dimensions: $\binom{d}{2}$ independent rotation planes.
 
 4D bivector basis:
 
-```math
+$$
 \mathbf{e}_{12}, \mathbf{e}_{13}, \mathbf{e}_{14}, \mathbf{e}_{23}, \mathbf{e}_{24}, \mathbf{e}_{34}
-```
+$$
 
 ### Component Counts
 
@@ -379,6 +379,6 @@ Motor components: $1 + \binom{d + 1}{2}$
 
 Exponential uses half-angles so sandwich product gives full rotation:
 
-```math
+$$
 R \mathbf{v} \tilde{R} \text{ rotates by } θ
-```
+$$

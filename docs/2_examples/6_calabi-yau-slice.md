@@ -2,9 +2,9 @@
 
 The quintic threefold, the zero set of $z_1^5 + z_2^5 + z_3^5 + z_4^5 + z_5^5$ in $\mathbb{CP}^4$, is the standard example of a Calabi–Yau manifold. It has six real dimensions, so its standard picture shows a slice of it: the complex curve
 
-```math
+$$
 z_1^5 + z_2^5 = 1
-```
+$$
 
 in $\mathbb{C}^2$. A point of $\mathbb{C}^2$ is a point of $\mathbb{R}^4$, and one complex equation removes two real dimensions, so the curve is a real surface in four dimensions. This document builds it in four stages: one patch, the copies of that patch made by the curve's symmetry, the welded surface, and its projection into three dimensions. Each stage states the mathematics and then the morphis code that carries it out. The code is the `calabi_yau` example:
 
@@ -18,9 +18,9 @@ It checks every claim below numerically and writes the four figures to `figures/
 
 $\mathbb{C}^2$ is the space with two modes. Each mode $m$ owns a direction $\mathbf e_m$ and its partner $\mathbf e_{\dot m}$, and a real vector reads as the complex amplitudes
 
-```math
+$$
 z^m = v^m + i v^{\dot m}
-```
+$$
 
 Multiplication by $i$ is the complex structure $J$, the quarter turn $J \mathbf e_m = \mathbf e_{\dot m}$, so the complex arithmetic of $\mathbb{C}^2$ is ordinary geometry in $\mathbb{R}^4$.
 
@@ -38,26 +38,26 @@ v.amplitudes                                  # [1, 1j]
 
 **The mathematics.** The identity $\cosh^2 w - \sinh^2 w = 1$ solves the equation at once. Take fifth roots of each term:
 
-```math
+$$
 \begin{aligned}
 z_1(w) &= \cosh(w)^{2/5} \\
 z_2(w) &= (-i \sinh w)^{2/5}
 \end{aligned}
-```
+$$
 
 Then $z_1^5 = \cosh^2 w$ and $z_2^5 = -\sinh^2 w$, which sum to 1. The complex coordinate runs over the rectangle $w = ξ + i θ$ with $ξ \in [-a, a]$ and $θ \in [0, π/2]$. On it, both $\cosh w$ and $-i \sinh w$ have non-negative real part, so the principal fifth root is smooth inside, and the map $w \mapsto (z_1, z_2)$ is one sheet of the curve.
 
 The map is holomorphic in $w$, which fixes the local geometry. Moving $w$ by $i$ moves the point by $J$ applied to the motion along $ξ$:
 
-```math
+$$
 ∂_θ \mathbf{X} = J (∂_ξ \mathbf{X})
-```
+$$
 
 Each tangent plane is therefore a complex line, closed under $J$, with Kähler angle 0. A complex curve is a minimal surface: its mean curvature vanishes, $\mathbf{k} = 0$. In coordinates where $h_{ab}$ is a multiple of $δ_{ab}$, minimality means $\mathbf k_{22} = -\mathbf k_{11}$, and the Gauss equation gives a curvature that is never positive:
 
-```math
+$$
 K = -\frac{\mathbf{k}_{11} \cdot \mathbf{k}_{11} + \mathbf{k}_{12} \cdot \mathbf{k}_{12}}{\det h}
-```
+$$
 
 The sheet is saddle-shaped at every point. Two points on its edge are special: $w = 0$, where $z_2 = 0$, and $w = i π/2$, where $z_1 = 0$. There the fifth root is not differentiable, and the next stage shows why.
 
@@ -96,9 +96,9 @@ patch.gaussian_curvature(coordinates)           # negative everywhere
 
 **The mathematics.** Let $ζ = e^{2πi/5}$. Since $ζ^5 = 1$, multiplying either coordinate by a power of $ζ$ keeps a solution a solution:
 
-```math
+$$
 (z_1, z_2) \mapsto (ζ^{k_1} z_1, ζ^{k_2} z_2)
-```
+$$
 
 The first sheet took one fifth root of each coordinate, the principal one, while a nonzero complex number has five, differing by powers of $ζ$. Each coordinate offers five independent choices of root, so the 25 pairs $(k_1, k_2)$, with $k_1, k_2 \in \lbrace 0, \ldots, 4 \rbrace$, copy the first sheet into 25 sheets, and together they cover the curve. A curve of degree $n$ needs $n^2$ sheets in the same way. Fixing $k_1 = 0$ leaves five sheets that differ only by the phase of $z_2$. Near $w = 0$ the second coordinate behaves like $z_2 \approx (-i w)^{2/5}$, which squeezes the half-disk $θ \ge 0$ around $w = 0$, of angle $π$, into a wedge of angle $2π/5$ around $z_2 = 0$. Five wedges, turned by $ζ$, close up into a full turn. So the five sheets fan out around the point $(1, 0)$, and the point is smooth on the curve, though no single sheet covers a neighborhood of it. The special points of stage 1 belong to the parametrization, not to the curve.
 
@@ -117,9 +117,9 @@ fan.pieces                                    # per cell: which sheet, 0 to 4
 
 **The mathematics.** Welded together, the 25 sheets form one surface, and its topology is that of the curve. Closed up in $\mathbb{CP}^2$, a smooth curve of degree $n$ has genus $(n - 1)(n - 2) / 2$, so the quintic curve is a sphere with 6 handles. The affine curve misses the points at infinity, where $z_1^5 + z_2^5 = 0$, one for each fifth root of $-1$. Cutting the sheets off at $|ξ| = a$ replaces each missing point with a boundary circle, so the Euler characteristic is:
 
-```math
+$$
 χ = 2 - 2 g - n = 2 - 12 - 5 = -15
-```
+$$
 
 with 5 boundary circles. The five flaring tips in the figure are those ends, each reaching toward a point at infinity.
 
@@ -144,21 +144,21 @@ The complex knows nothing of positions or metric. The same `CellComplex` methods
 
 **The mathematics.** Drawing in three dimensions discards one direction of $\mathbb{R}^4$. The figures use the orthographic projection onto $\mathbf e_1$, $\mathbf e_2$, and a blend of the two imaginary directions:
 
-```math
+$$
 \mathbf{s} = \cos α \mathbf{e}_{\dot 1} + \sin α \mathbf{e}_{\dot 2}
-```
+$$
 
 so the picture shows $\mathrm{Re} z_1$, $\mathrm{Re} z_2$, and $\mathbf{s} \cdot \mathbf{x}$, and hides the direction:
 
-```math
+$$
 \mathbf{n} = -\sin α \mathbf{e}_{\dot 1} + \cos α \mathbf{e}_{\dot 2}
-```
+$$
 
 Two sheets that are disjoint in $\mathbb{R}^4$ can cross in the picture, and the surface can pinch. A pinch point is a point whose tangent plane contains $\mathbf{n}$: the projection crushes that plane to a line, and the drawn surface folds into a cusp there. Differentiating the curve's equation gives $z_1^4 dz_1 + z_2^4 dz_2 = 0$, so the tangent line at a point is spanned over $\mathbb{C}$ by $(z_2^4, -z_1^4)$. As amplitudes, $\mathbf{n}$ is $(-i \sin α, i \cos α)$. It lies in the tangent line exactly when the two are complex multiples, which is when:
 
-```math
+$$
 \left( \frac{z_2}{z_1} \right)^4 = \tan α
-```
+$$
 
 Write $z_2 = t z_1$, so $t^4 = \tan α$ gives four values of $t$, and the curve's equation becomes $z_1^5 (1 + t^5) = 1$, with five roots $z_1$ for each. At $α = π/4$ the four values are $t = 1, i, -1, -i$, and $t^5 = t$. The value $t = -1$ makes $1 + t^5 = 0$, which sends the point to infinity. That leaves $3 \times 5 = 15$ pinch points. They are features of the drawing, not of the curve, and they move as $α$ changes.
 

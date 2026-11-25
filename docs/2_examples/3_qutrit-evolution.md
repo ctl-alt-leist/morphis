@@ -15,15 +15,15 @@ It writes `qutrit-relative-phases` and `qutrit-trajectory`, each as a `.png` sti
 
 The system is a spin-1 in a magnetic field tilted from $z$ by an angle $β$, with a quadratic shift $D$ along $z$:
 
-```math
+$$
 H = \cos β S_z + \sin β S_x + D S_z^2
-```
+$$
 
 in units of the field strength, on the lab states $m = +1, 0, -1$. The example takes $β = 0.9$ and $D = 0.4$. The Hamiltonian has three energies:
 
-```math
+$$
 (E_1, E_2, E_3) = (-0.7517, +0.2510, +1.3007)
-```
+$$
 
 The state starts in the lab state $m = 0$.
 
@@ -46,35 +46,35 @@ GAPS = ENERGIES[1:] - ENERGIES[0]                       # ω_21, ω_31
 
 The state space $\mathbb{C}^3$ is the space with three modes, $\mathbb{R}^6$ with directions $1, \dot 1, 2, \dot 2, 3, \dot 3$, and the modes are taken to be the energy eigenstates $|k⟩$. In that basis the evolution is diagonal. Each amplitude keeps its modulus $a_k$ and turns its phase at its own rate:
 
-```math
+$$
 z^k(t) = a_k e^{-i E_k t}
-```
+$$
 
 with $Σ_k a_k^2 = 1$. In $\mathbb{R}^6$ this is a rotation by $-E_k t$ in each of the three conjugate planes, the three-mode version of the rotor evolution of the qubit. For the initial state $m = 0$ the populations $a_k^2$ are:
 
-```math
+$$
 (a_1^2, a_2^2, a_3^2) = (0.4568, 0.3460, 0.1972)
-```
+$$
 
 Fixing the three moduli leaves the three phases free, so the state stays on a 3-torus $T^3$ of fixed populations inside the unit sphere $S^5$.
 
 The overall phase $e^{iα}$ of a state cannot be observed, and it moves all three phases together. Measuring the phases from the ground state's removes it: the ground amplitude becomes the constant $a_1$, real and positive, and the two remaining phases are coordinates $(u, v)$ on a 2-torus of relative phases:
 
-```math
+$$
 \mathbf{X}(u, v) = a_1 \mathbf{e}_1 + a_2 \left( \cos u \mathbf{e}_2 + \sin u \mathbf{e}_{\dot 2} \right) + a_3 \left( \cos v \mathbf{e}_3 + \sin v \mathbf{e}_{\dot 3} \right)
-```
+$$
 
 On it the state moves along a straight line of the torus coordinates, at the gap frequencies $ω_{k1} = E_k - E_1$:
 
-```math
+$$
 (u, v) = -(ω_{21} t, ω_{31} t)
-```
+$$
 
 with $ω_{21} = 1.0027$ and $ω_{31} = 2.0525$. A line on a torus closes only when its slope is rational. The slope here is:
 
-```math
+$$
 \frac{ω_{31}}{ω_{21}} = 2.046835
-```
+$$
 
 an irrational number for generic $β$ and $D$, so the orbit never closes and fills the torus densely. The ratio is close to 2, so locally the orbit follows the $(1, 2)$ curve, the one that winds twice around $v$ for each turn around $u$. Each turn of $u$ leaves $v$ ahead of that curve by $0.0468$ of a turn, about $17°$, so the near-$(1, 2)$ loop precesses slowly around the torus. Over the 60 time units drawn, $u$ makes 9.6 turns and $v$ makes 19.6.
 
@@ -106,9 +106,9 @@ Two steps carry the torus from $\mathbb{R}^6$ into the drawing space, and neithe
 
 The first drops the ground mode. On the torus the coordinates along $\mathbf e_1$ and $\mathbf e_{\dot 1}$ are the constants $a_1$ and 0, so the orthographic map onto the four directions $2, \dot 2, 3, \dot 3$ is one-to-one on the torus. Its image lies on the 3-sphere of radius:
 
-```math
+$$
 ρ = \sqrt{a_2^2 + a_3^2} = 0.7370
-```
+$$
 
 since $a_2^2 + a_3^2 = 1 - a_1^2$ is the population outside the ground state.
 
@@ -159,9 +159,9 @@ animate(partial(create_torus_sketch, theme), times, output, frame_rate=FRAME_RAT
 
 The torus is where the state goes once its global phase is set aside. The second figure keeps everything, and draws $\mathbf{ψ}(t)$ as the conjugate-planes figure draws its qubit, in the state space $\mathcal{V}$ with the path it has traced, without drawing any conjugate plane. The state is drawn as a point at the head of its path. With $c_k$ the amplitude on $|k⟩$ at $t = 0$, the state is:
 
-```math
+$$
 \mathbf{ψ}(t) = \sum_k \left[ \mathrm{Re}\left( c_k e^{-i E_k t} \right) \mathbf{e}_k + \mathrm{Im}\left( c_k e^{-i E_k t} \right) \mathbf{e}_{\dot k} \right]
-```
+$$
 
 a rotation by $-E_k t$ in each of the three conjugate planes at once, at three different rates. The periods $2π / |E_k|$ are 8.36, 25.03, and 4.83, and $E_1 < 0$, so mode 1 turns the other way from modes 2 and 3.
 
@@ -177,9 +177,9 @@ def evolved_state(t: NDArray) -> Vector:
 
 A view onto three of the six axes would draw three directions at full length and drop the other three. The figure instead sends each basis direction to its own diagonal of an icosahedron. The six diagonals are equiangular lines, every pair meeting at $\arccos(1/\sqrt{5}) ≈ 63.4°$, and they form a tight frame: for the unit diagonals $\mathbf d_a$,
 
-```math
+$$
 \sum_{a=1}^{6} \mathbf{d}_a \mathbf{d}_a^{\mathsf{T}} = 2 \mathbb{1}
-```
+$$
 
 so the map $\mathbf e_a \mapsto \mathbf d_a / \sqrt{2}$ has orthonormal rows. It is the orthogonal projection of $\mathbb{R}^6$ onto a 3-space at 45° to every basis direction, so every direction is drawn at the same length, $1 / \sqrt{2}$. In code it is a `Projection.linear`:
 

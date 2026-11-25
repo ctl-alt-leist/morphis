@@ -6,9 +6,9 @@ Duality operations map between vectors of complementary grades, revealing the de
 
 In any $d$-dimensional space, the **unit pseudoscalar** serves as the fundamental reference element:
 
-```math
+$$
 \mathbb{1} = \mathbf{e}_1 \wedge \mathbf{e}_2 \wedge \cdots \wedge \mathbf{e}_d
-```
+$$
 
 This highest-grade element represents the oriented volume of the entire space and provides the algebraic foundation for all duality operations.
 
@@ -42,21 +42,21 @@ $$
 
 The complements of a basis blade $u$ satisfy the fundamental relationship:
 
-```math
+$$
 u \wedge \overline{u} = \mathbb{1}
-```
+$$
 
-```math
+$$
 \underline{u} \wedge u = \mathbb{1}
-```
+$$
 
 This reveals that a k-vector and its complement span the entire space with no overlap.
 
 ### Sign Relationship
 
-```math
+$$
 \underline{u} = (-1)^{\text{grade}(u) \cdot \text{antigrade}(u)} \overline{u}
-```
+$$
 
 where antigrade = $d -$ grade.
 
@@ -138,15 +138,15 @@ b_dual = hodge_dual(b)
 
 ### Grade Mapping
 
-```math
+$$
 \text{grade}(\star b) = d - \text{grade}(b)
-```
+$$
 
 ### Double Hodge Dual
 
-```math
+$$
 \star \star v = (-1)^{k(d - k)} \text{sgn}(g) v
-```
+$$
 
 where $\text{sgn}(g)$ is the sign of the metric determinant:
 - Euclidean: $\text{sgn}(g) = +1$
@@ -164,7 +164,7 @@ where $\text{sgn}(g)$ is the sign of the metric determinant:
 - Bivector $\xrightarrow{\star}$ bivector (self-dual structure!)
 - Trivector $\xrightarrow{\star}$ vector
 
-The self-dual nature of bivectors in 4D creates rich structure—the 6-dimensional bivector space splits into 3D self-dual and anti-self-dual subspaces.
+The self-dual nature of bivectors in 4D Euclidean space creates rich structure—the 6-dimensional bivector space splits into 3D self-dual and anti-self-dual subspaces.
 
 ## Metric-Independent vs Metric-Dependent
 
@@ -224,15 +224,15 @@ intersection = meet(u, v)
 
 The 3D cross product is secretly the Hodge dual of the wedge product:
 
-```math
+$$
 \mathbf{a} \times \mathbf{b} = \star(\mathbf{a} \wedge \mathbf{b})
-```
+$$
 
 This explains why the cross product only works in 3D—it requires the special coincidence that vectors and bivectors have the same dimension (both 3).
 
-### Electromagnetic Duality
+### Self-Duality and Signature
 
-In electromagnetism, the electric field $\mathbf{E}$ and magnetic field $\mathbf{B}$ are Hodge duals in spacetime. The Maxwell equations exhibit a duality symmetry under $\mathbf{E} \leftrightarrow \star\mathbf{B}$.
+On bivectors in four dimensions, $\star \star = \det(g)$. In Euclidean signature the eigenvalues of $\star$ are $\pm 1$ and the real bivectors split into self-dual and anti-self-dual halves. In Lorentzian signature the eigenvalues are $\pm i$, so the split exists only with complex coefficients, and on real bivectors $\star$ is a complex structure.
 
 ### Computational Efficiency
 

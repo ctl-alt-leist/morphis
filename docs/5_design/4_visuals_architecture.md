@@ -156,17 +156,17 @@ scene.set_projection(Stereographic(axes=(1, 2, 3), pole=4))      # from the pole
 | View | Map | Parameters |
 |------|-----|------------|
 | `Orthographic(axes)` | the components along the axes; every other direction dropped | |
-| `Perspective(axes, distance)` | $\mathbf{x} \mapsto D \mathbf{x}_{\text{axes}} / (D - Σ x_{\text{dropped}})$ | `distance` $D$ of the eye |
+| `Perspective(axes, distance)` | $\mathbf{x} \mapsto D \mathbf x_{\text{axes}} / (D - Σ x_{\text{dropped}})$ | `distance` $D$ of the eye |
 | `Stereographic(axes, pole, radius)` | from the pole of the sphere of that radius onto the hyperplane through the origin, then orthographic onto the axes | `pole` label (last direction by default), `radius` |
 
-The perspective weight row is $1 - Σ x_{\text{dropped}} / D$, so its center of projection is the flat where the axes components vanish and $Σ x_{\text{dropped}} = D$: from ℝ⁴ the eye sits at $D \mathbf{e}_4$, and the far cell of a tesseract is drawn inside the near one. Every view draws a space of dimension 3 or less in its own coordinates, zero-padded. The axes must be three distinct labels of the element's space, so an axis outside it raises `IndexError` (0 is forbidden in a Euclidean space and is time or the ideal direction in a Lorentzian or PGA space), and a stereographic pole may not also be an axis. The default `axes=(1, 2, 3)` is x, y, z in every signature, because x is always 1. Views are frozen pydantic models, compared by value and saved with a scene.
+The perspective weight row is $1 - Σ x_{\text{dropped}} / D$, so its center of projection is the flat where the axes components vanish and $Σ x_{\text{dropped}} = D$: from ℝ⁴ the eye sits at $D \mathbf e_4$, and the far cell of a tesseract is drawn inside the near one. Every view draws a space of dimension 3 or less in its own coordinates, zero-padded. The axes must be three distinct labels of the element's space, so an axis outside it raises `IndexError` (0 is forbidden in a Euclidean space and is time or the ideal direction in a Lorentzian or PGA space), and a stereographic pole may not also be an axis. The default `axes=(1, 2, 3)` is x, y, z in every signature, because x is always 1. Views are frozen pydantic models, compared by value and saved with a scene.
 
 **Projections.** `Projection` holds the $(m + 1) \times (d + 1)$ matrix of a projective map $\mathbb{RP}^d \to \mathbb{RP}^m$ on homogeneous coordinates; its kernel is the center of projection. A projection to 3D may be given wherever a view is, for a map no view names: a screen tilted out of the basis, a deliberately unfaithful linear depiction, or a chain of maps.
 
 | Constructor or method | Role |
 |------|------|
 | `Projection.linear(metric, images)` | each labeled direction sent to a chosen picture vector; the deliberately unfaithful depiction, in which two directions may share one image |
-| `Projection.orthographic(screen)` | picture coordinate $c$ is $\mathbf{e}_c \cdot \mathbf{x}$ for an orthonormal screen `Frame` |
+| `Projection.orthographic(screen)` | picture coordinate $c$ is $\mathbf e_c \cdot \mathbf{x}$ for an orthonormal screen `Frame` |
 | `Projection.stereographic(pole)` | the sphere of the pole's radius, from the pole |
 | `P @ Q` | composition, first Q then P |
 | `P(points)` | picture coordinates of points of any lot |
@@ -181,7 +181,7 @@ The perspective weight row is $1 - Σ x_{\text{dropped}} / D$, so its center of 
 
 Ink marks that also take displacements (a vector's arrow, a plane's spanning vectors, a circle's plane) set them out from a drawing-space placement, which needs an affine projection; given a central one, `Sketch.carried` raises `ValueError`. Points, curves, surfaces, and labels go through any projection.
 
-**Labels.** `basis_labels(axes)` in `projection.py` gives the LaTeX labels of the drawn basis, $\mathbf{e}_2, \mathbf{e}_3, \mathbf{e}_4$ for axes `(2, 3, 4)`. The Scene passes them to the backend before the basis is first drawn and again on every `set_projection`. A given `Projection` has no axes, and the basis is labeled 1, 2, 3.
+**Labels.** `basis_labels(axes)` in `projection.py` gives the LaTeX labels of the drawn basis, $\mathbf e_2, \mathbf e_3, \mathbf e_4$ for axes `(2, 3, 4)`. The Scene passes them to the backend before the basis is first drawn and again on every `set_projection`. A given `Projection` has no axes, and the basis is labeled 1, 2, 3.
 
 **The Canvas path.** `ProjectionConfig` and `project_blade` in `projection.py` remain for the Canvas helpers in `drawing/vectors.py`, `contexts.py`, and `operations.py`, which slice components at chosen axes. They are to move onto views as those helpers are revisited.
 
