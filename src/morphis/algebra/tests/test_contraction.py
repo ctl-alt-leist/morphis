@@ -306,3 +306,67 @@ class TestOperatorIndexedContraction:
         assert result.grade == 1
         assert result.lot == (M,)
         assert result.shape == (M, 3)
+
+
+# =============================================================================
+# The Two Syntaxes Agree
+# =============================================================================
+
+
+class TestSyntaxesAgree:
+    """contract() and the bracket syntax give the same data, grade, and lot."""
+
+    def assert_agree(self, left, right, grade, lot):
+        assert_allclose(left.data, right.data)
+        assert left.grade == right.grade == grade
+        assert left.lot == right.lot == lot
+
+    def operator(self, M, N, in_grade, out_grade):
+        return Operator(
+            data=np.random.randn(M, N, *(3,) * (out_grade + in_grade)),
+            input_spec=VectorSpec(grade=in_grade, lot=(N,), dim=3),
+            output_spec=VectorSpec(grade=out_grade, lot=(M,), dim=3),
+            metric=euclidean_metric(3),
+        )
+
+    def test_operator_scalar_to_bivector(self):
+        O = self.operator(2, 5, 0, 2)
+        v = Vector(np.random.randn(5), grade=0, metric=O.metric)
+
+        self.assert_agree(contract("mnab, n -> mab", O, v), O["mnab"] * v["n"], 2, (2,))
+
+    def test_operator_vector_to_vector(self):
+        O = self.operator(2, 5, 1, 1)
+        v = Vector(np.random.randn(5, 3), grade=1, metric=O.metric)
+
+        self.assert_agree(contract("mnab, nb -> ma", O, v), O["mnab"] * v["nb"], 1, (2,))
+
+    def test_operator_matches_call(self):
+        O = self.operator(2, 5, 1, 2)
+        v = Vector(np.random.randn(5, 3), grade=1, metric=O.metric)
+
+        self.assert_agree(contract("mnabc, nc -> mab", O, v), O * v, 2, (2,))
+
+    def test_lot_contraction(self):
+        g = euclidean_metric(3)
+        u = Vector(np.random.randn(2, 5, 3, 3), grade=2, metric=g)
+        v = Vector(np.random.randn(5), grade=0, metric=g)
+
+        self.assert_agree(contract("mnab, n -> mab", u, v), u["mnab"] * v["n"], 2, (2,))
+
+    def test_outer_product_keeps_lot_first(self):
+        g = euclidean_metric(3)
+        u = Vector(np.random.randn(2, 3), grade=1, metric=g)
+        v = Vector(np.random.randn(5, 3), grade=1, metric=g)
+
+        self.assert_agree(contract("ma, nb -> mnab", u, v), u["ma"] * v["nb"], 2, (2, 5))
+
+    def test_implicit_output_counts_only_geometric_indices(self):
+        g = euclidean_metric(3)
+        u = Vector(np.random.randn(2, 3), grade=1, metric=g)
+        s = Vector(np.random.randn(2), grade=0, metric=g)
+
+        result = contract("am, a", u, s)
+        assert result.grade == 1
+        assert result.lot == ()
+        assert contract("am, bm", u, u).lot == (2, 2)

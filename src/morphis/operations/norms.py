@@ -45,7 +45,7 @@ def _form_v(v: Vector) -> NDArray:
 
     sig = norm_squared_signature(k)
     metric_args = [g.data] * k
-    return einsum(sig, *metric_args, v.data, v.data) / factorial(k)
+    return einsum(sig, *metric_args, v.data, v.data, optimize=True) / factorial(k)
 
 
 def _form_mv(v: MultiVector) -> NDArray:
@@ -222,5 +222,5 @@ def hermitian_form(v: Vector) -> NDArray:
 
     sig = norm_squared_signature(k)
     metric_args = [g.data] * k
-    result = einsum(sig, *metric_args, conj(v.data), v.data) / factorial(k)
+    result = einsum(sig, *metric_args, conj(v.data), v.data, optimize=True) / factorial(k)
     return result.real

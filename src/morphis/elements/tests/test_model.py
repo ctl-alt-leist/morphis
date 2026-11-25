@@ -420,7 +420,7 @@ class TestMultiVector:
         assert mv.is_rotor is False
 
     def test_is_motor_true(self):
-        """A proper motor has grades {0, 2} and M * ~M = 1."""
+        """A proper motor has grades {0, 2, 4} and M * ~M = 1."""
         from math import pi
 
         from morphis.elements import basis_vectors
@@ -435,7 +435,7 @@ class TestMultiVector:
         assert M.is_motor is True
 
     def test_is_motor_false_wrong_grades(self):
-        """A multivector with grades other than {0, 2} is not a motor."""
+        """A multivector with grades other than {0, 2, 4} is not a motor."""
         g = euclidean_metric(4)
         b_0 = Vector(1.0, grade=0, metric=g)
         b_1 = Vector(ones(4), grade=1, metric=g)

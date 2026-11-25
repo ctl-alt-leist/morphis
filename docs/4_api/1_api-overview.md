@@ -500,14 +500,14 @@ F_unit = F.unit()
 ### Transforms
 
 ```python
-from morphis.transforms import rotor, rotate
+from morphis.transforms import rotate, rotor, transform
 
 # Create rotor for rotation
 b = (e1 ^ e2).unit()
 R = rotor(b, angle)
 
 # Apply rotation
-v_rotated = rotate(v, R)  # or: R * v * ~R
+v_rotated = transform(v, R)  # or: rotate(v, b, angle)
 ```
 
 ### Visualization

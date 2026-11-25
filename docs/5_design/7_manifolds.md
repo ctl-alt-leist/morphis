@@ -10,7 +10,7 @@ The aim is to make the mathematics of the physics notebook executable in the for
 
 **The lot is the coordinate grid.** A grid of $σ$ is a lot of shape $(N_1, \ldots, N_k)$, one axis per intrinsic coordinate, and lot axis $a$ is the $σ^a$ direction. Every operation in morphis already broadcasts over it. A field on a manifold is therefore a `Vector` whose lot is the grid; no separate field class is needed until bundles need sections.
 
-**Everything lives in the ambient algebra.** The tangent frame $∂_a \mathbf{X}$, the tangent blade $\mathbf{t}$, the projector $P$, the normal space, and the second fundamental form $\mathbf{k}_{ab}$ are all ambient objects, so one formula holds in every dimension and signature. Quantities with manifold indices, such as $h_{ab}$, are plain $k \times k$ arrays per point. They are not `Metric` objects, because a `Metric` is a constant flat context.
+**Everything lives in the ambient algebra.** The tangent frame $∂_a \mathbf{X}$, the tangent blade $\mathbf{t}$, the projector $P$, the normal space, and the second fundamental form $\mathbf k_{ab}$ are all ambient objects, so one formula holds in every dimension and signature. Quantities with manifold indices, such as $h_{ab}$, are plain $k \times k$ arrays per point. They are not `Metric` objects, because a `Metric` is a constant flat context.
 
 **Frames compute; blades are views.** morphis stores a grade-$r$ element with all $d^r$ components:
 
@@ -62,14 +62,14 @@ Two complex objects are native, and they are kept distinct.
 
 **Complex coefficients**, $\mathbb{C} \otimes \mathrm{Cl}(V)$: the scalar $i$ is external and commutes with everything. morphis already admits complex components.
 
-**Complex dimensions**, $\mathbb{R}^{2n}$ with a structure bivector: the unit $i$ is the bivector $\mathbf{J}$, an element of the algebra. A space declared with modes pairs each representative direction $\mathbf{e}_m$ with its partner $\mathbf{e}_{\dot m}$, in the adjacent order $1, \dot 1, 2, \dot 2, \ldots$, and carries
+**Complex dimensions**, $\mathbb{R}^{2n}$ with a structure bivector: the unit $i$ is the bivector $\mathbf{J}$, an element of the algebra. A space declared with modes pairs each representative direction $\mathbf e_m$ with its partner $\mathbf e_{\dot m}$, in the adjacent order $1, \dot 1, 2, \dot 2, \ldots$, and carries
 
-```math
+$$
 \begin{aligned}
-\mathbf{J} &= \mathbf{e}_m \wedge \mathbf{e}_{\dot m} \\
-J(\mathbf{v}) &= \mathbf{v} \lrcorner \mathbf{J}
+\mathbf J &= \mathbf e_m \wedge \mathbf e_{\dot m} \\
+J(\mathbf v) &= \mathbf v \lrcorner \mathbf J
 \end{aligned}
-```
+$$
 
 Every real vector of such a space has a complex reading: `v.amplitudes` returns the $n$ mode amplitudes $v^m + i v^{\dot m}$, just as `.on[...]` returns real components, and `Vector.from_amplitudes(z, metric)` builds the real vector from them. The amplitude carries no normalization factor; under the ket convention, which places $1 / \sqrt{2}$ in the basis, the ket amplitudes are these divided by $\sqrt{2}$. Holomorphic maps are written in ordinary complex arithmetic and land as real vectors.
 
@@ -111,9 +111,9 @@ The vocabulary follows the Kähler appendix:
 | $\sqrt{\lvert \det h \rvert}$ | `X.volume_element(σ)` |
 | $P(\mathbf{v})$, $P_\perp(\mathbf{v})$ | `X.tangent_part(v, σ)`, `X.normal_part(v, σ)` |
 | normal space | `X.normal_frame(σ)`, `X.normal_blade(σ)` |
-| $\mathbf{k}_{ab} = P_\perp(∂_a ∂_b \mathbf{X})$ | `X.second_fundamental_form(σ)` |
-| $\mathbf{k} = \frac{1}{k} h^{ab} \mathbf{k}_{ab}$ | `X.mean_curvature(σ)` |
-| $R_{abcd} = \mathbf{k}_{ac} \cdot \mathbf{k}_{bd} - \mathbf{k}_{ad} \cdot \mathbf{k}_{bc}$ | `X.riemann_curvature(σ)` |
+| $\mathbf k_{ab} = P_\perp(∂_a ∂_b \mathbf{X})$ | `X.second_fundamental_form(σ)` |
+| $\mathbf{k} = \frac{1}{k} h^{ab} \mathbf k_{ab}$ | `X.mean_curvature(σ)` |
+| $R_{abcd} = \mathbf k_{ac} \cdot \mathbf k_{bd} - \mathbf k_{ad} \cdot \mathbf k_{bc}$ | `X.riemann_curvature(σ)` |
 | $R_{bd} = h^{ac} R_{abcd}$, $R = h^{bd} R_{bd}$ | `X.ricci_curvature(σ)`, `X.scalar_curvature(σ)` |
 | $K = R_{1212} / \det h$ | `X.gaussian_curvature(σ)` |
 | causal character | `X.causal_character(σ)` |
@@ -166,7 +166,7 @@ Each layer is tested against worked examples from the notebook, and each complet
 | Test | Expected |
 |------|----------|
 | periodic grid | torus, $χ = 0$ |
-| Clifford torus | $h_{ab} = δ_{ab}$, $K = 0$, $\mathbf{k}_{11} = -\mathbf{r}_1$ |
+| Clifford torus | $h_{ab} = δ_{ab}$, $K = 0$, $\mathbf k_{11} = -\mathbf r_1$ |
 | sphere of radius $ρ$ | $K = 1 / ρ^2$ |
 | de Sitter in $\mathbb{R}^{1,2}$ | timelike everywhere, in both conventions |
 | Fermat curve, $n = 5$ | $\cos θ_K = 1$, $\mathbf{k} = 0$, $K < 0$, welded mesh $χ = -15$ with 5 boundary circles |

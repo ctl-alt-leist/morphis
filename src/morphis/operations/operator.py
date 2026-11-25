@@ -247,15 +247,9 @@ class Operator(IndexableMixin):
             G = Operator(...)  # shape (M, N, 3, 3) for lot-first layout
             G["mnab"]          # IndexedTensor with indices for all 4 axes
         """
-        from morphis.algebra.contraction import IndexedTensor
+        from morphis.algebra.contraction import IndexedTensor, _output_geo_indices
 
-        # Operator layout: (*out_lot, *in_lot, *out_geo, *in_geo)
-        # Output geometric indices start after lot dimensions
-        lot_end = self.output_spec.collection + self.input_spec.collection
-        out_geo_end = lot_end + self.output_spec.grade
-        output_geo_indices = indices[lot_end:out_geo_end]
-
-        return IndexedTensor(self, indices, output_geo_indices=output_geo_indices)
+        return IndexedTensor(self, indices, output_geo_indices=_output_geo_indices(self, indices))
 
     def _slice(self, key):
         """

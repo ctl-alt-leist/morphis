@@ -31,10 +31,12 @@ def right_complement(u: Vector) -> Vector:
     """
     Compute the right complement of a vector using the Levi-Civita symbol:
 
-        comp(u)^{m_{k+1} ... m_d} = u^{m_1 ... m_k} eps_{m_1 ... m_d}
+        comp(u)^{m_{k+1} ... m_d} = (1 / k!) u^{m_1 ... m_k} eps_{m_1 ... m_d}
 
-    Maps grade k vector to grade (d - k) vector, representing the orthogonal
-    subspace.
+    Maps grade k vector to grade (d - k) vector. On a basis blade it is fixed
+    by u ^ comp(u) = I, with I the unit pseudoscalar, and it needs no metric.
+    The left complement undoes it; applying the right complement twice gives
+    (-1)^(k (d - k)) u.
 
     Returns Vector of grade (dim - grade) with same metric.
     """
@@ -45,7 +47,7 @@ def right_complement(u: Vector) -> Vector:
     result_grade = d - k
     eps = levi_civita(d)
     sig = complement_signature(k, d)
-    result_data = einsum(sig, u.data, eps)
+    result_data = einsum(sig, u.data, eps) / factorial(k)
 
     return Vector(
         data=result_data,
@@ -59,9 +61,11 @@ def left_complement(u: Vector) -> Vector:
     """
     Compute the left complement of a vector:
 
-        lcomp(u)^{m_1 ... m_{d-k}} = eps_{m_1 ... m_d} u^{m_{d-k+1} ... m_d}
+        lcomp(u)^{m_1 ... m_{d-k}} = (1 / k!) eps_{m_1 ... m_d} u^{m_{d-k+1} ... m_d}
 
-    Related to right complement by a sign factor. Maps grade k to grade (d - k).
+    Maps grade k to grade (d - k). On a basis blade it is fixed by
+    lcomp(u) ^ u = I, and it is (-1)^(k (d - k)) times the right complement,
+    which it undoes.
 
     Returns Vector of grade (dim - grade) with same metric.
     """
@@ -76,7 +80,7 @@ def left_complement(u: Vector) -> Vector:
     vector_indices = INDICES[result_grade : result_grade + k]
     eps_indices = result_indices + vector_indices
     sig = f"{eps_indices}, ...{vector_indices} -> ...{result_indices}"
-    result_data = einsum(sig, eps, u.data)
+    result_data = einsum(sig, eps, u.data) / factorial(k)
 
     return Vector(
         data=result_data,
@@ -118,7 +122,7 @@ def hodge_dual(u: Vector) -> Vector:
         metric_parts = ", ".join(f"{vector_indices[m]}{lowered_indices[m]}" for m in range(k))
         sig = f"{metric_parts}, ...{vector_indices}, {lowered_indices} -> ..."
         metric_args = [g.data] * k
-        result_data = einsum(sig, *metric_args, u.data, eps) / factorial(k)
+        result_data = einsum(sig, *metric_args, u.data, eps, optimize=True) / factorial(k)
         return Vector(data=result_data, grade=0, metric=u.metric, collection=u.collection)
 
     vector_indices = INDICES[:k]
@@ -128,7 +132,7 @@ def hodge_dual(u: Vector) -> Vector:
     eps_sub = lowered_indices + result_indices
     sig = f"{metric_parts}, ...{vector_indices}, {eps_sub} -> ...{result_indices}"
     metric_args = [g.data] * k
-    result_data = einsum(sig, *metric_args, u.data, eps) / factorial(k)
+    result_data = einsum(sig, *metric_args, u.data, eps, optimize=True) / factorial(k)
 
     return Vector(
         data=result_data,

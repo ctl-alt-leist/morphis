@@ -460,7 +460,7 @@ class Frame(GradedElement):
         """View frame vectors as a batch of grade-1 vectors."""
 
     def transform(self, M: 'MultiVector') -> 'Frame'
-        """Transform this frame by a motor/versor via sandwich product."""
+        """Transform each vector of this frame by a motor/versor."""
 
     def transform_inplace(self, M: 'MultiVector') -> 'None'
         """Transform this frame in-place by a motor/versor."""
@@ -670,10 +670,10 @@ def dot(u: 'Vector', v: 'Vector') -> 'NDArray'
     """Compute the inner product of two grade-1 vectors: g_{mn} u^m v^n."""
 
 def project(u: 'Vector', v: 'Vector') -> 'Vector'
-    """Project vector u onto vector v:"""
+    """Project u onto the subspace of the blade v:"""
 
 def reject(u: 'Vector', v: 'Vector') -> 'Vector'
-    """Compute the rejection of vector u from vector v: the component of u"""
+    """Compute the rejection of u from the blade v:"""
 
 def interior(u: 'Vector', v: 'Vector') -> 'Vector'
     """Compute the left interior product (left contraction) of u into v:"""
@@ -805,10 +805,10 @@ def interior_signature(j: int, k: int) -> str
 
 ```python
 def factor(b: 'Vector', tol: 'float | None' = None) -> 'Vector'
-    """Factor a k-vector into k spanning grade-1 vectors."""
+    """Factor a blade into k spanning grade-1 vectors, orthogonal in the metric:"""
 
 def spanning_vectors(b: 'Vector', tol: 'float | None' = None) -> 'tuple[Vector, ...]'
-    """Factor a vector into its constituent grade-1 vectors."""
+    """Factor a blade into its constituent grade-1 vectors."""
 ```
 
 
@@ -1038,7 +1038,7 @@ def translate(u: 'Vector', v: 'Vector') -> 'Vector'
     """Translate a vector by a direction (PGA only)."""
 
 def transform(b: 'Vector', M: 'MultiVector') -> 'Vector'
-    """Apply a motor/versor transformation to a vector via sandwich product."""
+    """Apply a motor/versor transformation to a vector."""
 ```
 
 
@@ -1083,10 +1083,10 @@ def distance_point_to_point(p: 'Vector', q: 'Vector') -> 'NDArray'
     """Compute Euclidean distance between two points."""
 
 def distance_point_to_line(p: 'Vector', l: 'Vector') -> 'NDArray'
-    """Compute distance from a point to a line as |p ^ l| / |l|."""
+    """Compute distance from a point to a line as |p ^ l| / (|p| |l|), in weight norms."""
 
 def distance_point_to_plane(p: 'Vector', h: 'Vector') -> 'NDArray'
-    """Compute distance from a point to a plane as |p ^ h| / |h|."""
+    """Compute distance from a point to a plane as |p ^ h| / (|p| |h|), in weight norms."""
 
 def are_collinear(p: 'Vector', q: 'Vector', r: 'Vector', tol: 'float | None' = None) -> 'NDArray'
     """Check if three points are collinear: p ^ q ^ r = 0."""
@@ -1101,7 +1101,7 @@ def point_on_plane(p: 'Vector', h: 'Vector', tol: 'float | None' = None) -> 'NDA
     """Check if a point lies on a plane: p ^ h = 0."""
 
 def line_in_plane(l: 'Vector', h: 'Vector', tol: 'float | None' = None) -> 'NDArray'
-    """Check if a line lies in a plane: l ^ h = 0."""
+    """Check if a line lies in a plane: every point of the line lies in it."""
 
 def translator(v: 'Vector') -> 'MultiVector'
     """Create a translator for pure translation (PGA only)."""

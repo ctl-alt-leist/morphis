@@ -97,7 +97,7 @@ def _wedge_vectors(*vectors: Vector) -> Vector:
     sig = wedge_signature(grades)
     delta = generalized_delta(n, d)
     norm = wedge_normalization(grades)
-    result = norm * einsum(sig, *[u.data for u in vectors], delta)
+    result = norm * einsum(sig, *[u.data for u in vectors], delta, optimize=True)
 
     return Vector(data=result, grade=n, metric=metric)
 
@@ -287,17 +287,28 @@ def _antiwedge_vectors(u: Vector, v: Vector) -> Vector:
     """
     Core antiwedge implementation for two Vectors.
 
-    Computes u ∨ v = complement(complement(u) ∧ complement(v))
+    Computes u ∨ v = left_complement(right_complement(u) ∧ right_complement(v)).
+    The outer complement is the left one because it inverts the right one, so
+    that right_complement(u ∨ v) = right_complement(u) ∧ right_complement(v)
+    and u ∨ I = u hold in every dimension. The two complements differ only in
+    even dimensions, on odd grades.
 
-    Returns Vector of grade (j + k - d).
+    Returns Vector of grade (j + k - d), or scalar zero if j + k < d.
     """
-    from morphis.operations.duality import right_complement
+    from morphis.elements.metric import Metric
+    from morphis.elements.vector import Vector
+    from morphis.operations.duality import left_complement, right_complement
 
-    u_comp = right_complement(u)
-    v_comp = right_complement(v)
-    joined = _wedge_vectors(u_comp, v_comp)
+    metric = Metric.merge(u.metric, v.metric)
+    d = get_common_dim(u, v)
 
-    return right_complement(joined)
+    if u.grade + v.grade < d:
+        result = Vector(data=zeros(broadcast_collection_shape(u, v)), grade=0, metric=metric)
+
+    else:
+        result = left_complement(_wedge_vectors(right_complement(u), right_complement(v)))
+
+    return result
 
 
 def antiwedge(*elements):
@@ -311,11 +322,11 @@ def antiwedge(*elements):
 
     Defined via duality:
 
-        u ∨ v = complement(complement(u) ∧ complement(v))
+        u ∨ v = left_complement(right_complement(u) ∧ right_complement(v))
 
     For grade-j vector u and grade-k vector v in d dimensions:
     - Result grade: j + k - d
-    - Returns zero vector if j + k < d (subspaces don't intersect generically)
+    - Returns scalar zero if j + k < d (subspaces don't intersect generically)
 
     For Frames:
         Distributes over frame vectors: (p ∨ q) ∨ {u, v, w} = {p ∨ q ∨ u, p ∨ q ∨ v, p ∨ q ∨ w}
@@ -434,19 +445,19 @@ def _geometric_v_v(u: Vector, v: Vector) -> MultiVector:
 
         if r == 0:
             # Scalar result
-            result_data = norm * einsum(sig, *metric_args, u.data, v.data)
+            result_data = norm * einsum(sig, *metric_args, u.data, v.data, optimize=True)
             component = Vector(result_data, grade=0, metric=metric)
 
         elif c == 0:
             # Pure wedge (no contractions)
             delta = generalized_delta(r, d)
-            result_data = norm * einsum(sig, u.data, v.data, delta)
+            result_data = norm * einsum(sig, u.data, v.data, delta, optimize=True)
             component = Vector(data=result_data, grade=r, metric=metric)
 
         else:
             # Mixed: contractions + antisymmetrization
             delta = generalized_delta(r, d)
-            result_data = norm * einsum(sig, *metric_args, u.data, v.data, delta)
+            result_data = norm * einsum(sig, *metric_args, u.data, v.data, delta, optimize=True)
             component = Vector(data=result_data, grade=r, metric=metric)
 
         components[r] = component

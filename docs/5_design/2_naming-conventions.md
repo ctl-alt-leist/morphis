@@ -34,11 +34,11 @@ This document defines the naming conventions used throughout the morphis codebas
 
 | Function | Returns | Description |
 |----------|---------|-------------|
-| `basis_vector(index, metric)` | Vector | Single basis vector $\mathbf{e}_n$ |
-| `basis_vectors(metric)` | tuple[Vector, ...] | All basis vectors in index order: $(\mathbf{e}_1, \ldots, \mathbf{e}_d)$ for Euclidean, $(\mathbf{e}_0, \ldots, \mathbf{e}_{d - 1})$ for Lorentzian and PGA |
-| `basis_element(indices, metric)` | Vector | Basis k-vector $\mathbf{e}_{n_1} \wedge \cdots \wedge \mathbf{e}_{n_k}$ |
+| `basis_vector(index, metric)` | Vector | Single basis vector $\mathbf e_n$ |
+| `basis_vectors(metric)` | tuple[Vector, ...] | All basis vectors in index order: $(\mathbf e_1, \ldots, \mathbf e_d)$ for Euclidean, $(\mathbf e_0, \ldots, \mathbf e_{d - 1})$ for Lorentzian and PGA |
+| `basis_element(indices, metric)` | Vector | Basis k-vector $\mathbf e_{n_1} \wedge \cdots \wedge \mathbf e_{n_k}$ |
 | `geometric_basis(metric)` | dict[int, tuple] | Complete basis by grade |
-| `pseudoscalar(metric)` | Vector | Highest grade basis element, $\mathbf{e}_{12\ldots d}$ for Euclidean, $\mathbf{e}_{01\ldots(d - 1)}$ for Lorentzian and PGA |
+| `pseudoscalar(metric)` | Vector | Highest grade basis element, $\mathbf e_{12\ldots d}$ for Euclidean, $\mathbf e_{01\ldots(d - 1)}$ for Lorentzian and PGA |
 
 Indices are user-facing geometric indices; see [Index Convention](6_index-convention.md).
 
@@ -64,7 +64,7 @@ Indices are user-facing geometric indices; see [Index Convention](6_index-conven
 | `.lot` | tuple[int, ...] | Lot (batch) dimensions |
 | `.geo` | tuple[int, ...] | Geometric dimensions (depends on grade) |
 | `.data` | NDArray | Underlying array |
-| `.is_blade` | bool | True if factorizable as $\mathbf{v}_1 \wedge \cdots \wedge \mathbf{v}_k$ |
+| `.is_blade` | bool | True if factorizable as $\mathbf v_1 \wedge \cdots \wedge \mathbf v_k$ |
 | `.shape` | tuple | Full data shape = `(*lot, *geo)` |
 | `.metric` | Metric | Associated metric |
 | `.at` | AtAccessor | Indexing over lot dimensions: `v.at[i]` |

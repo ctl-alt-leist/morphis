@@ -121,7 +121,7 @@ class Frame(GradedElement):
 - `.is_even` - True if only even grades (0, 2, 4, ...)
 - `.is_odd` - True if only odd grades (1, 3, 5, ...)
 - `.is_rotor` - True if even versor with M * ~M = 1
-- `.is_motor` - True if PGA motor (grades {0, 2} with M * ~M = 1)
+- `.is_motor` - True if PGA motor (grades {0, 2, 4} with M * ~M = 1)
 - `.grades` - List of present grades
 
 ---

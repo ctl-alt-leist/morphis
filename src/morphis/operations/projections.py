@@ -10,9 +10,10 @@ Vector naming convention: u, v, w (never a, b, c for vectors).
 
 from __future__ import annotations
 
+from math import factorial
 from typing import TYPE_CHECKING
 
-from numpy import einsum, newaxis, where, zeros
+from numpy import abs as np_abs, asarray, einsum, newaxis, where, zeros
 from numpy.typing import NDArray
 
 from morphis.config import TOLERANCE
@@ -30,16 +31,32 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
+def _contraction_normalization(n: int) -> float:
+    """
+    Normalization of a contraction over n index pairs.
+
+    The factor 1 / n! counts each set of n directions once, and the sign
+    (-1)^(n (n - 1) / 2) turns the in-order pairing of the einsum signatures
+    into the inside-out pairing of the geometric product.
+    """
+    sign = (-1) ** (n * (n - 1) // 2)
+
+    return sign / factorial(n)
+
+
 def interior_left(u: Vector, v: Vector) -> Vector:
     """
     Compute the left interior product (left contraction) of u into v:
 
-        (u _| v)^{n_1 ... n_{k - j}}
-            = u^{m_1 ... m_j} v_{m_1 ... m_j}^{n_1 ... n_{k - j}}
+        u _| v = <u v>_{k - j}
 
-    where indices are lowered using the metric. Contracts all indices of u
-    with the first grade(u) indices of v. Result is grade (k - j), or zero
-    vector if j > k.
+        (u _| v)^{n_1 ... n_{k - j}}
+            = (1 / j!) u^{m_j ... m_1} v_{m_1 ... m_j}^{n_1 ... n_{k - j}}
+
+    where indices are lowered using the metric. The indices of u pair with the
+    first grade(u) indices of v from the inside out, as they do in the
+    geometric product, and 1 / j! counts each set of j directions once. Hence
+    e12 _| e12 = -1. Result is grade (k - j), or scalar zero if j > k.
 
     Both vectors must have compatible metrics (validated via Metric.merge).
 
@@ -64,7 +81,7 @@ def interior_left(u: Vector, v: Vector) -> Vector:
     result_grade = k - j
     sig = interior_left_signature(j, k)
     metric_args = [g.data] * j
-    result = einsum(sig, *metric_args, u.data, v.data)
+    result = _contraction_normalization(j) * einsum(sig, *metric_args, u.data, v.data, optimize=True)
 
     return Vector(data=result, grade=result_grade, metric=metric)
 
@@ -77,12 +94,14 @@ def interior_right(u: Vector, v: Vector) -> Vector:
     """
     Compute the right interior product (right contraction) of u by v:
 
-        (u |_ v)^{m_1 ... m_{j - k}}
-            = u^{m_1 ... m_{j - k} n_1 ... n_k} v_{n_1 ... n_k}
+        u |_ v = <u v>_{j - k}
 
-    where indices are lowered using the metric. Contracts all indices of v
-    with the last grade(v) indices of u. Result is grade (j - k), or zero
-    vector if k > j.
+        (u |_ v)^{m_1 ... m_{j - k}}
+            = (1 / k!) u^{m_1 ... m_{j - k} n_1 ... n_k} v_{n_k ... n_1}
+
+    where indices are lowered using the metric. The indices of v pair with the
+    last grade(v) indices of u from the inside out, as they do in the geometric
+    product. Result is grade (j - k), or scalar zero if k > j.
 
     Both vectors must have compatible metrics (validated via Metric.merge).
 
@@ -107,7 +126,7 @@ def interior_right(u: Vector, v: Vector) -> Vector:
     result_grade = j - k
     sig = interior_right_signature(j, k)
     metric_args = [g.data] * k
-    result = einsum(sig, *metric_args, u.data, v.data)
+    result = _contraction_normalization(k) * einsum(sig, *metric_args, u.data, v.data, optimize=True)
 
     return Vector(data=result, grade=result_grade, metric=metric)
 
@@ -141,38 +160,53 @@ def dot(u: Vector, v: Vector) -> NDArray:
 
 def project(u: Vector, v: Vector) -> Vector:
     """
-    Project vector u onto vector v:
+    Project u onto the subspace of the blade v:
 
-        proj_v(u) = (u _| v) _| v / |v|^2
+        proj_v(u) = (u _| v) _| v^(-1)
+
+    Projection preserves grade and is an outermorphism: proj_v(u ^ w) =
+    proj_v(u) ^ proj_v(w). It is zero when grade(u) > grade(v), since a
+    subspace holds no blade larger than itself. A null blade has no inverse
+    and so no projection; the result there is zero.
 
     Both vectors must have compatible metrics.
 
     Returns projected vector with same grade as u.
     """
+    from morphis.elements.metric import Metric
     from morphis.elements.vector import Vector
+    from morphis.operations.products import reverse
 
-    contraction = interior_left(u, v)
-    result = interior_left(contraction, v)
-    v_form = form(v)
+    metric = Metric.merge(u.metric, v.metric)
+    d = get_common_dim(u, v)
+    j, k = u.grade, v.grade
 
-    n_expanded = v_form
-    for _ in range(result.grade):
-        n_expanded = n_expanded[..., newaxis]
+    if j > k:
+        data = zeros(broadcast_collection_shape(u, v) + (d,) * j)
 
-    safe_norm = where(n_expanded > TOLERANCE, n_expanded, 1.0)
+    else:
+        # v^(-1) = reverse(v) / form(v)
+        numerator = interior_left(interior_left(u, v), reverse(v))
 
-    return Vector(
-        data=result.data / safe_norm,
-        grade=result.grade,
-        metric=result.metric,
-        collection=result.collection,
-    )
+        # A blade is null relative to its own size, whatever the metric's sign
+        v_form = asarray(form(v))
+        size = np_abs(v.data).max(axis=tuple(range(-k, 0))) if k > 0 else np_abs(v.data)
+        is_null = np_abs(v_form) <= TOLERANCE * size**2
+
+        for _ in range(j):
+            v_form = v_form[..., newaxis]
+            is_null = is_null[..., newaxis]
+
+        data = where(is_null, 0.0, numerator.data / where(is_null, 1.0, v_form))
+
+    return Vector(data=data, grade=j, metric=metric)
 
 
 def reject(u: Vector, v: Vector) -> Vector:
     """
-    Compute the rejection of vector u from vector v: the component of u
-    orthogonal to v.
+    Compute the rejection of u from the blade v:
+
+        rej_v(u) = u - proj_v(u)
 
     Returns rejected vector with same grade as u.
     """

@@ -286,9 +286,7 @@ class Frame(GradedElement):
 
     def transform(self, M: MultiVector) -> Frame:
         """
-        Transform this frame by a motor/versor via sandwich product.
-
-        Computes M * F * ~M, extracting grade-1 components.
+        Transform each vector of this frame by a motor/versor.
 
         Args:
             M: MultiVector (motor/versor) to transform by
@@ -296,7 +294,9 @@ class Frame(GradedElement):
         Returns:
             New Frame with transformed vectors
         """
-        result = (M * self * ~M)[1]
+        from morphis.transforms.actions import transform
+
+        result = transform(self.as_vector(), M)
         return Frame(data=result.data.copy(), metric=self.metric)
 
     def transform_inplace(self, M: MultiVector) -> None:
@@ -306,7 +306,7 @@ class Frame(GradedElement):
         Args:
             M: MultiVector (motor/versor) to transform by
         """
-        self.data[...] = (M * self * ~M)[1].data
+        self.data[...] = self.transform(M).data
 
     # =========================================================================
     # Conversion Methods

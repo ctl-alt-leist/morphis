@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 from numpy import (
     abs as np_abs,
     arctan2,
+    arctanh,
     cos,
     cosh,
     iscomplexobj,
@@ -40,7 +41,7 @@ from numpy import (
 from numpy.typing import NDArray
 
 from morphis.config import TOLERANCE
-from morphis.operations.norms import norm
+from morphis.operations.norms import form, norm
 from morphis.operations.products import geometric, grade_project, wedge
 
 
@@ -307,9 +308,12 @@ def log_versor(M: MultiVector) -> Vector:
     """
     Extract the bivector generator from a rotor/versor: log(M)
 
-    For a rotor M = a + B where a is scalar and B is bivector:
+    For a simple rotor M = a + B, with a scalar and B a bivector whose square
+    is the scalar λ:
 
-        log(M) = atan2(|B|, a) * B / |B|
+        log(M) = atan2(√-λ, a) * B / √-λ     if λ < 0 (rotation)
+        log(M) = atanh(√λ / a) * B / √λ      if λ > 0 (boost)
+        log(M) = B / a                       if λ = 0 (translation)
 
     The result is a bivector whose exponential recovers M.
 
@@ -320,12 +324,15 @@ def log_versor(M: MultiVector) -> Vector:
         Vector (bivector) that generates M via exp_vector
 
     Raises:
-        ValueError: If M doesn't have the expected rotor structure
+        ValueError: If M doesn't have the expected rotor structure, or is not
+            simple (its bivector part does not square to a scalar)
 
     Notes:
         - For rotors near identity (a ≈ 1, |B| ≈ 0), uses careful numerics
         - Returns angle in (-pi, pi]
         - For double-cover rotors, may return either generator
+        - A boost or translation with a < 0 is not an exponential; the result
+          generates -M, which is the same transformation
 
     Examples:
         >>> R = rotor(B, angle)
@@ -347,24 +354,35 @@ def log_versor(M: MultiVector) -> Vector:
         shape = M.collection + (d, d)
         return Vector(zeros(shape), grade=2, metric=M.metric, collection=M.collection)
 
+    B = bivector_part
+    size = np_abs(B.data).max(axis=(-2, -1))
+    W = wedge(B, B)
+
+    # M has unit size, so rounding in B enters W in proportion to B itself
+    if (np_abs(W.data).max(axis=tuple(range(-4, 0))) > 1e-9 * size).any():
+        raise ValueError("log_versor requires a simple rotor, whose bivector part squares to a scalar")
+
     a = scalar_part.data  # Shape: (*collection,)
-    B_norm = norm(bivector_part)  # Shape: (*collection,)
+    square = -form(B)  # B² of a simple bivector
+    root = sqrt(np_abs(square))
 
-    # Compute angle: theta = 2 * atan2(|B|, a) for rotor R = exp(-B*theta/2)
-    # But log returns the generator, so we want atan2(|B|, a) directly
-    theta = arctan2(B_norm, a)
+    # The angle of a rotation, in (-pi, pi], or the rapidity of a boost
+    is_boost = square > 0
+    safe_a = where(np_abs(a) > TOLERANCE, a, 1.0)
+    rapidity = arctanh(where(is_boost, root / safe_a, 0.0))
+    angle = where(is_boost, rapidity, arctan2(root, a))
 
-    # Scale bivector: result = theta * B / |B|
-    # Handle |B| ≈ 0 case (near identity)
-    safe_norm = where(B_norm > TOLERANCE, B_norm, 1.0)
-    scale = where(B_norm > TOLERANCE, theta / safe_norm, zeros(B_norm.shape))
+    # Handle B² ≈ 0 case (near identity, or a translation)
+    is_null = root <= TOLERANCE
+    safe_root = where(is_null, 1.0, root)
+    scale = where(is_null, 1.0 / safe_a, angle / safe_root)
 
     # Expand for broadcasting
     scale_expanded = scale
     for _ in range(2):  # grade 2
         scale_expanded = scale_expanded[..., newaxis]
 
-    result_data = scale_expanded * bivector_part.data
+    result_data = scale_expanded * B.data
 
     return Vector(result_data, grade=2, metric=M.metric, collection=M.collection)
 
@@ -379,7 +397,8 @@ def slerp(R0: MultiVector, R1: MultiVector, t: float | NDArray) -> MultiVector:
     Spherical linear interpolation between rotors.
 
     Computes R(t) that smoothly interpolates from R0 (at t=0) to R1 (at t=1)
-    along the geodesic path on the rotation manifold.
+    along the geodesic path on the rotation manifold. The relative rotor
+    R0^(-1) * R1 must be simple (see log_versor).
 
         R(t) = R0 * exp(t * log(R0^(-1) * R1))
 
